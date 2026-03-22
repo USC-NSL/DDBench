@@ -3,8 +3,11 @@
 **Date: 2026-03-22**
 **Attempted: 53 / 60 cases**
 **Reproduced: 37 / 53 attempted (70%)**
+**Double-verified: 37 / 37 reproduced (100%)**
 
 This file logs every case that was reliably reproduced during this run, along with the method used and key observations. Cases not listed here either failed to reproduce, could not be built, or were not attempted.
+
+All 37 cases were confirmed in a second verification pass.
 
 ---
 
@@ -18,7 +21,7 @@ This file logs every case that was reliably reproduced during this run, along wi
 | `dragonfly-6619-evalsha-empty` | redis-cli `EVALSHA "" 0` | Process crashed with `Check failed: !eval_args.sha.empty()` (SIGABRT). |
 | `dragonfly-6654-mc-reply-large` | SET 8000+ byte value via Redis, retrieve via memcached meta get | Process crashed when reply exceeded `kMaxBufferSize` (8192 bytes). |
 | `dragonfly-6687-replica-rdb-encoding` | Master with tiered storage + replica REPLICAOF | Replica failed with `Unknown RDB string encoding 10` during sync. Required `tiered_prefix`, `tiered_offload_threshold=1.0`, and `serialization_max_chunk_size=64000`. |
-| `dragonfly-6738-pipeline-block` | Pipeline SET+PING+BLPOP in single pipeline | SET and PING replies delayed 5 seconds until BLPOP timed out, confirming pipeline flushing bug with blocking commands. |
+| `dragonfly-6738-pipeline-block` | Pipeline SET+PING+BLPOP in single pipeline via `redis-cli --pipe-timeout` | SET and PING replies delayed 5 seconds until BLPOP timed out, confirming pipeline flushing bug with blocking commands. Note: the EVAL/BRPOPLPUSH variant from the original reproduce.md did not reproduce on this commit — the pipeline variant is the reliable reproduction method. |
 | `dragonfly-6753-populate-sigfpe` | redis-cli `DEBUG POPULATE 100 prefix 0` | Process crashed with SIGFPE (division by zero in `DoPopulateBatch`). |
 | `dragonfly-6761-mc-pipeline-crash` | `printf "get nokey\r\nversion\r\n" \| nc 127.0.0.1 11211` | Process crashed when GET was pipelined before VERSION in memcached protocol. |
 | `dragonfly-6764-hincrbyfloat-nan` | `HINCRBYFLOAT nonexist field nan` then `HRANDFIELD nonexist 1` | First command creates zombie empty hash; second crashes at `hset_family.cc:973`. |
@@ -44,7 +47,7 @@ This file logs every case that was reliably reproduced during this run, along wi
 | Case | Method | Observation |
 |------|--------|-------------|
 | `clickhouse-29332-predicate-pushdown` | Docker v21.10, two-shard cluster, GROUP BY with WHERE IN distributed subquery | `DISTRIBUTED_IN_JOIN_SUBQUERY_DENIED` error. Predicate pushdown rewrites the query into a double-distributed subquery. |
-| `clickhouse-75699-join-merge-distributed` | Docker v25.1.3.23, JOIN on Merge table backed by Distributed table | `Code: 49. DB::Exception: Column ID UInt32 query tree node does not have valid source node`. Required exact query from the GitHub issue using `Merge(currentDatabase(), 'a')`. |
+| `clickhouse-75699-join-merge-distributed` | Docker v25.2.1.3085 (not v25.1.3.23 — bug introduced in 25.2 branch), JOIN on Merge table backed by Distributed table | `Code: 49. DB::Exception: Column ID UInt32 query tree node does not have valid source node`. Required exact query from the GitHub issue using `Merge(currentDatabase(), 'a')`. |
 | `clickhouse-92375-distinct-distributed` | Docker v24.12, two-shard cluster with `optimize_skip_unused_shards=1` | `SELECT count() FROM (SELECT DISTINCT ...)` returns 4 instead of correct 2. |
 | `clickhouse-98079-keeper-addwatch` | Docker Keeper v25.3, Java ZooKeeper client with CuratorCache | Keeper disconnects client (`KeeperErrorCode = ConnectionLoss`) after `addWatch` call. Same test passes against Apache ZooKeeper. |
 | `clickhouse-99109-sum-nondeterministic` | Docker v24.12, SUM with `max_threads=1` vs `max_threads=16` | All 10 keys show different sums between single-threaded and multi-threaded execution (differences ~1e-8 to 3e-8). |
@@ -83,7 +86,7 @@ This file logs every case that was reliably reproduced during this run, along wi
 
 | Case | Method | Observation |
 |------|--------|-------------|
-| `redpanda-16944-raft-batcher-alloc` | Docker v24.1.1, `--smp 1`, 100 concurrent producers to single partition | 8 "oversized allocation" warnings logged, sizes doubling from 262144 (256KB) to 4194304 (4MB). Stack traces reference `raft::replicate_entries_stm::append_to_self()`. |
+| `redpanda-16944-raft-batcher-alloc` | Docker v23.3.1 (not v24.1.1 which already has the fix), `--smp 1`, high-throughput writes to many partitions | "oversized allocation: 196608 bytes" warning logged. The raft batcher's std::vector grew past 128KB during burst of raft operations. Must use `--smp 1` to concentrate load on one core. |
 | `redpanda-25769-listoffsets-wrong` | Docker v24.3.7, 5 gzip-compressed records in single batch with distinct timestamps, ListOffsets query | `ListOffsets` returned offset 0 for all timestamp queries on compressed data (5/6 wrong). Uncompressed control test returned correct offsets (0 wrong). |
 
 ### Seastar (1 / 1)

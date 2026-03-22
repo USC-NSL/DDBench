@@ -11,9 +11,9 @@
 docker pull clickhouse/clickhouse-server:21.10
 ```
 
-Create a cluster config file `cluster_config.xml`:
+Create a cluster config file `cluster_config.xml`. **Note:** ClickHouse v21.10 uses `<yandex>` as the XML root element, not `<clickhouse>` (which was introduced in later versions):
 ```xml
-<clickhouse>
+<yandex>
     <remote_servers>
         <test_cluster>
             <shard>
@@ -30,7 +30,7 @@ Create a cluster config file `cluster_config.xml`:
             </shard>
         </test_cluster>
     </remote_servers>
-</clickhouse>
+</yandex>
 ```
 
 Start two ClickHouse instances:

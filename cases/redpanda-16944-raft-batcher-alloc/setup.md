@@ -38,10 +38,11 @@ cd ../..
 
 Alternatively, use Docker:
 ```bash
-docker pull redpandadata/redpanda:v24.1.x  # Use version matching the buggy commit
+# Use v23.3.1 or v23.3.2 — NOT v24.1.1+ which already contains the fix
+docker pull redpandadata/redpanda:v23.3.1
 ```
 
-## Server setup
+## Server setup (source build)
 ```bash
 cat > /tmp/redpanda.yaml <<EOF
 redpanda:
@@ -57,11 +58,23 @@ redpanda:
     address: "0.0.0.0"
     port: 9644
   developer_mode: true
+  memory_allocation_warning_threshold: 131073
 EOF
 
 rm -rf /tmp/redpanda-data
 ./build/release/bin/redpanda \
   --redpanda-cfg /tmp/redpanda.yaml \
-  --smp 4 \
+  --smp 1 \
   --memory 4G &
+```
+
+**Note:** `memory_allocation_warning_threshold: 131073` must be set in the config — in v23.3.x it defaults to disabled (nullopt), so the oversized allocation warning is never emitted even when allocations exceed 128KB. Use `--smp 1` to concentrate all raft batching on a single Seastar core.
+
+## Server setup (Docker — recommended)
+```bash
+docker run -d --name redpanda --network host \
+  redpandadata/redpanda:v23.3.1 \
+  redpanda start --smp 1 --memory 2G --overprovisioned \
+  --advertise-kafka-addr localhost:9092 \
+  --set redpanda.memory_allocation_warning_threshold=131073
 ```

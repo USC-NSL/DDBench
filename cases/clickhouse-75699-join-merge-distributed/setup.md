@@ -7,8 +7,10 @@
 
 ## Option A: Docker (recommended)
 
+**Note:** The bug was introduced in the 25.2 development branch. Use version `25.2.1.3085` (not `25.1.3.23` which does not contain the buggy code path).
+
 ```bash
-docker pull clickhouse/clickhouse-server:25.1.3.23
+docker pull clickhouse/clickhouse-server:25.2.1.3085
 ```
 
 Create a cluster config file `cluster_config.xml`:
@@ -31,7 +33,7 @@ Start a ClickHouse instance:
 ```bash
 docker run -d --name ch-node --network host \
   -v $(pwd)/cluster_config.xml:/etc/clickhouse-server/config.d/cluster.xml \
-  clickhouse/clickhouse-server:25.1.3.23
+  clickhouse/clickhouse-server:25.2.1.3085
 ```
 
 Verify it is running:

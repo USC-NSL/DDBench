@@ -20,10 +20,19 @@ git submodule update --init --recursive
 
 ## Deploy: Master + Replica with tiered storage
 
-Start master with tiered storage enabled:
+Start master with tiered storage enabled. The following flags are critical for reliable reproduction:
+- `--tiered_prefix` enables tiered storage
+- `--tiered_offload_threshold=1.0` forces all data to be offloaded to disk
+- `--serialization_max_chunk_size=64000` uses smaller serialization chunks that expose the encoding bug
+- `--maxmemory=512mb` triggers memory pressure that forces tiered offload
+
 ```bash
 ./build-opt/dragonfly --port 6379 --logtostderr --proactor_threads 4 \
-  --dbfilename="" --tiered_prefix=/tmp/dragonfly_tiered
+  --dbfilename="" \
+  --tiered_prefix=/tmp/dragonfly_tiered \
+  --tiered_offload_threshold=1.0 \
+  --serialization_max_chunk_size=64000 \
+  --maxmemory=512mb
 ```
 
 Start replica:
