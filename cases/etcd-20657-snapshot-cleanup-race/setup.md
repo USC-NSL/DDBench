@@ -9,11 +9,12 @@
 ```bash
 git clone https://github.com/etcd-io/etcd.git
 cd etcd
-# Checkout a version prior to the fix for issue #20657
-git log --oneline --all --grep="20657" | head -5
-# Use a commit before the fix was merged
-git checkout main~50  # Adjust based on when the fix landed
+# Use release-3.5 branch which contains the buggy snapshot cleanup logic.
+# The bug exists in 3.5.x up through at least 3.5.21.
+git checkout release-3.5
 ```
+
+**Note:** This is a race condition between snapshot cleanup and snapshot application that occurs with low `--snapshot-count`. It is extremely timing-dependent and may require many attempts (hundreds of rapid writes with concurrent leader changes) to trigger.
 
 ## Build
 ```bash

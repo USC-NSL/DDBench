@@ -5,11 +5,13 @@
 rm -rf /tmp/redpanda-data
 ./build/release/bin/redpanda \
   --redpanda-cfg /tmp/redpanda.yaml \
-  --smp 4 \
+  --smp 1 \
   --memory 4G &
 RPANDA_PID=$!
 sleep 5
 ```
+
+**Important:** Use `--smp 1` (single Seastar core). With multiple cores (`--smp 4`), the write load is distributed across cores and the batcher's internal vector never grows large enough on any single core to trigger the oversized allocation warning. With `--smp 1`, all replication batching happens on one core, causing the vector to grow past the 128KB Seastar threshold.
 
 ## Step 2: Create a topic with multiple partitions
 ```bash

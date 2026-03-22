@@ -9,8 +9,9 @@
 ```bash
 git clone https://github.com/facebook/rocksdb.git
 cd rocksdb
-# Checkout the commit just before the fix
-git checkout 25d8a6b0b5ccde1b7d26920a264ebc7f810ee1b5~1
+# The fix is commit 0119a8c78 ("Fix Checkpoint::ExportColumnFamily() returning staled data (#13654)")
+# Checkout its parent to get the buggy version
+git checkout 0119a8c78~1
 ```
 
 ## Build
@@ -95,39 +96,44 @@ int main() {
         cf_handles[1], "/tmp/rocksdb_export_output", &metadata);
     std::cout << "Export status: " << s.ToString() << std::endl;
 
-    // Now open the exported data and verify all keys are present
+    // Import the exported data into a fresh DB and verify all keys are present
     rocksdb::Options import_options;
     import_options.create_if_missing = true;
     rocksdb::DB* verify_db;
     s = rocksdb::DB::Open(import_options, "/tmp/rocksdb_export_verify", &verify_db);
     assert(s.ok());
 
-    rocksdb::ColumnFamilyHandle* import_cf;
-    s = verify_db->CreateColumnFamily(import_options, "imported_cf", &import_cf);
-    assert(s.ok());
-
-    // Import
+    // Import the exported column family
     rocksdb::ImportColumnFamilyOptions import_cf_options;
-    // ... import using metadata ...
+    import_cf_options.move_files = false;
+    rocksdb::ColumnFamilyHandle* import_cf;
+    s = verify_db->CreateColumnFamilyWithImport(
+        rocksdb::ColumnFamilyOptions(), "imported_cf", import_cf_options, *metadata, &import_cf);
+    std::cout << "Import status: " << s.ToString() << std::endl;
 
-    // Verify all 2000 keys are present
+    // Verify all 2000 keys are present in the IMPORTED data (not the source DB)
     int found = 0;
-    for (int i = 0; i < 2000; i++) {
-        std::string val;
-        s = db->Get(rocksdb::ReadOptions(), cf_handles[1],
-                    "key" + std::to_string(i), &val);
-        if (s.ok()) found++;
+    if (s.ok()) {
+        for (int i = 0; i < 2000; i++) {
+            std::string val;
+            s = verify_db->Get(rocksdb::ReadOptions(), import_cf,
+                        "key" + std::to_string(i), &val);
+            if (s.ok()) found++;
+        }
     }
-    std::cout << "Found " << found << " of 2000 keys" << std::endl;
+    std::cout << "Found " << found << " of 2000 keys in exported data" << std::endl;
     if (found < 2000) {
-        std::cout << "BUG: Missing " << (2000 - found) << " committed keys!" << std::endl;
+        std::cout << "BUG: Export is missing " << (2000 - found)
+                  << " committed keys (memtable data not exported)!" << std::endl;
     }
 
     // Cleanup
     for (auto h : cf_handles) if (h) db->DestroyColumnFamilyHandle(h);
     delete checkpoint;
+    delete metadata;
     delete db;
-    if (verify_db) { delete import_cf; delete verify_db; }
+    if (import_cf) verify_db->DestroyColumnFamilyHandle(import_cf);
+    delete verify_db;
     return found < 2000 ? 1 : 0;
 }
 EOF

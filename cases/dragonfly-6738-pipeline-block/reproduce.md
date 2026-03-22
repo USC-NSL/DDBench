@@ -35,7 +35,7 @@ The `BRPOPLPUSH` in terminal 1 waits the full 5 seconds and returns `(nil)`, eve
 ## Expected result (bug fixed)
 The `BRPOPLPUSH` in terminal 1 returns `"hello"` immediately after the EVAL runs, and the element is moved to `dst`.
 
-## Scripted reproduction
+## Scripted reproduction (EVAL variant)
 
 ```bash
 #!/bin/bash
@@ -57,5 +57,25 @@ if [ "$ELAPSED" -ge "4" ]; then
     echo "FAIL: Consumer waited ${ELAPSED}s (full timeout)"
 else
     echo "PASS: Consumer woke up after ${ELAPSED}s"
+fi
+```
+
+## Alternative: Pipeline flushing variant
+
+The bug also manifests as a pipeline flushing issue: when a blocking command (e.g., `BLPOP`) is in a pipeline, replies for *preceding* non-blocking commands (e.g., `SET`, `PING`) are held back until the blocking command completes or times out.
+
+```bash
+# Send SET + PING + BLPOP in a single pipeline
+# The SET and PING replies should return immediately, but with the bug
+# they are delayed until BLPOP times out (5 seconds)
+START=$(date +%s)
+printf "SET mykey myval\r\nPING\r\nBLPOP nolist 5\r\n" | redis-cli -p 6379 --pipe-timeout 10
+END=$(date +%s)
+ELAPSED=$((END - START))
+
+if [ "$ELAPSED" -ge "4" ]; then
+    echo "FAIL: Pipeline replies delayed ${ELAPSED}s by BLPOP"
+else
+    echo "PASS: Pipeline replies returned promptly"
 fi
 ```

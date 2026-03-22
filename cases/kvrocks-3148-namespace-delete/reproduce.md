@@ -1,14 +1,28 @@
 # Reproduce: Kvrocks #3148
 
-## Step 1: Start Kvrocks
+## Step 1: Create a config file with a password
+
+Namespace commands require authentication. Create a minimal config:
 ```bash
-./build/kvrocks --port 6666 --dir /tmp/kvrocks-test --log-dir /tmp/kvrocks-test/logs
+cat > /tmp/kvrocks-test.conf <<'EOF'
+bind 0.0.0.0
+port 6666
+dir /tmp/kvrocks-test
+log-dir /tmp/kvrocks-test/logs
+requirepass foobared
+EOF
 ```
 
-## Step 2: Create two namespaces with different tokens
-Connect with the default admin credentials:
+## Step 2: Start Kvrocks
 ```bash
-redis-cli -p 6666
+mkdir -p /tmp/kvrocks-test/logs
+./build/kvrocks -c /tmp/kvrocks-test.conf
+```
+
+## Step 3: Create two namespaces with different tokens
+Connect with admin credentials (`-a` flag for the password):
+```bash
+redis-cli -p 6666 -a foobared
 
 # Add two namespaces
 NAMESPACE ADD ns1 token1
@@ -18,14 +32,14 @@ NAMESPACE ADD ns2 token2
 NAMESPACE GET *
 ```
 
-## Step 3: Set ns1's token to ns2's token
+## Step 4: Set ns1's token to ns2's token
 ```bash
-redis-cli -p 6666 NAMESPACE SET ns1 token2
+redis-cli -p 6666 -a foobared NAMESPACE SET ns1 token2
 ```
 
-## Step 4: Check namespace list
+## Step 5: Check namespace list
 ```bash
-redis-cli -p 6666 NAMESPACE GET *
+redis-cli -p 6666 -a foobared NAMESPACE GET *
 ```
 
 ## Expected result (bug present)

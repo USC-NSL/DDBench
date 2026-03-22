@@ -6,9 +6,10 @@
 - **Issue:** https://github.com/scylladb/scylladb/issues/27130
 - **Fix PR:** https://github.com/scylladb/scylladb/pull/27410
 
-## Option A: Docker (recommended)
+## Option A: Docker (may not reproduce)
 
-Use a version before the fix:
+**Warning:** The Docker image `6.2.2` may not reliably reproduce this bug. The segfault requires hitting a narrow timing window during startup where the REST API is available but the storage service is not yet initialized. The Docker entrypoint's startup sequence may differ enough to prevent the race from triggering. Building from source (Option B) is more reliable.
+
 ```bash
 docker pull scylladb/scylla:6.2.2
 ```

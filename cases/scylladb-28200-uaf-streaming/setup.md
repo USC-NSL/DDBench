@@ -10,11 +10,14 @@
 git clone https://github.com/scylladb/scylladb.git
 cd scylladb
 # Checkout a version containing the bug (before the fix for #28200)
+# The fix was merged in January 2026. Use a commit just before the fix.
 git log --oneline --all --grep="28200" | head -5
-# Use a commit before the fix
-git checkout <buggy-commit>
+# Use the parent of the fix commit
+git checkout <fix-commit>~1
 git submodule update --init --recursive
 ```
+
+**Note:** An AddressSanitizer (ASAN) build is required to detect this use-after-free. Without ASAN, the bug may not cause a visible crash. Docker release images do not include ASAN instrumentation.
 
 ## Build
 ```bash
@@ -39,10 +42,11 @@ A multi-node cluster is needed to trigger streaming (topology changes):
 pip install scylla-ccm
 
 # Create a 3-node cluster
+# NOTE: ccm with release:5.4 will NOT have this bug — you must use a custom-built binary
 ccm create scylla-uaf -v release:5.4 -n 3 --scylla
 ccm start
 
-# Alternatively, start manually:
+# Alternatively, start manually (using the ASAN build):
 # Node 1
 ./build/dev/scylla --workdir /tmp/scylla-node1 \
   --smp 2 --memory 2G \

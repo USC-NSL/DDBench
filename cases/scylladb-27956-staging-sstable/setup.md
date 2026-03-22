@@ -42,3 +42,7 @@ pip install scylla-ccm
 ccm create scylla-staging -v release:5.4 -n 2 --scylla
 ccm start
 ```
+
+## Important: Docker/ccm release versions will not work
+
+**This bug is a regression introduced by commit `5d1f74b86ac6ef151871ee300f8728`**, which reordered view update generator initialization before SSTable loading. This commit is not present in any published Docker release (e.g., `5.4.0`, `6.2.x`). Building from source at the exact regression commit is required. The ccm `release:5.4` shortcut will use a release that does not contain the regression.

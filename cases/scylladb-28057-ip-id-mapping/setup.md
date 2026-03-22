@@ -27,8 +27,10 @@ ninja build/dev/scylla
 
 ## Cluster setup
 A multi-node cluster is required. Use at least 3 nodes:
+**Note:** The ccm `release:5.4` shortcut may not contain this bug. The fix (`af6cb0d0a431`) was merged in January 2026 for a bug in the raft topology IP preservation logic. Building from source at commit `af6cb0d0a431~1` is required for reliable reproduction.
+
 ```bash
-# Using ccm (Cassandra Cluster Manager for Scylla)
+# Using ccm — only works if using a custom-built scylla binary
 pip install scylla-ccm
 
 ccm create scylla-replace -v release:5.4 -n 3 --scylla

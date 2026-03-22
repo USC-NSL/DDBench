@@ -68,22 +68,38 @@ int main() {
         rocksdb::ExportImportFilesMetaData* meta = nullptr;
         auto s = cp->ExportColumnFamily(cf_handles[1], export_dir, &meta);
 
-        if (s.ok()) {
-            // Count keys in the export
-            // Check if all keys up to snapshot_count are present
-            int found = 0;
-            for (int i = 0; i < snapshot_count; i++) {
-                std::string val;
-                s = db->Get(rocksdb::ReadOptions(), cf_handles[1],
-                            "key" + std::to_string(i), &val);
-                if (s.ok()) found++;
+        if (s.ok() && meta) {
+            // Import the exported data into a separate DB and verify keys
+            rocksdb::Options verify_opts;
+            verify_opts.create_if_missing = true;
+            rocksdb::DB* verify_db;
+            std::string verify_dir = export_dir + "_verify";
+            rocksdb::DB::Open(verify_opts, verify_dir, &verify_db);
+
+            rocksdb::ImportColumnFamilyOptions icf_opts;
+            icf_opts.move_files = false;
+            rocksdb::ColumnFamilyHandle* icf;
+            auto is = verify_db->CreateColumnFamilyWithImport(
+                rocksdb::ColumnFamilyOptions(), "imported", icf_opts, *meta, &icf);
+
+            if (is.ok()) {
+                int found = 0;
+                for (int i = 0; i < snapshot_count; i++) {
+                    std::string val;
+                    is = verify_db->Get(rocksdb::ReadOptions(), icf,
+                                "key" + std::to_string(i), &val);
+                    if (is.ok()) found++;
+                }
+                if (found < snapshot_count) {
+                    int missing = snapshot_count - found;
+                    missing_total += missing;
+                    std::cout << "Trial " << trial << ": MISSING " << missing
+                              << " keys in export (found " << found << "/" << snapshot_count << ")" << std::endl;
+                }
+                verify_db->DestroyColumnFamilyHandle(icf);
             }
-            if (found < snapshot_count) {
-                int missing = snapshot_count - found;
-                missing_total += missing;
-                std::cout << "Trial " << trial << ": MISSING " << missing
-                          << " keys (found " << found << "/" << snapshot_count << ")" << std::endl;
-            }
+            delete verify_db;
+            rocksdb::DestroyDB(verify_dir, verify_opts);
         }
         delete cp;
         delete meta;

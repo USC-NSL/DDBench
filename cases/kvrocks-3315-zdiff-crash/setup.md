@@ -26,5 +26,5 @@ make -j$(nproc)
 
 ## Verify
 ```bash
-./bin/kvrocks --version
+./build/kvrocks --version
 ```

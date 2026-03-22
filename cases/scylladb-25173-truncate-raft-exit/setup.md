@@ -44,3 +44,7 @@ pip install scylla-ccm
 ccm create scylla-truncate -v release:5.4 -n 3 --scylla
 ccm start
 ```
+
+## Important: Docker/ccm release versions may not work
+
+**This bug exists only in development builds** where the truncate check calls `on_internal_error` (which throws). Published Docker images and ccm release versions (e.g., `release:5.4`) use `SCYLLA_ASSERT` instead, which is a different code path that does not trigger the raft applier exit. Building from source at the exact buggy commit (`bb922b2aa9dd58de902848d99fde06b9b1c5828a~1`) is required for reliable reproduction.

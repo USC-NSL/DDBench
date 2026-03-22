@@ -9,10 +9,9 @@
 ```bash
 git clone https://github.com/etcd-io/etcd.git
 cd etcd
-# Checkout a version prior to the fix for issue #20269
-git log --oneline --all --grep="20269" | head -5
-# Use a commit before the fix was merged
-git checkout main~100  # Adjust based on when the fix landed
+# The fix is commit fb769c430 ("server: ignore raft messages if member id mismatch")
+# Checkout its parent to get the buggy version
+git checkout fb769c430~1
 ```
 
 ## Build

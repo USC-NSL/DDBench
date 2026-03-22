@@ -19,16 +19,13 @@ redis-cli -p 6666 INFO replication
 
 ## Step 2: Throttle replica network
 
-Use `tc` (traffic control) to simulate a slow replica:
+Use `iptables` to drop packets destined for the replica port, simulating a slow replica:
 ```bash
-# On Linux, throttle the replica's incoming bandwidth
-sudo tc qdisc add dev lo root netem delay 100ms rate 100kbit
+# Drop 90% of packets to the replica port (6667) to create significant replication lag
+sudo iptables -A OUTPUT -p tcp --dport 6667 -m statistic --mode random --probability 0.9 -j DROP
 ```
 
-Or alternatively, use `iptables` to drop some packets to the replica:
-```bash
-sudo iptables -A OUTPUT -p tcp --dport 6667 -m statistic --mode random --probability 0.5 -j DROP
-```
+**Note:** Do not use `tc qdisc add dev lo root netem ...` on the loopback interface — it throttles all loopback traffic including the benchmark client's connection to the master, making the test impractical. The `iptables` approach targets only the replica port.
 
 ## Step 3: Generate high write load on master
 
@@ -57,6 +54,5 @@ redis-cli -p 6666 INFO replication
 
 ## Cleanup
 ```bash
-sudo tc qdisc del dev lo root 2>/dev/null
-sudo iptables -D OUTPUT -p tcp --dport 6667 -m statistic --mode random --probability 0.5 -j DROP 2>/dev/null
+sudo iptables -D OUTPUT -p tcp --dport 6667 -m statistic --mode random --probability 0.9 -j DROP 2>/dev/null
 ```

@@ -9,7 +9,7 @@
    sleep 5
    ```
 
-2. Create and submit a system job with deployment:
+2. Create and submit a multi-group system job where one group has infeasible nodes:
    ```bash
    cat > system-job.nomad.hcl <<'EOF'
    job "test-system" {
@@ -20,8 +20,25 @@
        healthy_deadline = "5m"
        auto_revert      = true
      }
-     group "test" {
+     group "primary" {
        task "test" {
+         driver = "exec"
+         config {
+           command = "/bin/sleep"
+           args    = ["3600"]
+         }
+         resources {
+           cpu    = 100
+           memory = 64
+         }
+       }
+     }
+     group "constrained" {
+       constraint {
+         attribute = "${node.unique.name}"
+         value     = "nonexistent-node-xyz"
+       }
+       task "test2" {
          driver = "exec"
          config {
            command = "/bin/sleep"
@@ -37,12 +54,13 @@
    EOF
 
    ./nomad job run system-job.nomad.hcl
-   sleep 5
+   sleep 30  # Wait for deployment to complete with nil dstate for constrained group
    ```
 
-3. Trigger an update to create a new eval:
+3. Update the job to remove the constraint and trigger a new eval against the old deployment:
    ```bash
-   sed 's/memory = 64/memory = 128/' system-job.nomad.hcl > system-job-v2.nomad.hcl
+   sed '/constraint/,/}/d' system-job.nomad.hcl > system-job-v2.nomad.hcl
+   sed -i 's/memory = 64/memory = 128/' system-job-v2.nomad.hcl
    ./nomad job run system-job-v2.nomad.hcl
    sleep 10
    ```

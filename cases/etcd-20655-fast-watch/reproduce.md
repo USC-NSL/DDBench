@@ -1,23 +1,10 @@
 # Reproduce: etcd #20655
 
-## Step 1: Check out the reproduction test
+## Step 1: Run the manual reproduction test
 
-The reproduction test is in PR #20654:
-```bash
-cd etcd
+**Note:** The test `TestWatchReliabilityHighFrequency` referenced in PR #20654 is not checked into the etcd repository. Use the manual reproduction below instead.
 
-# Cherry-pick or apply the test from PR #20654
-# The test rapidly creates watches and checks for dropped events
-```
-
-## Step 2: Run the reproduction test
-
-```bash
-# Run against the release-3.5 branch
-go test -v -run TestWatchReliabilityHighFrequency ./tests/integration/ -count=1 -timeout 300s
-```
-
-Alternatively, write a manual repro:
+First, start a single-node etcd server (see setup.md), then run the following Go program:
 
 ```bash
 cat > /tmp/watch_race_test.go << 'GOEOF'
@@ -85,16 +72,18 @@ func main() {
 GOEOF
 ```
 
-## Step 3: Start etcd and run the test
+## Step 2: Start etcd and run the test
 
 ```bash
 # Start a single-node etcd
 bin/etcd --data-dir /tmp/etcd-watch-test &
 sleep 2
 
-# Run the repro
+# Run the repro (increase total for more likelihood of triggering)
 cd /tmp && go run watch_race_test.go
 ```
+
+**Note:** This race condition is internal to the watch subsystem and may require hundreds or thousands of rapid watch creations to trigger. Increase the `total` variable (e.g., to 500 or 1000) and run multiple times. The bug is non-deterministic.
 
 ## Expected result (bug present)
 Some watch events are dropped (non-zero dropped count). The test reports missed events.

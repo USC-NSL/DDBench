@@ -30,8 +30,10 @@ func main() {
         kgo.SeedBrokers("localhost:9092"),
         kgo.ProducerBatchCompression(kgo.GzipCompression()),
         kgo.DefaultProduceTopic("test-compressed"),
-        // Force each record into its own batch for clarity
-        kgo.ProducerBatchMaxBytes(1),
+        // All records MUST go into a single compressed batch to trigger the bug.
+        // Use a large batch size and manual flush to ensure they batch together.
+        kgo.ProducerBatchMaxBytes(1<<20),
+        kgo.ProducerLinger(5 * time.Second),
     )
     if err != nil {
         panic(err)
@@ -47,15 +49,20 @@ func main() {
         time.Date(2024, 1, 1, 4, 0, 0, 0, time.UTC),   // offset 4
     }
 
+    // Produce all records without flushing so they batch together
     for i, ts := range timestamps {
         record := &kgo.Record{
             Value:     []byte(fmt.Sprintf("record-%d", i)),
             Timestamp: ts,
         }
-        client.ProduceSync(context.Background(), record)
+        client.Produce(context.Background(), record, nil)
+    }
+    // Flush to send all 5 records in a single compressed batch
+    if err := client.Flush(context.Background()); err != nil {
+        panic(err)
     }
 
-    fmt.Println("Produced 5 compressed records with known timestamps")
+    fmt.Println("Produced 5 compressed records in a single batch with known timestamps")
 }
 ```
 
@@ -77,14 +84,18 @@ offsets, err := adminClient.ListOffsetsAfterMilli(context.Background(),
 
 ## Alternative: Using kcat
 
-```bash
-# Produce compressed records
-for i in $(seq 1 5); do
-    echo "record-$i" | kcat -P -b localhost:9092 -t test-compressed -z gzip
-done
+**Note:** The following kcat loop will NOT reproduce the bug because each invocation creates a separate batch. The bug only manifests when multiple records with different timestamps are in the *same* compressed batch. Use the Go program above or a Kafka client that supports batched production with compression.
 
-# Query offsets by timestamp (using kafka-consumer-groups or a custom script)
-# The ListOffsets API must be called programmatically to specify a target timestamp
+```bash
+# This does NOT work — each kcat call creates a separate batch:
+# for i in $(seq 1 5); do
+#     echo "record-$i" | kcat -P -b localhost:9092 -t test-compressed -z gzip
+# done
+
+# Instead, pipe all records at once so they go into a single batch:
+printf "record-0\nrecord-1\nrecord-2\nrecord-3\nrecord-4\n" | kcat -P -b localhost:9092 -t test-compressed -z gzip
+# Note: kcat assigns all records the same timestamp in this case,
+# so the Go program is the preferred approach for setting distinct timestamps.
 ```
 
 ## Expected result (bug present)
