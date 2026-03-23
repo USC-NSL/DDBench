@@ -1,0 +1,11 @@
+name: dragonfly-6907-ftsearch-vector-crash
+project: dragonfly
+repo: https://github.com/dragonflydb/dragonfly.git
+buggy_commit: "c09a5a16bacc4b107435b0f144c1eb4a7553fd04~1"
+submodules: true
+build:
+  command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"
+  binary: build-dbg/dragonfly
+docker:
+  caps: []
+  min_cpus: 1

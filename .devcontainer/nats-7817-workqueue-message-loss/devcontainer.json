@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - nats-7817-workqueue-message-loss",
+  "build": {
+    "dockerfile": "../../docker/nats.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-nats-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/nats-7817-workqueue-message-loss",
+  "postCreateCommand": "bash /repo/docker/bench-init.sh nats-7817-workqueue-message-loss",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}

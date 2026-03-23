@@ -2,6 +2,13 @@
 # Reproduction and verification script for clickhouse-98079-keeper-addwatch
 # Runs ClickHouse Keeper from source build, sends addWatch
 # via zkCli.sh, and reports PASS/FAIL.
+# ── Docker mode (preferred) ──
+CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
+    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+fi
+# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_NAME="clickhouse-98079-keeper-addwatch"

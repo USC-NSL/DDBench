@@ -4,6 +4,13 @@
 # cmake/tools.cmake requires Clang 21 which doesn't exist as a package.
 # We patch it to accept Clang 18 instead.
 # WARNING: ClickHouse builds take 30-90 minutes depending on your hardware.
+# ── Docker mode (preferred) ──
+CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
+    exec "$REPO_ROOT/bench.sh" setup "$CASE_NAME"
+fi
+# ── Host fallback (no Docker) ──
 set -euo pipefail
 
 CASE_NAME="clickhouse-98079-keeper-addwatch"

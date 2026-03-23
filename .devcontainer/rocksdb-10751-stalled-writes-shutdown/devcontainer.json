@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - rocksdb-10751-stalled-writes-shutdown",
+  "build": {
+    "dockerfile": "../../docker/rocksdb.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-rocksdb-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/rocksdb-10751-stalled-writes-shutdown",
+  "postCreateCommand": "bash /repo/docker/bench-init.sh rocksdb-10751-stalled-writes-shutdown",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+    }
+  }
+}

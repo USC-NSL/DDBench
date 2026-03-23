@@ -1,0 +1,11 @@
+name: etcd-19172-embed-data-race
+project: etcd
+repo: https://github.com/etcd-io/etcd.git
+buggy_commit: "43431bd6f83b60d13a29ef9df53d7f04fe63fcfd~1"
+submodules: false
+build:
+  command: "make build"
+  binary: bin/etcd
+docker:
+  caps: []
+  min_cpus: 1

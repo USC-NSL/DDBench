@@ -3,6 +3,13 @@
 # Starts Kvrocks master + replica, throttles replica via iptables,
 # generates write load, and checks WAL growth. Reports PASS/FAIL.
 # NOTE: Requires sudo for iptables rules.
+# ── Docker mode (preferred) ──
+CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
+    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+fi
+# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

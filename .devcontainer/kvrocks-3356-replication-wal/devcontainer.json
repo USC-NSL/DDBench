@@ -1,0 +1,21 @@
+{
+  "name": "Bug Bench - kvrocks-3356-replication-wal",
+  "build": {
+    "dockerfile": "../../docker/kvrocks.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--cap-add=NET_ADMIN"
+  ],
+  "mounts": [
+    "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/kvrocks-3356-replication-wal",
+  "postCreateCommand": "bash /repo/docker/bench-init.sh kvrocks-3356-replication-wal",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+    }
+  }
+}

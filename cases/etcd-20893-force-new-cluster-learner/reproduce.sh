@@ -2,6 +2,13 @@
 # Reproduction and verification script for etcd-20893-force-new-cluster-learner
 # Starts a 3-member cluster, adds a learner, triggers snapshot, recovers with
 # --force-new-cluster, and checks if the learner is still in the member list.
+# ── Docker mode (preferred) ──
+CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
+    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+fi
+# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

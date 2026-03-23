@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Setup script for raft-358-negative-log-range
 # Clones the repository and checks out the buggy commit.
+# ── Docker mode (preferred) ──
+CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
+    exec "$REPO_ROOT/bench.sh" setup "$CASE_NAME"
+fi
+# ── Host fallback (no Docker) ──
 set -euo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

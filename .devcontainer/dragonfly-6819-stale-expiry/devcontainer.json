@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - dragonfly-6819-stale-expiry",
+  "build": {
+    "dockerfile": "../../docker/dragonfly.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-dragonfly-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/dragonfly-6819-stale-expiry",
+  "postCreateCommand": "bash /repo/docker/bench-init.sh dragonfly-6819-stale-expiry",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+name: kvrocks-3315-zdiff-crash
+project: kvrocks
+repo: https://github.com/apache/kvrocks.git
+buggy_commit: "c2c5d094d4335c4951f88e7de319d78e1bf5b3b8~1"
+submodules: true
+build:
+  command: "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)"
+  binary: build/kvrocks
+docker:
+  caps: []
+  min_cpus: 1

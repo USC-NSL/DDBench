@@ -1,0 +1,11 @@
+name: dragonfly-6825-config-overflow
+project: dragonfly
+repo: https://github.com/dragonflydb/dragonfly.git
+buggy_commit: "4b16da4d2e80eafc57ecb5fef511a9d49afe5c54~1"
+submodules: true
+build:
+  command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"
+  binary: build-dbg/dragonfly
+docker:
+  caps: []
+  min_cpus: 1

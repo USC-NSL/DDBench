@@ -1,0 +1,11 @@
+name: kvrocks-3356-replication-wal
+project: kvrocks
+repo: https://github.com/apache/kvrocks.git
+buggy_commit: "559a667bef223a07fea350a27168e91fe0a74601~1"
+submodules: true
+build:
+  command: "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)"
+  binary: build/kvrocks
+docker:
+  caps: ["NET_ADMIN"]
+  min_cpus: 1

@@ -1,0 +1,11 @@
+name: dragonfly-6909-search-nonfinite
+project: dragonfly
+repo: https://github.com/dragonflydb/dragonfly.git
+buggy_commit: "1c38bb63d2824080430d6d25e5a6fe6d714a2882~1"
+submodules: true
+build:
+  command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"
+  binary: build-dbg/dragonfly
+docker:
+  caps: []
+  min_cpus: 1

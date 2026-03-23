@@ -1,0 +1,11 @@
+name: raft-268-shutdown-deadlock
+project: raft
+repo: https://github.com/hashicorp/raft.git
+buggy_commit: "2e997410f28efe8106fc606d21cb655be1b05dee~1"
+submodules: false
+build:
+  command: ""
+  binary: ""
+docker:
+  caps: []
+  min_cpus: 1

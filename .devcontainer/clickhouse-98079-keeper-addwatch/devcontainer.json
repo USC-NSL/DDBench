@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - clickhouse-98079-keeper-addwatch",
+  "build": {
+    "dockerfile": "../../docker/clickhouse.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-clickhouse-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/clickhouse-98079-keeper-addwatch",
+  "postCreateCommand": "bash /repo/docker/bench-init.sh clickhouse-98079-keeper-addwatch",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+name: dragonfly-6687-replica-rdb-encoding
+project: dragonfly
+repo: https://github.com/dragonflydb/dragonfly.git
+buggy_commit: "8347cd80192a7be967a3983a6a55a10525915015~1"
+submodules: true
+build:
+  command: |
+    ./helio/blaze.sh -DCMAKE_BUILD_TYPE=Release -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly && cd .. && [ ! -e build-opt ] && ln -s build-dbg build-opt || true
+  binary: build-opt/dragonfly
+docker:
+  caps: []
+  min_cpus: 1

@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - etcd-19172-embed-data-race",
+  "build": {
+    "dockerfile": "../../docker/etcd.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-etcd-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/etcd-19172-embed-data-race",
+  "postCreateCommand": "bash /repo/docker/bench-init.sh etcd-19172-embed-data-race",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}

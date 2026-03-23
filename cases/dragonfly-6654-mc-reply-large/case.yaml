@@ -1,0 +1,11 @@
+name: dragonfly-6654-mc-reply-large
+project: dragonfly
+repo: https://github.com/dragonflydb/dragonfly.git
+buggy_commit: "ff4ef508985cb91a7fdf418682af1534c24acf83~1"
+submodules: true
+build:
+  command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"
+  binary: build-dbg/dragonfly
+docker:
+  caps: []
+  min_cpus: 1

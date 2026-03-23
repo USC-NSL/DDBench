@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Setup script for nats-7760-filter-stepdown
 # Clones the repository, checks out the buggy version, builds the server, and installs nats CLI.
+# ── Docker mode (preferred) ──
+CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
+    exec "$REPO_ROOT/bench.sh" setup "$CASE_NAME"
+fi
+# ── Host fallback (no Docker) ──
 set -euo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,0 +1,11 @@
+name: dragonfly-6753-populate-sigfpe
+project: dragonfly
+repo: https://github.com/dragonflydb/dragonfly.git
+buggy_commit: "5e31c9f84acfcfc2a7fb421cde7845ffcdf5536e~1"
+submodules: true
+build:
+  command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"
+  binary: build-dbg/dragonfly
+docker:
+  caps: []
+  min_cpus: 1

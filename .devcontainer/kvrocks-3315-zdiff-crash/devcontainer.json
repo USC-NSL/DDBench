@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - kvrocks-3315-zdiff-crash",
+  "build": {
+    "dockerfile": "../../docker/kvrocks.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/kvrocks-3315-zdiff-crash",
+  "postCreateCommand": "bash /repo/docker/bench-init.sh kvrocks-3315-zdiff-crash",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+    }
+  }
+}

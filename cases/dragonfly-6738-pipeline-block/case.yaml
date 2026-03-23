@@ -1,0 +1,11 @@
+name: dragonfly-6738-pipeline-block
+project: dragonfly
+repo: https://github.com/dragonflydb/dragonfly.git
+buggy_commit: "c4849b4d008d1dd6fd950f251cdb9a9a2e264e00~1"
+submodules: true
+build:
+  command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"
+  binary: build-dbg/dragonfly
+docker:
+  caps: []
+  min_cpus: 1

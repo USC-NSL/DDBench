@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - raft-268-shutdown-deadlock",
+  "build": {
+    "dockerfile": "../../docker/raft.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-raft-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/raft-268-shutdown-deadlock",
+  "postCreateCommand": "bash /repo/docker/bench-init.sh raft-268-shutdown-deadlock",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}

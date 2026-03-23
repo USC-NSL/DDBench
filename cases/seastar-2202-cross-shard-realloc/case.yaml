@@ -1,0 +1,11 @@
+name: seastar-2202-cross-shard-realloc
+project: seastar
+repo: https://github.com/scylladb/seastar.git
+buggy_commit: "2bc4f22b~1"
+submodules: true
+build:
+  command: "./configure.py --mode=dev --cook fmt && ninja -C build/dev"
+  binary: build/dev/libseastar.a
+docker:
+  caps: []
+  min_cpus: 2

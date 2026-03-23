@@ -1,0 +1,11 @@
+name: etcd-20893-force-new-cluster-learner
+project: etcd
+repo: https://github.com/etcd-io/etcd.git
+buggy_commit: "c58e6f1caf7dfe07da002230a2b61d664ab21a34~1"
+submodules: false
+build:
+  command: "make build"
+  binary: bin/etcd
+docker:
+  caps: []
+  min_cpus: 1

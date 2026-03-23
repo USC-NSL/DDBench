@@ -1,0 +1,11 @@
+name: raft-358-negative-log-range
+project: raft
+repo: https://github.com/hashicorp/raft.git
+buggy_commit: "7b09f38f739f486a692096c35236c7eef094e933~1"
+submodules: false
+build:
+  command: ""
+  binary: ""
+docker:
+  caps: []
+  min_cpus: 1

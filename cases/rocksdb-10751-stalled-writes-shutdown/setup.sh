@@ -2,6 +2,13 @@
 # Setup script for rocksdb-10751-stalled-writes-shutdown
 # Clones the repository, checks out the buggy commit, builds RocksDB,
 # and compiles the test program.
+# ── Docker mode (preferred) ──
+CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
+    exec "$REPO_ROOT/bench.sh" setup "$CASE_NAME"
+fi
+# ── Host fallback (no Docker) ──
 set -euo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

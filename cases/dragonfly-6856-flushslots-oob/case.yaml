@@ -1,0 +1,11 @@
+name: dragonfly-6856-flushslots-oob
+project: dragonfly
+repo: https://github.com/dragonflydb/dragonfly.git
+buggy_commit: "c79bbe0c646c1bce47f76168dbe813951aecd8ce~1"
+submodules: true
+build:
+  command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"
+  binary: build-dbg/dragonfly
+docker:
+  caps: []
+  min_cpus: 1

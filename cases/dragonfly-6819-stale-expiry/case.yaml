@@ -1,0 +1,11 @@
+name: dragonfly-6819-stale-expiry
+project: dragonfly
+repo: https://github.com/dragonflydb/dragonfly.git
+buggy_commit: "fa4d116313779182571f70a537ab31f09ec043a5~1"
+submodules: true
+build:
+  command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"
+  binary: build-dbg/dragonfly
+docker:
+  caps: []
+  min_cpus: 1

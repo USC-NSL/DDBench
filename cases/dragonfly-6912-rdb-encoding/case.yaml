@@ -1,0 +1,11 @@
+name: dragonfly-6912-rdb-encoding
+project: dragonfly
+repo: https://github.com/dragonflydb/dragonfly.git
+buggy_commit: "ef296f099b6e210ad28f043be9d0a8cec4dc4885~1"
+submodules: true
+build:
+  command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"
+  binary: build-dbg/dragonfly
+docker:
+  caps: []
+  min_cpus: 1

@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - raft-358-negative-log-range",
+  "build": {
+    "dockerfile": "../../docker/raft.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-raft-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/raft-358-negative-log-range",
+  "postCreateCommand": "bash /repo/docker/bench-init.sh raft-358-negative-log-range",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}

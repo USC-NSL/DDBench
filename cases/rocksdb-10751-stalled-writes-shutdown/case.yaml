@@ -1,0 +1,12 @@
+name: rocksdb-10751-stalled-writes-shutdown
+project: rocksdb
+repo: https://github.com/facebook/rocksdb.git
+buggy_commit: "a45e6878f39cdc777c54e5d6749d53c1f70e2b52~1"
+submodules: false
+build:
+  command: |
+    mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-include cstdint -w" -DFAIL_ON_WARNINGS=OFF -DWITH_TESTS=OFF && make -j$(nproc) rocksdb
+  binary: build/librocksdb.a
+docker:
+  caps: []
+  min_cpus: 1
