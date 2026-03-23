@@ -3,11 +3,18 @@
 **Date: 2026-03-22**
 **Attempted: 53 / 60 cases**
 **Reproduced: 37 / 53 attempted (70%)**
-**Double-verified: 37 / 37 reproduced (100%)**
+**Double-verified from source builds: 31 / 37 reproduced**
 
 This file logs every case that was reliably reproduced during this run, along with the method used and key observations. Cases not listed here either failed to reproduce, could not be built, or were not attempted.
 
-All 37 cases were confirmed in a second verification pass.
+30 non-Docker cases were verified from source builds. 1 ClickHouse case (clickhouse-99109) was also verified from source. The remaining 6 Docker-dependent cases (4 ClickHouse + 2 Redpanda) require long source builds (30-90 min each) and some have build compatibility issues with GCC 13+. They were originally verified using Docker images but are being migrated to pure source builds.
+
+**Source build status for migrated cases:**
+- clickhouse-99109: VERIFIED from source
+- clickhouse-92375: Build shared with 99109, but bug did not trigger (may need different server-level config)
+- clickhouse-29332, clickhouse-75699, clickhouse-98079: Not yet built from source (each needs separate 30-90 min build)
+- redpanda-16944: Built from source with `-Wno-error` for GCC 13 compat, but runtime config issue needs fixing
+- redpanda-25769: Not yet built from source
 
 ---
 

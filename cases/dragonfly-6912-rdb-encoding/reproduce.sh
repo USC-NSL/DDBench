@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Reproduction and verification script for dragonfly-6912-rdb-encoding
+# Starts Dragonfly, triggers the bug, and reports PASS/FAIL.
+set -uo pipefail
+
+CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/dragonfly-6912-rdb-encoding"
+BINARY="$WORK_DIR/build-dbg/dragonfly"
+PORT=16912
+DATA_DIR="$WORK_DIR/dragonfly-6912-data"
+
+# Verify setup
+if [ ! -x "$BINARY" ]; then
+    echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
+    exit 1
+fi
+
+# Cleanup from previous runs
+pkill -f "dragonfly.*--port $PORT" 2>/dev/null || true
+sleep 1
+rm -rf "$DATA_DIR"
+mkdir -p "$DATA_DIR"
+
+echo "=== Reproducing dragonfly-6912-rdb-encoding ==="
+
+cleanup() {
+    [ -n "${SERVER_PID:-}" ] && kill "$SERVER_PID" 2>/dev/null && wait "$SERVER_PID" 2>/dev/null
+    rm -rf "$DATA_DIR"
+}
+trap cleanup EXIT
+
+# Start Dragonfly
+"$BINARY" --port "$PORT" --logtostderr --proactor_threads 1 \
+    --dbfilename="" --dir "$DATA_DIR" &>/dev/null &
+SERVER_PID=$!
+sleep 2
+
+# Check server started
+if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo "ERROR: Dragonfly failed to start."
+    exit 1
+fi
+
+# Trigger the bug: CMS.INITBYPROB, CMS.INCRBY, then DUMP
+echo "Sending: CMS.INITBYPROB mysketch 0.001 0.01"
+redis-cli -p "$PORT" CMS.INITBYPROB mysketch 0.001 0.01 2>/dev/null || true
+
+echo "Sending: CMS.INCRBY mysketch item1 5 item2 10"
+redis-cli -p "$PORT" CMS.INCRBY mysketch item1 5 item2 10 2>/dev/null || true
+
+echo "Sending: DUMP mysketch"
+redis-cli -p "$PORT" DUMP mysketch 2>/dev/null || true
+sleep 1
+
+# Check if process crashed
+if kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo ""
+    echo "PASS: Bug is fixed — process survived DUMP on CMS key"
+    kill "$SERVER_PID" 2>/dev/null
+    wait "$SERVER_PID" 2>/dev/null
+    rm -rf "$DATA_DIR"
+    exit 0
+else
+    wait "$SERVER_PID" 2>/dev/null
+    EXIT_CODE=$?
+    echo ""
+    echo "FAIL: Bug is present — process crashed (exit code $EXIT_CODE)"
+    rm -rf "$DATA_DIR"
+    exit 1
+fi
