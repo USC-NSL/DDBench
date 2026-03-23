@@ -7,7 +7,7 @@ CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/dragonfly-6654-mc-reply-large"
 BINARY="$WORK_DIR/build-dbg/dragonfly"
 PORT=16654
-MC_PORT=11211
+MC_PORT=21654
 DATA_DIR="$WORK_DIR/dragonfly-6654-data"
 
 # Verify setup
@@ -42,9 +42,9 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     exit 1
 fi
 
-# Trigger the bug: SET an 8000+ byte value, then retrieve via memcached meta get
-echo "Sending: SET bigkey with 8000-byte value via Redis, then meta get via memcached"
-LARGE_VALUE=$(python3 -c "print('A' * 8000)")
+# Trigger the bug: SET a 16000+ byte value, then retrieve via memcached meta get
+echo "Sending: SET bigkey with 16000-byte value via Redis, then meta get via memcached"
+LARGE_VALUE=$(python3 -c "print('A' * 16000)")
 redis-cli -p "$PORT" SET bigkey "$LARGE_VALUE" >/dev/null 2>&1
 
 # Retrieve via memcached meta get — this triggers the crash

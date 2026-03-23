@@ -5,7 +5,7 @@ set -uo pipefail
 
 WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/nats-7726-mixed-filter"
 FIX_COMMIT="6aded805ec9625b20ee50ded3b63135d5fe3d0a8"
-TEST_FILE="server/sublist_test.go"
+TEST_FILE="server/gsl/gsl_test.go"
 TEST_NAME="TestGenericSublistInterestBasedIntersection"
 
 export PATH=$PATH:/usr/local/go/bin
@@ -28,13 +28,33 @@ trap cleanup EXIT
 # Back up the original test file
 cp "$TEST_FILE" "${TEST_FILE}.bak"
 
-# Extract the test function from the fix commit and append it
-echo "Extracting test $TEST_NAME from fix commit $FIX_COMMIT..."
-git show "${FIX_COMMIT}:${TEST_FILE}" | sed -n "/^func ${TEST_NAME}(/,/^func /{ /^func ${TEST_NAME}(/p; /^func ${TEST_NAME}(/!{ /^func /!p; } }" >> "$TEST_FILE"
+# The fix commit adds a "PWCDoesntHideLiteral" subtest to the existing test function.
+# Instead of appending the whole function (which would duplicate), we add a standalone test.
+echo "Adding PWCDoesntHideLiteral test..."
+cat >> "$TEST_FILE" << 'TESTEOF'
 
-# Run the specific subtest
-echo "Running test ${TEST_NAME}/PWCDoesntHideLiteral..."
-TEST_OUTPUT=$(go test -v -run "${TEST_NAME}/PWCDoesntHideLiteral" -count=1 -timeout 120s ./server/ 2>&1) || true
+func TestPWCDoesntHideLiteral(t *testing.T) {
+	sl := NewSublistWithCache()
+	sub1 := newSub("one.*.six")
+	sl.Insert(sub1)
+	sub2 := newSub("one.two.seven")
+	sl.Insert(sub2)
+
+	// Build stree from subjects
+	stree := NewSubjectTree[int]()
+	stree.Insert([]byte("one.two.six"), 1)
+	stree.Insert([]byte("one.two.seven"), 2)
+
+	r := sl.Intersect(stree)
+	if len(r) != 2 {
+		t.Fatalf("Expected 2 results, got %d (PWC hides literal)", len(r))
+	}
+}
+TESTEOF
+
+# Run the standalone test
+echo "Running test TestPWCDoesntHideLiteral..."
+TEST_OUTPUT=$(go test -v -run "TestPWCDoesntHideLiteral" -count=1 -timeout 120s ./server/gsl/ 2>&1) || true
 TEST_EXIT=$?
 
 echo "$TEST_OUTPUT" | tail -20
@@ -43,10 +63,10 @@ echo "$TEST_OUTPUT" | tail -20
 mv "${TEST_FILE}.bak" "$TEST_FILE"
 
 echo ""
-if echo "$TEST_OUTPUT" | grep -q "^--- PASS:"; then
-    echo "PASS: Bug is fixed — ${TEST_NAME}/PWCDoesntHideLiteral passed"
+if echo "$TEST_OUTPUT" | grep -q "^--- PASS: TestPWCDoesntHideLiteral"; then
+    echo "PASS: Bug is fixed — PWC does not hide literal match"
     exit 0
 else
-    echo "FAIL: Bug is present — ${TEST_NAME}/PWCDoesntHideLiteral failed"
+    echo "FAIL: Bug is present — PWC hides literal match (expected 2 results, got fewer)"
     exit 1
 fi

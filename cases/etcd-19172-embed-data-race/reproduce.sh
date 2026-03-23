@@ -15,24 +15,24 @@ if [ ! -d "$WORK_DIR" ]; then
 fi
 
 # Clean up any leftover etcd processes
-pkill -f "etcd" 2>/dev/null || true
+pkill -f "etcd --name" 2>/dev/null || true
 sleep 1
 
 echo "=== Reproducing etcd-19172-embed-data-race ==="
 
 cleanup() {
-    pkill -f "etcd" 2>/dev/null || true
+    pkill -f "etcd --name" 2>/dev/null || true
 }
 trap cleanup EXIT
 
 echo "Running TestEmbedEtcd with -race up to 10 times..."
 
-cd "$WORK_DIR"
+cd "$WORK_DIR/tests/integration/embed"
 
 RACE_DETECTED=0
 for i in $(seq 1 10); do
     echo "=== Run $i/10 ==="
-    OUTPUT=$(go test -race -run TestEmbedEtcd ./tests/integration/embed/ -count=1 -timeout 120s 2>&1)
+    OUTPUT=$(go test -race -run "^TestEmbedEtcd" -count=1 -timeout 120s 2>&1)
     if echo "$OUTPUT" | grep -q "DATA RACE"; then
         echo "$OUTPUT" | grep -A 20 "DATA RACE" | head -30
         RACE_DETECTED=1

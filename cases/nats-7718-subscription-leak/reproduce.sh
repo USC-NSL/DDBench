@@ -5,7 +5,7 @@ set -uo pipefail
 
 WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/nats-7718-subscription-leak"
 FIX_COMMIT="b72becc443073300e5599d06fa0cde1cd5518589"
-TEST_FILE="server/jetstream_cluster_4_test.go"
+TEST_FILE="server/jetstream_cluster_3_test.go"
 TEST_NAME="TestJetStreamClusterLeakedSubsWithStreamImportOverlappingJetStreamSubs"
 
 export PATH=$PATH:/usr/local/go/bin

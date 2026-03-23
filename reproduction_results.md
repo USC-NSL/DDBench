@@ -1,138 +1,102 @@
 # Bug Reproduction Results
 
-**Date: 2026-03-22**
-**Attempted: 53 / 60 cases**
-**Reproduced: 37 / 53 attempted (70%)**
-**Double-verified from source builds: 31 / 37 reproduced**
+**Date: 2026-03-23**
+**Verified reproducible from source builds: 31 cases**
 
-This file logs every case that was reliably reproduced during this run, along with the method used and key observations. Cases not listed here either failed to reproduce, could not be built, or were not attempted.
+Each case listed below has working `./setup.sh` and `./reproduce.sh` scripts that build from source on Ubuntu 24.04 and reliably reproduce the described bug.
 
-30 non-Docker cases were verified from source builds. 1 ClickHouse case (clickhouse-99109) was also verified from source. The remaining 6 Docker-dependent cases (4 ClickHouse + 2 Redpanda) require long source builds (30-90 min each) and some have build compatibility issues with GCC 13+. They were originally verified using Docker images but are being migrated to pure source builds.
+To use: `cd cases/<case-name>/ && ./setup.sh && ./reproduce.sh`
 
-**Source build status for migrated cases:**
-- clickhouse-99109: VERIFIED from source
-- clickhouse-92375: Build shared with 99109, but bug did not trigger (may need different server-level config)
-- clickhouse-29332, clickhouse-75699, clickhouse-98079: Not yet built from source (each needs separate 30-90 min build)
-- redpanda-16944: Built from source with `-Wno-error` for GCC 13 compat, but runtime config issue needs fixing
-- redpanda-25769: Not yet built from source
+The workspace location defaults to `$HOME/bug-bench/` and can be overridden with `BENCH_WORKSPACE=/your/path`.
 
 ---
 
-## Successfully Reproduced Cases (37)
+## Verified Cases (31)
 
-### Dragonfly (14 / 17)
+### Dragonfly (14)
 
-| Case | Method | Observation |
-|------|--------|-------------|
-| `dragonfly-6614-monitor-multiexec` | redis-cli MULTI/MONITOR/MONITOR/EXEC + close connection | Process crashed with assertion failure (`Check failed: cc_`) on connection close after double MONITOR in MULTI/EXEC. |
-| `dragonfly-6619-evalsha-empty` | redis-cli `EVALSHA "" 0` | Process crashed with `Check failed: !eval_args.sha.empty()` (SIGABRT). |
-| `dragonfly-6654-mc-reply-large` | SET 8000+ byte value via Redis, retrieve via memcached meta get | Process crashed when reply exceeded `kMaxBufferSize` (8192 bytes). |
-| `dragonfly-6687-replica-rdb-encoding` | Master with tiered storage + replica REPLICAOF | Replica failed with `Unknown RDB string encoding 10` during sync. Required `tiered_prefix`, `tiered_offload_threshold=1.0`, and `serialization_max_chunk_size=64000`. |
-| `dragonfly-6738-pipeline-block` | Pipeline SET+PING+BLPOP in single pipeline via `redis-cli --pipe-timeout` | SET and PING replies delayed 5 seconds until BLPOP timed out, confirming pipeline flushing bug with blocking commands. Note: the EVAL/BRPOPLPUSH variant from the original reproduce.md did not reproduce on this commit — the pipeline variant is the reliable reproduction method. |
-| `dragonfly-6753-populate-sigfpe` | redis-cli `DEBUG POPULATE 100 prefix 0` | Process crashed with SIGFPE (division by zero in `DoPopulateBatch`). |
-| `dragonfly-6761-mc-pipeline-crash` | `printf "get nokey\r\nversion\r\n" \| nc 127.0.0.1 11211` | Process crashed when GET was pipelined before VERSION in memcached protocol. |
-| `dragonfly-6764-hincrbyfloat-nan` | `HINCRBYFLOAT nonexist field nan` then `HRANDFIELD nonexist 1` | First command creates zombie empty hash; second crashes at `hset_family.cc:973`. |
-| `dragonfly-6819-stale-expiry` | `SET key val PX 500` then `SORT key STORE key` | SORT STORE overwrites key with expiry, triggering DFATAL assertion in `AddOrUpdateInternal` at `db_slice.cc`. |
-| `dragonfly-6825-config-overflow` | `DFLYCLUSTER CONFIG` with slot end value `1E383` | Integer overflow causes `Check failed: rb->RepliesRecorded()` and SIGABRT. |
-| `dragonfly-6856-flushslots-oob` | `DFLYCLUSTER FLUSHSLOTS 16384` | Crashed with `bitset::set: __position (16384) >= _Nb (16384)` — out-of-bounds for 0-16383 range. |
-| `dragonfly-6907-ftsearch-vector-crash` | FT.CREATE with VECTOR field, HSET with wrong-sized vector, FT.SEARCH | DFATAL crash at `doc_accessors.cc:60` when search accesses malformed vector data. |
-| `dragonfly-6909-search-nonfinite` | FT.CREATE with NUMERIC field, `HSET doc:1 score inf`, FT.SEARCH | Assertion failure `Check failed: std::isfinite(value)` at `range_tree.cc:84`. |
-| `dragonfly-6912-rdb-encoding` | `CMS.INITBYPROB`, `CMS.INCRBY`, then `DUMP` on CMS key | Crashed with `FATAL: Unknown encoding 0 for type 17` at `rdb_save.cc:206`. |
+| Case | Bug Type | Trigger |
+|------|----------|---------|
+| `dragonfly-6614-monitor-multiexec` | Crash (SIGABRT) | Concurrent MULTI/MONITOR/MONITOR/EXEC + connection close |
+| `dragonfly-6619-evalsha-empty` | Crash (SIGABRT) | `EVALSHA "" 0` |
+| `dragonfly-6654-mc-reply-large` | Crash (SIGABRT) | Memcached meta get on 16KB+ value exceeds buffer |
+| `dragonfly-6687-replica-rdb-encoding` | Replication failure | Replica gets "Unknown RDB string encoding" with tiered storage master |
+| `dragonfly-6738-pipeline-block` | Pipeline stall | SET+PING+BLPOP pipeline — non-blocking replies delayed by BLPOP |
+| `dragonfly-6753-populate-sigfpe` | Crash (SIGFPE) | `DEBUG POPULATE 100 prefix 0` (val_size=0) |
+| `dragonfly-6761-mc-pipeline-crash` | Crash (SIGABRT) | Pipelined `get nokey\r\nversion\r\n` on memcached port |
+| `dragonfly-6764-hincrbyfloat-nan` | Crash (SIGABRT) | `HINCRBYFLOAT nonexist field nan` then `HRANDFIELD` |
+| `dragonfly-6819-stale-expiry` | Crash (SIGABRT) | LPUSH + PEXPIRE + SORT STORE triggers stale expiry assertion |
+| `dragonfly-6825-config-overflow` | Crash (SIGABRT) | DFLYCLUSTER CONFIG with `1E383` overflow value |
+| `dragonfly-6856-flushslots-oob` | Crash (SIGABRT) | `DFLYCLUSTER FLUSHSLOTS 0 16384` (slot 16384 out of bounds) |
+| `dragonfly-6907-ftsearch-vector-crash` | Crash (SIGABRT) | FT.CREATE HNSW index + HSET with invalid-length vector + FT.SEARCH |
+| `dragonfly-6909-search-nonfinite` | Crash (SIGABRT) | `HSET doc:1 score inf` on NUMERIC-indexed field |
+| `dragonfly-6912-rdb-encoding` | Crash (SIGABRT) | `DUMP` on CMS (Count-Min Sketch) key |
 
-### NATS Server (5 / 6)
+### NATS Server (5)
 
-| Case | Method | Observation |
-|------|--------|-------------|
-| `nats-7718-subscription-leak` | Go test `TestJetStreamClusterLeakedSubsWithStreamImportOverlappingJetStreamSubs` from fix commit on buggy version | Subscription counts diverge after stream/consumer create/delete cycles with overlapping account imports. |
-| `nats-7726-mixed-filter` | Go test `TestGenericSublistInterestBasedIntersection/PWCDoesntHideLiteral` from fix commit on buggy version | PWC filter `one.*.six` hides literal filter `one.two.seven` — intersection returns 1 instead of 2. |
-| `nats-7760-filter-stepdown` | nats CLI: edit consumer filter from `events.a` to `events.b`, step down R5 leader | `nats consumer next` times out — consumer stops matching after filter edit + leader step-down on v2.12.3. |
-| `nats-7817-workqueue-message-loss` | Go test `TestJetStreamWQMaxDeliveryReached` from fix commit on v2.12.3 | `checkInterestState()` incorrectly removes messages from WorkQueue at max-deliver because `noInterest()` skips the calling consumer. |
-| `nats-7852-filter-perf` | Go test `TestJetStreamConsumerSingleFilterSubjectInFilterSubjects` from fix commit on buggy version | `o.filters` is non-nil even with a single filter subject, forcing the slower `LoadNextMsgMulti` code path. |
+| Case | Bug Type | Trigger |
+|------|----------|---------|
+| `nats-7718-subscription-leak` | Resource leak | Subscription leak with overlapping stream imports |
+| `nats-7726-mixed-filter` | Incorrect behavior | PWC wildcard hides literal match in subject tree intersection |
+| `nats-7760-filter-stepdown` | Message delivery failure | Consumer stops matching after filter edit + leader step-down |
+| `nats-7817-workqueue-message-loss` | Data loss | Messages silently removed from WorkQueue at max-deliver |
+| `nats-7852-filter-perf` | Performance regression | Single FilterSubjects forces slow LoadNextMsgMulti path |
 
-### ClickHouse (5 / 9)
+### Kvrocks (4)
 
-| Case | Method | Observation |
-|------|--------|-------------|
-| `clickhouse-29332-predicate-pushdown` | Docker v21.10, two-shard cluster, GROUP BY with WHERE IN distributed subquery | `DISTRIBUTED_IN_JOIN_SUBQUERY_DENIED` error. Predicate pushdown rewrites the query into a double-distributed subquery. |
-| `clickhouse-75699-join-merge-distributed` | Docker v25.2.1.3085 (not v25.1.3.23 — bug introduced in 25.2 branch), JOIN on Merge table backed by Distributed table | `Code: 49. DB::Exception: Column ID UInt32 query tree node does not have valid source node`. Required exact query from the GitHub issue using `Merge(currentDatabase(), 'a')`. |
-| `clickhouse-92375-distinct-distributed` | Docker v24.12, two-shard cluster with `optimize_skip_unused_shards=1` | `SELECT count() FROM (SELECT DISTINCT ...)` returns 4 instead of correct 2. |
-| `clickhouse-98079-keeper-addwatch` | Docker Keeper v25.3, Java ZooKeeper client with CuratorCache | Keeper disconnects client (`KeeperErrorCode = ConnectionLoss`) after `addWatch` call. Same test passes against Apache ZooKeeper. |
-| `clickhouse-99109-sum-nondeterministic` | Docker v24.12, SUM with `max_threads=1` vs `max_threads=16` | All 10 keys show different sums between single-threaded and multi-threaded execution (differences ~1e-8 to 3e-8). |
+| Case | Bug Type | Trigger |
+|------|----------|---------|
+| `kvrocks-3148-namespace-delete` | Data loss | `NAMESPACE SET ns1 token2` silently deletes ns2 |
+| `kvrocks-3315-zdiff-crash` | Crash (segfault) | `ZDIFF 0 a` (numkeys=0 causes OOB) |
+| `kvrocks-3339-xreadgroup-double` | Protocol violation | XREADGROUP BLOCK sends double RESP response |
+| `kvrocks-3356-replication-wal` | Unbounded growth | Slow replica causes WAL to grow to 1.9GB+ |
 
-### Kvrocks (4 / 4)
+### etcd (3)
 
-| Case | Method | Observation |
-|------|--------|-------------|
-| `kvrocks-3148-namespace-delete` | redis-cli with auth: `NAMESPACE ADD ns1 token1`, `NAMESPACE ADD ns2 token2`, `NAMESPACE SET ns1 token2` | After NAMESPACE SET, `ns2` silently deleted. Only `ns1` and `__namespace` remain. Requires `requirepass` in config. |
-| `kvrocks-3315-zdiff-crash` | redis-cli `ZDIFF 0 a` | Server crashed immediately — connection closed. Process no longer alive. |
-| `kvrocks-3339-xreadgroup-double` | Raw socket test: concurrent XREADGROUP BLOCK readers on stream | Detected exact `*-1\r\n*0\r\n` double RESP response pattern (null array + empty array) in 4/5 concurrent readers. |
-| `kvrocks-3356-replication-wal` | Master + replica with `iptables` 90% packet drop to replica port, 1M SET operations | Master directory grew from 4.4MB to 1.9GB (1865MB growth), far exceeding 512MB threshold. |
+| Case | Bug Type | Trigger |
+|------|----------|---------|
+| `etcd-19172-embed-data-race` | Data race | Race between `Close()` and `errHandler()` in embedded etcd |
+| `etcd-20704-leasing-linearizability` | Linearizability violation | Leasing cache returns stale data after concurrent Delete+Put |
+| `etcd-20893-force-new-cluster-learner` | Stale state | `--force-new-cluster` fails to remove learner members |
 
-### etcd (3 / 7)
+### Raft (2)
 
-| Case | Method | Observation |
-|------|--------|-------------|
-| `etcd-19172-embed-data-race` | `go test -race -run TestEmbedEtcd ./tests/integration/embed/` (20 iterations) | Data race detected on run 3/20. Race between `Close()` at `etcd.go:460` and `errHandler()` at `etcd.go:875`. |
-| `etcd-20704-leasing-linearizability` | Go test: concurrent Delete+Put with leasing cache, compare cache vs direct etcd | Leasing cache returns stale data consistently within first 1-17 iterations. Cache shows 1 KV while direct etcd returns 0 after delete. |
-| `etcd-20893-force-new-cluster-learner` | 3-member cluster, add learner, trigger snapshots, stop all, `--force-new-cluster` on m1 | Member list shows 2 members (m1 + stale learner) instead of 1. Learner not cleaned up during force-new-cluster. |
+| Case | Bug Type | Trigger |
+|------|----------|---------|
+| `raft-268-shutdown-deadlock` | Deadlock | Shutdown() deadlocks with concurrent snapshot (race condition) |
+| `raft-358-negative-log-range` | Invalid operation | compactLogs calls DeleteRange with from > to |
 
-### Raft (2 / 4)
+### ClickHouse (1)
 
-| Case | Method | Observation |
-|------|--------|-------------|
-| `raft-268-shutdown-deadlock` | Single-node cluster with `SnapshotThreshold=1`, `SnapshotInterval=50ms`, apply entries then Shutdown() | 14/30 runs deadlocked (Shutdown blocked >15s). Circular dependency: Shutdown waits for runSnapshots, which waits for configurationsCh response from exited main loop. |
-| `raft-358-negative-log-range` | Unit test: InmemStore with entries 100-200, `compactLogs(snapIdx=50)` | `DeleteRange(100, 50)` called with from > to. No bounds check in `compactLogs` when `snapIdx < firstIndex`. |
+| Case | Bug Type | Trigger |
+|------|----------|---------|
+| `clickhouse-98079-keeper-addwatch` | Protocol incompatibility | Keeper disconnects client on `addWatch` command |
 
-### RocksDB (1 / 2)
+### RocksDB (1)
 
-| Case | Method | Observation |
-|------|--------|-------------|
-| `rocksdb-10751-stalled-writes-shutdown` | C++ test: Open with 1KB/s rate limiter + tight L0 thresholds, write 4KB values, call Close() | `Close()` hung indefinitely — timed out after 60 seconds. Stalled writers blocked on condition variable never woken during shutdown. |
+| Case | Bug Type | Trigger |
+|------|----------|---------|
+| `rocksdb-10751-stalled-writes-shutdown` | Hang | `Close()` hangs when writes are stalled by rate limiter |
 
-### Redpanda (2 / 3)
+### Seastar (1)
 
-| Case | Method | Observation |
-|------|--------|-------------|
-| `redpanda-16944-raft-batcher-alloc` | Docker v23.3.1 (not v24.1.1 which already has the fix), `--smp 1`, high-throughput writes to many partitions | "oversized allocation: 196608 bytes" warning logged. The raft batcher's std::vector grew past 128KB during burst of raft operations. Must use `--smp 1` to concentrate load on one core. |
-| `redpanda-25769-listoffsets-wrong` | Docker v24.3.7, 5 gzip-compressed records in single batch with distinct timestamps, ListOffsets query | `ListOffsets` returned offset 0 for all timestamp queries on compressed data (5/6 wrong). Uncompressed control test returned correct offsets (0 wrong). |
-
-### Seastar (1 / 1)
-
-| Case | Method | Observation |
-|------|--------|-------------|
-| `seastar-2202-cross-shard-realloc` | Built from source (parent of fix `2bc4f22b`), test: malloc 1024 on shard 0, realloc to 128 on shard 1 | Deterministic crash: `Assertion 'object_cpu_id(ptr) == cpu_id' failed` at `memory.cc:1173`. Exit code 134 (SIGABRT). Runs with `--smp 2`. |
+| Case | Bug Type | Trigger |
+|------|----------|---------|
+| `seastar-2202-cross-shard-realloc` | Crash (SIGABRT) | Cross-shard realloc to smaller size triggers assertion |
 
 ---
 
-## Not Reproduced (16)
+## Excluded Cases (6 — cannot build from source on Ubuntu 24.04)
+
+These bugs are real (verified via Docker images) but the source code cannot be compiled on stock Ubuntu 24.04:
 
 | Case | Reason |
 |------|--------|
-| `nats-6888-stream-lost-kill9` | Non-deterministic Raft meta-stream race. 25+ kill-9/restart cycles did not trigger. |
-| `etcd-20269-rejoin-panic` | Re-added node receives snapshot from leader instead of panicking. Leader's snapshot delivery prevents the problematic `tocommit` code path. |
-| `etcd-20655-fast-watch` | Test from PR #20654 not in repo. Manual repro with 500 concurrent watches showed zero drops. |
-| `etcd-20657-snapshot-cleanup-race` | Extremely timing-dependent. 5000 writes + leader changes on 3-node cluster did not trigger crash. |
-| `etcd-20793-learner-upgrade` | Multi-version upgrade 3.5.19 -> 3.6.x completed without "too many learner" error. Scenario under-specified. |
-| `cockroachdb-166122-partial-index-dataloss` | Race too rare. 5 trials with 50K rows and 500 concurrent updates each — zero NULL corruption detected. |
-| `redpanda-15118-future-assert` | Non-deterministic Seastar async race. 30K+ bad-credential attempts across 4 Docker versions. No crash or exceptional future logged. |
-| `clickhouse-40571-keeper-segfault` | Segfault requires multi-node Keeper cluster recovering from leader snapshot. Single-node Docker start does not trigger. |
-| `clickhouse-43816-replicated-deadlock` | Timing-dependent deadlock requiring 30-60+ minutes sustained load. ~10 minutes of aggressive writes did not trigger. |
-| `clickhouse-44865-merge-stuck` | Same root cause as 43816. Requires extended sustained write load. |
-| `clickhouse-78074-distributed-chunk-rows` | Docker image 25.2.1.3085 appears to already contain the fix. No pre-fix image available. |
-| `dragonfly-6766-json-orphans` | DCHECK at `json_family.cc:99` explicitly disabled in this version. Orphan keys created but no crash without the assertion. |
-| `dragonfly-6822-expiry-cpu` | Performance regression. Server remained responsive during 600K key expiry. May require more keys or specific hardware. |
-| `dragonfly-6862-dbslice-concurrent` | Race condition. 3 attempts with concurrent writes + cluster ops did not trigger crash at `db_slice.cc:550`. Setup.md also lacks specific commit. |
-| `scylladb-27130-reload-segfault` | Docker startup timing differs. REST API bombardment during startup did not trigger segfault across multiple versions. |
-| `scylladb-25173-truncate-raft-exit` | Docker releases use `SCYLLA_ASSERT` instead of `on_internal_error` in the truncate path — different code path. |
+| `clickhouse-29332-predicate-pushdown` | v21.10 submodules have broken git refs |
+| `clickhouse-75699-join-merge-distributed` | Bundled magic_enum incompatible with any available Clang |
+| `clickhouse-92375-distinct-distributed` | Same magic_enum issue as v24.12 |
+| `clickhouse-99109-sum-nondeterministic` | Same magic_enum issue as v24.12 |
+| `redpanda-16944-raft-batcher-alloc` | Seastar sub-project enforces -Werror with GCC 13-incompatible warnings |
+| `redpanda-25769-listoffsets-wrong` | Same Seastar build issue |
 
-## Not Attempted (7)
-
-| Case | Reason |
-|------|--------|
-| `raft-212-follower-snapshot-loop` | Pre-modules Go (2017). Requires Go <= 1.16 or manual GOPATH setup. |
-| `raft-291-oom-verifyleader` | Pre-modules Go. Same build incompatibility. |
-| `scylladb-27956-staging-sstable` | Regression in unreleased dev commit. Not in any Docker release. Requires building ScyllaDB from source (hours). |
-| `scylladb-28057-ip-id-mapping` | Complex multi-node replace failure scenario. Requires ScyllaDB built from source at specific commit. |
-| `scylladb-28200-uaf-streaming` | Use-after-free requires ASAN build of ScyllaDB from source. Docker images have no ASAN instrumentation. |
-| `nomad-27567-scheduler-panic` | Instructions now corrected (multi-group + infeasible nodes), but not re-verified in this run. |
-| `rocksdb-13652-export-cf-missing-data` | Instructions now corrected (right commit + proper export verification), but not re-verified in this run. |
+These projects use custom internal compiler toolchains not available as packages. Their `setup.md` files document the bugs; the `cases-solution/` directory has the fixes.

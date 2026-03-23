@@ -41,16 +41,23 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     exit 1
 fi
 
-# Trigger the bug: SET with short expiry, then SORT STORE to overwrite
-echo "Sending: SET key val PX 500"
-redis-cli -p "$PORT" SET key val PX 500 2>/dev/null || true
+# Trigger the bug: LPUSH a list with short expiry, then SORT STORE to overwrite
+echo "Sending: LPUSH mylist 3 2 1"
+redis-cli -p "$PORT" LPUSH mylist 3 2 1 2>/dev/null || true
 
-echo "Sending: SORT key STORE key"
-redis-cli -p "$PORT" SORT key STORE key 2>/dev/null || true
+echo "Sending: PEXPIRE mylist 500"
+redis-cli -p "$PORT" PEXPIRE mylist 500 2>/dev/null || true
+
+echo "Sending: SORT mylist STORE mylist"
+redis-cli -p "$PORT" SORT mylist STORE mylist 2>/dev/null || true
 
 # Wait for the original expiry to fire
 echo "Waiting for stale expiry to fire..."
-sleep 3
+sleep 1
+
+echo "Sending: PING"
+redis-cli -p "$PORT" PING 2>/dev/null || true
+sleep 2
 
 # Check if process crashed
 if kill -0 "$SERVER_PID" 2>/dev/null; then

@@ -43,11 +43,14 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     exit 1
 fi
 
-# Trigger the bug: DFLYCLUSTER CONFIG with overflow value
-# The config JSON contains slot range values that overflow during parsing
-echo "Sending: DFLYCLUSTER CONFIG with overflow value"
-OVERFLOW_CONFIG='[{"slot_ranges":[{"start":0,"end":99999999999999999}],"master":{"id":"'$NODE_ID'","ip":"127.0.0.1","port":'$PORT'},"replicas":[]}]'
+# Trigger the bug: DFLYCLUSTER CONFIG with overflow value (scientific notation)
+# Using 1E383 bypasses JSON integer validation but overflows during parsing
+echo "Sending: DFLYCLUSTER CONFIG with overflow value (1E383)"
+OVERFLOW_CONFIG='[{"slot_ranges":[{"start":0,"end":1E383}],"master":{"id":"'$NODE_ID'","ip":"127.0.0.1","port":'$PORT'},"replicas":[]}]'
 redis-cli -p "$PORT" DFLYCLUSTER CONFIG "$OVERFLOW_CONFIG" 2>/dev/null || true
+sleep 1
+# Send a follow-up command to trigger the assertion (the crash often happens on the next command after the overflow)
+redis-cli -p "$PORT" CLUSTER MYID 2>/dev/null || true
 sleep 1
 
 # Check if process crashed

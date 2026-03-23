@@ -55,7 +55,7 @@ fi
 
 # Create test program
 echo "Creating test program..."
-cat > "$WORK_DIR/test_stall_shutdown.cc" <<'CPPEOF'
+cat > "$WORK_DIR/test_stall_shutdown.cc" <<CPPEOF
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <rocksdb/rate_limiter.h>
@@ -74,7 +74,7 @@ int main() {
     options.level0_stop_writes_trigger = 4;
 
     rocksdb::DB* db;
-    auto s = rocksdb::DB::Open(options, "$WORK_DIR/rocksdb-10751-stalled-writes-shutdown/testdb", &db);
+    auto s = rocksdb::DB::Open(options, "/tmp/rocksdb_stall_test_db", &db);
     if (!s.ok()) {
         std::cerr << "Failed to open: " << s.ToString() << std::endl;
         return 1;

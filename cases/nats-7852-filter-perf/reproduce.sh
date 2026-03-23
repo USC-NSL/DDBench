@@ -5,7 +5,7 @@ set -uo pipefail
 
 WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/nats-7852-filter-perf"
 FIX_COMMIT="66e9bbc7f8684dd1b31c54ef686924e0841f9846"
-TEST_FILE="server/jetstream_test.go"
+TEST_FILE="server/jetstream_consumer_test.go"
 TEST_NAME="TestJetStreamConsumerSingleFilterSubjectInFilterSubjects"
 
 export PATH=$PATH:/usr/local/go/bin

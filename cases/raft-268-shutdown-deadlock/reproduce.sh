@@ -22,10 +22,10 @@ cleanup() {
 trap cleanup EXIT
 
 FAILURES=0
-TOTAL=20
+TOTAL=50
 
 for i in $(seq 1 $TOTAL); do
-    timeout 20 "$BINARY" > /dev/null 2>&1
+    timeout 15 "$BINARY" > /dev/null 2>&1
     EXIT_CODE=$?
     if [ $EXIT_CODE -ne 0 ]; then
         FAILURES=$((FAILURES + 1))

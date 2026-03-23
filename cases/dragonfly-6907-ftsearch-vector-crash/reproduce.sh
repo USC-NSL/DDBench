@@ -51,11 +51,12 @@ r = redis.Redis(host='127.0.0.1', port=$PORT)
 
 # Create index expecting 4-dim FLOAT32 vector (16 bytes)
 r.execute_command('FT.CREATE', 'idx', 'ON', 'HASH', 'PREFIX', '1', 'doc:',
-                  'SCHEMA', 'vec', 'VECTOR', 'FLAT', '6',
+                  'SCHEMA', 'vec', 'VECTOR', 'HNSW', '6',
                   'TYPE', 'FLOAT32', 'DIM', '4', 'DISTANCE_METRIC', 'L2')
 
-# Insert doc with wrong size: 2 dims (8 bytes) instead of 4 dims (16 bytes)
-wrong_vec = struct.pack('ff', 1.0, 2.0)
+# Insert doc with invalid size: 5 bytes (not a multiple of sizeof(float))
+# This triggers DFATAL in BytesToFtVectorSafe because it can't parse as floats
+wrong_vec = b'\x01\x02\x03\x04\x05'
 r.hset('doc:1', 'vec', wrong_vec)
 
 # Search triggers the crash

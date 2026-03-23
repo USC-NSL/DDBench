@@ -10,7 +10,7 @@ CASE_NAME="clickhouse-98079-keeper-addwatch"
 WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/${CASE_NAME}"
 SOURCE_REPO="https://github.com/ClickHouse/ClickHouse.git"
 SOURCE_COMMIT="3515972fbc064f7b62c963c8e25969053a6a38c2~1"
-CLICKHOUSE_BIN="$WORK_DIR/src/build/programs/clickhouse-keeper"
+CLICKHOUSE_BIN="$WORK_DIR/src/build/programs/clickhouse"
 ZK_VERSION="3.8.4"
 ZK_URL="https://archive.apache.org/dist/zookeeper/zookeeper-${ZK_VERSION}/apache-zookeeper-${ZK_VERSION}-bin.tar.gz"
 
@@ -24,7 +24,7 @@ echo ""
 echo "Installing build dependencies..."
 sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    build-essential cmake ninja-build clang lld git
+    build-essential cmake ninja-build clang lld git lsb-release wget
 
 # Java is needed for zkCli.sh
 if ! command -v java &>/dev/null; then
@@ -64,14 +64,32 @@ else
     echo "Start time: $(date)"
     cd "$WORK_DIR/src"
 
-    # Patch cmake/tools.cmake to lower the minimum Clang version from 21 to 18
-    # (Clang 21 doesn't exist as an apt package)
-    sed -i 's/set (CLANG_MINIMUM_VERSION 21)/set (CLANG_MINIMUM_VERSION 18)/' cmake/tools.cmake
+    # This commit requires Clang 21+. Install clang-23 from LLVM nightly and
+    # patch the minimum version check. Also disable -Werror (Clang 23 has new
+    # warnings that this codebase hasn't been updated for).
+    if ! command -v clang++-23 &>/dev/null; then
+        echo "Installing Clang 23 from LLVM nightly repository..."
+        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc >/dev/null
+        echo "deb http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/llvm.list >/dev/null
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y clang-23 lld-23
+    fi
+
+    # Install Rust nightly toolchain required by ClickHouse's corrosion-cmake
+    REQUIRED_RUST_NIGHTLY=$(grep -oP 'nightly-\d{4}-\d{2}-\d{2}' cmake/tools.cmake 2>/dev/null || grep -oP 'nightly-\d{4}-\d{2}-\d{2}' contrib/corrosion-cmake/CMakeLists.txt 2>/dev/null || echo "")
+    if [ -n "$REQUIRED_RUST_NIGHTLY" ] && ! rustup toolchain list | grep -q "$REQUIRED_RUST_NIGHTLY"; then
+        echo "Installing required Rust toolchain: $REQUIRED_RUST_NIGHTLY"
+        rustup toolchain install "$REQUIRED_RUST_NIGHTLY"
+    fi
+
+    # Patch minimum Clang version to accept 23
+    sed -i 's/set (CLANG_MINIMUM_VERSION [0-9]*)/set (CLANG_MINIMUM_VERSION 23)/' cmake/tools.cmake
 
     mkdir -p build && cd build
     cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=OFF -DENABLE_UTILS=OFF \
-        -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang
-    ninja clickhouse-keeper
+        -DCMAKE_CXX_COMPILER=clang++-23 -DCMAKE_C_COMPILER=clang-23 \
+        -DWERROR=OFF
+    ninja -j$(nproc) programs/clickhouse
     echo "Build complete at: $(date)"
     echo "Binary at: $CLICKHOUSE_BIN"
 fi

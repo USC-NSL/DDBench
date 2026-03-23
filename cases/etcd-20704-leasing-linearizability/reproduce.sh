@@ -9,7 +9,7 @@ WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/etcd-20704-leasing-linearizability
 BINARY="$WORK_DIR/bin/etcd"
 DATA_DIR="$WORK_DIR/etcd-20704-data"
 PORT=2379
-TEST_FILE="$WORK_DIR/etcd-20704-leasing-linearizability/leasing_bug_test.go"
+TEST_FILE="$WORK_DIR/leasing_bug.go"
 
 export PATH="$PATH:/usr/local/go/bin"
 
@@ -72,10 +72,13 @@ func main() {
 	}
 	defer cli.Close()
 
-	lkv, err := leasing.NewKV(cli, "leasing-test/")
+	lkv, closeFn, err := leasing.NewKV(cli, "leasing-test/")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create leasing KV: %v\n", err)
 		os.Exit(2)
+	}
+	if closeFn != nil {
+		defer closeFn()
 	}
 
 	ctx := context.Background()

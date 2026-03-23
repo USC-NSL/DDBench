@@ -37,10 +37,14 @@ git checkout $BUGGY_COMMIT 2>/dev/null || git checkout $(git rev-parse $BUGGY_CO
 git submodule update --init --recursive
 
 # Build (Release build required for this case)
+# Note: blaze.sh always creates a build-dbg directory regardless of CMAKE_BUILD_TYPE.
+# We symlink build-opt -> build-dbg so the reproduce script can find the binary.
 if [ ! -f "$WORK_DIR/build-opt/dragonfly" ]; then
     echo "Building Release (this may take several minutes)..."
     ./helio/blaze.sh -DCMAKE_BUILD_TYPE=Release -DWITH_AWS=OFF
-    cd build-opt && ninja dragonfly
+    cd build-dbg && ninja dragonfly
+    cd "$WORK_DIR"
+    [ ! -e build-opt ] && ln -s build-dbg build-opt
 else
     echo "Binary already exists, skipping build."
 fi

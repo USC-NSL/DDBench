@@ -6,7 +6,7 @@ set -uo pipefail
 
 CASE_NAME="clickhouse-98079-keeper-addwatch"
 WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/${CASE_NAME}"
-KEEPER="$WORK_DIR/src/build/programs/clickhouse-keeper"
+KEEPER="$WORK_DIR/src/build/programs/clickhouse"
 ZK_CLI="$WORK_DIR/tools/apache-zookeeper-3.8.4-bin/bin/zkCli.sh"
 
 echo "=== Reproducing ${CASE_NAME} ==="
@@ -46,7 +46,7 @@ mkdir -p "$WORK_DIR/logs"
 
 # ── Start Keeper ──
 echo "Starting ClickHouse Keeper..."
-"$KEEPER" \
+"$KEEPER" keeper \
     --config-file="$WORK_DIR/conf/keeper_config.xml" \
     &>"$WORK_DIR/logs/keeper.log" 2>&1 &
 PID_KEEPER=$!

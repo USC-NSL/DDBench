@@ -63,13 +63,13 @@ using namespace seastar;
 int main(int argc, char** argv) {
     app_template app;
     return app.run(argc, argv, [] {
-        return smp::invoke_on(0, [] {
+        return smp::submit_to(0, [] {
             // Allocate 1024 bytes on shard 0
             void* ptr = malloc(1024);
             memset(ptr, 'A', 1024);
             return reinterpret_cast<uintptr_t>(ptr);
         }).then([](uintptr_t addr) {
-            return smp::invoke_on(1, [addr] {
+            return smp::submit_to(1, [addr] {
                 void* ptr = reinterpret_cast<void*>(addr);
                 // Realloc to SMALLER size on shard 1 => assertion crash
                 void* new_ptr = realloc(ptr, 128);

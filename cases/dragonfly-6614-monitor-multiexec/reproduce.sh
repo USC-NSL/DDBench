@@ -41,9 +41,28 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     exit 1
 fi
 
-# Trigger the bug: MULTI, MONITOR, MONITOR, EXEC in pipeline, then close and send another command
-echo "Sending: MULTI + MONITOR + MONITOR + EXEC pipeline"
-printf "*1\r\n\$5\r\nMULTI\r\n*1\r\n\$7\r\nMONITOR\r\n*1\r\n\$7\r\nMONITOR\r\n*1\r\n\$4\r\nEXEC\r\n" | nc -q 1 127.0.0.1 "$PORT" >/dev/null 2>&1 || true
+# Trigger the bug: MULTI, MONITOR, MONITOR, EXEC in pipeline with concurrent connections
+echo "Sending: 100 rounds of 10 concurrent MULTI+MONITOR+EXEC pipelines"
+python3 -c "
+import socket, threading, time
+
+def attempt(port):
+    try:
+        s = socket.socket()
+        s.settimeout(2)
+        s.connect(('127.0.0.1', port))
+        s.sendall(b'*1\r\n\$5\r\nMULTI\r\n*1\r\n\$7\r\nMONITOR\r\n*1\r\n\$7\r\nMONITOR\r\n*1\r\n\$4\r\nEXEC\r\n')
+        time.sleep(0.1)
+        s.close()
+    except:
+        pass
+
+PORT = $PORT
+for _ in range(100):
+    threads = [threading.Thread(target=attempt, args=(PORT,)) for _ in range(10)]
+    for t in threads: t.start()
+    for t in threads: t.join()
+" 2>/dev/null || true
 sleep 1
 
 # Send another command to trigger the crash on the closed connection

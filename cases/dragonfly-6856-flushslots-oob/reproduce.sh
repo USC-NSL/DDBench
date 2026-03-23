@@ -44,8 +44,8 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
 fi
 
 # Trigger the bug: DFLYCLUSTER FLUSHSLOTS with out-of-range slot ID
-echo "Sending: DFLYCLUSTER FLUSHSLOTS 16384"
-redis-cli -p "$PORT" DFLYCLUSTER FLUSHSLOTS 16384 2>/dev/null || true
+echo "Sending: DFLYCLUSTER FLUSHSLOTS 0 16384"
+redis-cli -p "$PORT" DFLYCLUSTER FLUSHSLOTS 0 16384 2>/dev/null || true
 sleep 1
 
 # Check if process crashed

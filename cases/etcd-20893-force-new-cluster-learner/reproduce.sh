@@ -75,7 +75,7 @@ M2_PID=$!
   --snapshot-count=2 &>/dev/null &
 M3_PID=$!
 
-sleep 5
+sleep 15
 
 # Verify cluster is healthy
 if ! "$ETCDCTL" --endpoints=http://127.0.0.1:12379 endpoint health &>/dev/null; then
@@ -86,11 +86,18 @@ if ! "$ETCDCTL" --endpoints=http://127.0.0.1:12379 endpoint health &>/dev/null; 
     exit 1
 fi
 
-# Step 2: Add a learner member
+# Step 2: Add a learner member (with retry loop)
 echo "Adding learner member..."
-"$ETCDCTL" --endpoints=http://127.0.0.1:12379 member add learner1 \
-  --peer-urls=http://127.0.0.1:12386 \
-  --learner
+for attempt in $(seq 1 10); do
+    if "$ETCDCTL" --endpoints=http://127.0.0.1:12379 member add learner1 \
+      --peer-urls=http://127.0.0.1:12386 \
+      --learner 2>/dev/null; then
+        echo "Learner added on attempt $attempt"
+        break
+    fi
+    echo "Attempt $attempt failed, retrying in 3s..."
+    sleep 3
+done
 
 # Step 3: Write enough keys to trigger a snapshot
 echo "Writing keys to trigger snapshot..."

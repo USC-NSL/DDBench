@@ -20,6 +20,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Set LD_LIBRARY_PATH for Seastar shared libraries
+export LD_LIBRARY_PATH="$WORK_DIR/build/dev:$WORK_DIR/build/dev/_cooking/stow/fmt/lib:$WORK_DIR/build/dev/_cooking/installed/lib:${LD_LIBRARY_PATH:-}"
+
 # Run with 2 shards to enable cross-shard allocation
 "$BINARY" --smp 2 2>&1
 EXIT_CODE=$?
