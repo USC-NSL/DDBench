@@ -1,8 +1,7 @@
 # Symptom
 
 Sending the command `ZDIFF 0 a` (where numkeys=0) to Kvrocks causes the
-server process to crash. The crash is due to an out-of-bounds array access
-when the number of keys is zero.
+server process to crash.
 
 ## Observable behavior
 - The kvrocks process terminates abruptly.

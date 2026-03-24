@@ -5,4 +5,6 @@ Using the `DUMP` command on a key that holds a CMS (Count-Min Sketch) data struc
 FATAL: Unknown encoding 0 for type 17
 ```
 
-The crash occurs in `rdb_save.cc:206` because the `RdbObjectType` serialization function does not handle the CMS type (type 17). Any operation that triggers RDB serialization of a CMS key (DUMP, BGSAVE, replication) will crash.
+## Observable behavior
+- Any operation that triggers RDB serialization of a CMS key (DUMP, BGSAVE, replication) crashes the process.
+- The error message references an unknown encoding for an unrecognized type.

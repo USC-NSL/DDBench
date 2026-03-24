@@ -1,13 +1,9 @@
 # Symptom
 
 When running Dragonfly in cluster mode, sending a `DFLYCLUSTER CONFIG` command
-with values that cause integer overflow during parsing results in an assertion
-failure and process crash.
+with very large integer values causes the process to crash.
 
 ## Observable behavior
-- The Dragonfly process crashes with:
-  ```
-  Check failed: rb->RepliesRecorded() > replies_recorded_ (0 vs. 0) DFLYCLUSTER
-  ```
-- The crash occurs in `main_service.cc` in the `ReplyGuard` destructor.
-- The process exits with SIGABRT.
+- The Dragonfly process terminates with SIGABRT.
+- The crash is triggered by a single cluster configuration command with extreme values.
+- Any connected clients are disconnected.

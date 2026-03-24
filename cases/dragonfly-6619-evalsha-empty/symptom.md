@@ -1,7 +1,7 @@
 # Symptom
 
-Sending `EVALSHA "" 0` (empty SHA) to Dragonfly causes an assertion failure:
-```
-Check failed: !eval_args.sha.empty()
-```
-The process crashes with SIGABRT.
+Sending `EVALSHA "" 0` (an EVALSHA command with an empty SHA string) to Dragonfly causes the process to crash with SIGABRT.
+
+## Observable behavior
+- The crash is immediate upon receiving the command.
+- Any connected clients are disconnected.

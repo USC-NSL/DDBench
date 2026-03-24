@@ -1,5 +1,7 @@
 # Symptom
 
-A data race is detected between `Etcd.Close()` and `Etcd.errHandler()` when running the embedded etcd integration tests with the race detector enabled. The race occurs on an unsynchronized field access: one goroutine writes the field in `Close()` while another goroutine reads it in `errHandler()`.
+A data race is detected when running the embedded etcd integration tests with the Go race detector enabled.
 
-The test `TestEmbedEtcd` in `tests/integration/embed/` fails intermittently with a `WARNING: DATA RACE` message when run with `-race`.
+## Observable behavior
+- The test `TestEmbedEtcd` in `tests/integration/embed/` fails intermittently with a `WARNING: DATA RACE` message when run with `-race`.
+- The race involves concurrent access to a shared field during shutdown.
