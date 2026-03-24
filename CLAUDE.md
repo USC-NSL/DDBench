@@ -8,8 +8,11 @@ A benchmark suite of 31 verified real-world bug cases from open-source distribut
 
 ## Repository structure
 
-- `bench.sh` — Central orchestrator (setup, reproduce, shell, reset, clean)
+- `bench.sh` — Central orchestrator (setup, reproduce, shell, agent, reset, clean)
 - `docker/` — Layered Dockerfiles (base-cpp, base-go → per-project images)
+- `addons/` — Runtime tool injection scripts (AI agents, debuggers, profilers)
+  - `addons/examples/` — Shipped addon scripts (claude-code, aider, codex, gdb-dashboard, rr)
+  - `addons/*.sh` — User custom addon scripts (gitignored)
 - `.devcontainer/` — Per-case VS Code devcontainer configs (31 total)
 - `cases/<project>-<issue#>-<slug>/` — Bug case files
   - `case.yaml` — Declarative metadata (project, commit, build cmd, Docker caps)
@@ -25,15 +28,35 @@ A benchmark suite of 31 verified real-world bug cases from open-source distribut
 ## Working with cases (Docker, recommended)
 
 ```bash
-./bench.sh setup <case-name>       # build image, clone, checkout, compile
-./bench.sh reproduce <case-name>   # run reproduce.sh in container → PASS/FAIL
-./bench.sh shell <case-name>       # interactive shell (gdb, source, tools)
-./bench.sh reset <case-name>       # revert source to original buggy commit
-./bench.sh clean <case-name>       # remove worktree for this case
-./bench.sh clean-all               # remove all Docker artifacts
+./bench.sh setup <case-name>                    # build image, clone, checkout, compile
+./bench.sh reproduce <case-name>                # run reproduce.sh in container → PASS/FAIL
+./bench.sh shell <case-name> [--addon <name>]   # interactive shell (with optional addons)
+./bench.sh agent <case-name> --addon <name>     # launch AI agent inside container
+./bench.sh reset <case-name>                    # revert source to original buggy commit
+./bench.sh clean <case-name>                    # remove worktree for this case
+./bench.sh clean-all                            # remove all Docker artifacts
 ```
 
 Same-project cases share a single git clone via Docker volumes.
+
+### Working with addons
+
+Addons inject tools (AI agents, debuggers) into containers at runtime without modifying base images. Installed tools are cached in a persistent Docker volume (`bug-bench-tools`).
+
+```bash
+# Launch Claude Code against a bug case
+./bench.sh agent <case-name> --addon claude-code
+
+# Shell with multiple tools
+./bench.sh shell <case-name> --addon claude-code --addon custom-gdb-dashboard
+
+# Non-interactive agent with prompt
+./bench.sh agent <case-name> --addon aider --prompt "Read SYMPTOM.md and fix the bug"
+```
+
+Available addons: `claude-code`, `aider`, `codex`, `custom-gdb-dashboard`, `rr-debugger`. See `addons/README.md` for writing custom addons.
+
+API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) are forwarded from host. Agent configs (`~/.claude/`) mounted read-only.
 
 ### Container mount layout
 

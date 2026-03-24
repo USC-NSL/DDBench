@@ -60,6 +60,29 @@ bash /bench/reproduce.sh                            # reproduce the bug
 cd build-dbg && ninja dragonfly                     # rebuild after editing (Dragonfly example)
 ```
 
+### Agent Workflow
+
+Run AI coding agents (Claude Code, Aider, Codex, etc.) inside containers to diagnose and fix bugs. Agents are injected at runtime via **addons** — no Docker image changes needed.
+
+```bash
+# 1. Set up the case first (as usual)
+./bench.sh setup dragonfly-6856-flushslots-oob
+
+# 2a. Launch Claude Code inside the container
+./bench.sh agent dragonfly-6856-flushslots-oob --addon claude-code
+
+# 2b. Or launch Aider with a prompt
+./bench.sh agent dragonfly-6856-flushslots-oob --addon aider \
+    --prompt "Read SYMPTOM.md. Diagnose and fix. Run bash /bench/reproduce.sh to verify."
+
+# 2c. Or just get a shell with tools pre-installed
+./bench.sh shell dragonfly-6856-flushslots-oob --addon claude-code --addon custom-gdb-dashboard
+```
+
+API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) are forwarded from your host environment. Agent configs (`~/.claude/`) are mounted read-only.
+
+First run installs the tool (~1-3 min). Subsequent runs are instant (cached in a persistent Docker volume). See [`addons/README.md`](addons/README.md) for writing custom addons.
+
 ### Host-Only Workflow (no Docker)
 
 If Docker is not available, the scripts fall back to building directly on the host:
@@ -98,7 +121,8 @@ cases/<project>-<issue#>-<slug>/
 |---------|-------------|
 | `bench.sh setup <case>` | Build Docker image, clone repo, checkout buggy commit, compile |
 | `bench.sh reproduce <case>` | Run reproduce.sh inside container, prints PASS/FAIL |
-| `bench.sh shell <case>` | Interactive shell inside container (gdb, source, tools) |
+| `bench.sh shell <case> [--addon <name>]` | Interactive shell, optionally with tool addons |
+| `bench.sh agent <case> --addon <name>` | Launch an AI agent inside the container |
 | `bench.sh reset <case>` | Revert all source changes to original buggy commit |
 | `bench.sh clean <case>` | Remove worktree for a case |
 | `bench.sh clean-all` | Remove all Docker volumes, images, and artifacts |
@@ -139,6 +163,14 @@ See [`index.md`](index.md) for the full list with links and descriptions.
 │   ├── etcd.Dockerfile                # base-go
 │   ├── nats.Dockerfile                # base-go
 │   └── raft.Dockerfile                # base-go
+├── addons/                            # Runtime tool injection (agents, debuggers)
+│   ├── README.md                      # Addon authoring guide
+│   └── examples/                      # Shipped addon scripts
+│       ├── claude-code.sh             # Claude Code CLI
+│       ├── aider.sh                   # Aider AI assistant
+│       ├── codex.sh                   # OpenAI Codex CLI
+│       ├── custom-gdb-dashboard.sh    # GDB Dashboard UI
+│       └── rr-debugger.sh            # Mozilla rr (record & replay)
 ├── .devcontainer/                     # VS Code devcontainer configs (one per case)
 │   ├── dragonfly-6856-flushslots-oob/
 │   │   └── devcontainer.json

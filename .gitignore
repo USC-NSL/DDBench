@@ -1,0 +1,19 @@
+# User addon customizations (examples/ are tracked)
+addons/*.sh
+
+# Build artifacts
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# Tool cache (local only)
+.bench/
+
+# IDE / editor
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db

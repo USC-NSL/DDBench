@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # bench.sh — Central orchestrator for bug-bench Docker-based isolation
 # Usage:
-#   bench.sh setup <case-name>       Build image + clone + checkout + build
-#   bench.sh reproduce <case-name>   Run reproduce.sh inside container
-#   bench.sh shell <case-name>       Interactive shell inside container
-#   bench.sh clean <case-name>       Remove container + volumes for this case
-#   bench.sh clean-all               Remove all bug-bench containers + volumes + images
+#   bench.sh setup <case-name>                    Build image + clone + checkout + build
+#   bench.sh reproduce <case-name>                Run reproduce.sh inside container
+#   bench.sh shell <case-name> [--addon <name>]   Interactive shell (with optional addons)
+#   bench.sh agent <case-name> --addon <name>     Launch an AI agent inside container
+#   bench.sh reset <case-name>                    Revert to original buggy commit
+#   bench.sh clean <case-name>                    Remove container + volumes for this case
+#   bench.sh clean-all                            Remove all bug-bench containers + volumes + images
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -248,6 +250,114 @@ build_run_args() {
     fi
 }
 
+# ── Addon Infrastructure ────────────────────────────────────────────────────
+# Addons inject tools (AI agents, debuggers, profilers) into containers at
+# runtime. See addons/README.md for the full contract.
+
+TOOLS_VOL="${IMAGE_PREFIX}-tools"
+
+# Parse --addon flags from an argument list.
+# Usage: parse_addons arg1 arg2 --addon claude-code --addon gdb-dashboard ...
+# Sets:  ADDON_NAMES (array), AGENT_PROMPT (string), AGENT_CMD (string),
+#         REMAINING_ARGS (array)
+parse_addons() {
+    ADDON_NAMES=()
+    AGENT_PROMPT=""
+    AGENT_CMD=""
+    REMAINING_ARGS=()
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --addon)
+                [ -n "${2:-}" ] || die "--addon requires a name argument"
+                ADDON_NAMES+=("$2")
+                shift 2
+                ;;
+            --prompt)
+                [ -n "${2:-}" ] || die "--prompt requires a value"
+                AGENT_PROMPT="$2"
+                shift 2
+                ;;
+            --cmd)
+                [ -n "${2:-}" ] || die "--cmd requires a value"
+                AGENT_CMD="$2"
+                shift 2
+                ;;
+            *)
+                REMAINING_ARGS+=("$1")
+                shift
+                ;;
+        esac
+    done
+}
+
+# Resolve an addon name to its script path.
+# Looks in addons/<name>.sh first (user override), then addons/examples/<name>.sh.
+resolve_addon() {
+    local name="$1"
+    local user_script="$REPO_ROOT/addons/${name}.sh"
+    local example_script="$REPO_ROOT/addons/examples/${name}.sh"
+
+    if [ -f "$user_script" ]; then
+        echo "$user_script"
+    elif [ -f "$example_script" ]; then
+        echo "$example_script"
+    else
+        die "Addon not found: $name (looked in addons/${name}.sh and addons/examples/${name}.sh)"
+    fi
+}
+
+# Append addon-related Docker run args to the global RUN_ARGS array.
+# Only adds mounts/env when addons are actually requested.
+build_addon_args() {
+    # Persistent tool cache
+    docker volume create "$TOOLS_VOL" &>/dev/null
+    RUN_ARGS+=("-v" "${TOOLS_VOL}:/opt/tools")
+
+    # Mount addon scripts (read-only)
+    RUN_ARGS+=("-v" "${REPO_ROOT}/addons:/addons:ro")
+
+    # Tool directory env
+    RUN_ARGS+=("-e" "ADDON_TOOL_DIR=/opt/tools")
+
+    # Forward common API keys if set on host
+    for key in ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY; do
+        [ -n "${!key:-}" ] && RUN_ARGS+=("-e" "$key")
+    done
+
+    # Mount agent config directories if they exist on host
+    [ -d "$HOME/.claude" ] && RUN_ARGS+=("-v" "${HOME}/.claude:/root/.claude:ro")
+    [ -d "$HOME/.aider" ] && RUN_ARGS+=("-v" "${HOME}/.aider:/root/.aider:ro")
+}
+
+# Generate a bash snippet that installs addons and then exec's into a command.
+# Usage: addon_entrypoint "bash" → returns a bash -c string
+addon_entrypoint() {
+    local final_cmd="$1"
+    local setup_lines=""
+
+    setup_lines+='export PATH="/opt/tools/bin:$PATH"'$'\n'
+    setup_lines+='mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/"$CASE_NAME" ~/bug-bench/"$CASE_NAME" 2>/dev/null || true'$'\n'
+
+    for name in "${ADDON_NAMES[@]}"; do
+        local script_path
+        script_path=$(resolve_addon "$name")
+        local basename
+        basename=$(basename "$script_path")
+        # Addon scripts are mounted at /addons/ or /addons/examples/
+        local container_path
+        if [[ "$script_path" == *"/examples/"* ]]; then
+            container_path="/addons/examples/$basename"
+        else
+            container_path="/addons/$basename"
+        fi
+        setup_lines+="bash \"$container_path\" || echo \"WARNING: addon $name failed\""$'\n'
+    done
+
+    setup_lines+="exec $final_cmd"
+    echo "$setup_lines"
+}
+
 # ── Commands ─────────────────────────────────────────────────────────────────
 
 cmd_setup() {
@@ -407,6 +517,9 @@ cmd_reproduce() {
 
 cmd_shell() {
     local case_name="$1"
+    shift
+    parse_addons "$@"
+
     local case_dir
     case_dir=$(find_case_dir "$case_name")
     local yaml
@@ -421,10 +534,89 @@ cmd_shell() {
 
     echo "=== bench.sh shell: $case_name ==="
     echo "Dropping into interactive shell at $wt_path"
+    [ ${#ADDON_NAMES[@]} -gt 0 ] && echo "  Addons: ${ADDON_NAMES[*]}"
     echo "Type 'exit' to leave the container."
     echo ""
 
     build_run_args "$yaml"
+
+    if [ ${#ADDON_NAMES[@]} -gt 0 ]; then
+        build_addon_args
+        local entrypoint
+        entrypoint=$(addon_entrypoint "bash")
+        docker run --rm -it \
+            "${RUN_ARGS[@]}" \
+            -v "${vol}:/workspace" \
+            -v "${case_dir}:/bench:ro" \
+            -w "$wt_path" \
+            -e "BENCH_WORKSPACE=/workspace/worktrees" \
+            -e "CASE_NAME=${case_name}" \
+            "$image" \
+            bash -c "$entrypoint"
+    else
+        docker run --rm -it \
+            "${RUN_ARGS[@]}" \
+            -v "${vol}:/workspace" \
+            -v "${case_dir}:/bench:ro" \
+            -w "$wt_path" \
+            -e "BENCH_WORKSPACE=/workspace/worktrees" \
+            -e "CASE_NAME=${case_name}" \
+            "$image" \
+            bash -c 'mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/"$CASE_NAME" ~/bug-bench/"$CASE_NAME"; exec bash'
+    fi
+}
+
+cmd_agent() {
+    local case_name="$1"
+    shift
+    parse_addons "$@"
+
+    [ ${#ADDON_NAMES[@]} -gt 0 ] || die "agent command requires at least one --addon flag"
+
+    local case_dir
+    case_dir=$(find_case_dir "$case_name")
+    local yaml
+    yaml=$(find_case_yaml "$case_dir")
+
+    local project
+    project=$(yaml_val "$yaml" "project")
+    local image="${IMAGE_PREFIX}/${project}"
+    local vol
+    vol=$(volume_name "$project")
+    local wt_path="/workspace/worktrees/${case_name}"
+
+    echo "=== bench.sh agent: $case_name ==="
+    echo "  Addons: ${ADDON_NAMES[*]}"
+    [ -n "$AGENT_PROMPT" ] && echo "  Prompt: ${AGENT_PROMPT:0:80}..."
+    echo ""
+
+    build_run_args "$yaml"
+    build_addon_args
+
+    # Determine the agent command to run after addon installation.
+    # --cmd overrides auto-detection. Otherwise infer from the first addon name.
+    local agent_cmd="${AGENT_CMD}"
+    if [ -z "$agent_cmd" ]; then
+        case "${ADDON_NAMES[0]}" in
+            claude-code) agent_cmd="claude" ;;
+            aider)       agent_cmd="aider" ;;
+            codex)       agent_cmd="codex" ;;
+            *)           agent_cmd="bash" ;;
+        esac
+    fi
+
+    # Append prompt if provided (agent-specific flag handling)
+    local final_cmd="$agent_cmd"
+    if [ -n "$AGENT_PROMPT" ]; then
+        case "$agent_cmd" in
+            claude) final_cmd="claude --print \"$AGENT_PROMPT\"" ;;
+            aider)  final_cmd="aider --message \"$AGENT_PROMPT\"" ;;
+            *)      final_cmd="$agent_cmd" ;;
+        esac
+    fi
+
+    local entrypoint
+    entrypoint=$(addon_entrypoint "$final_cmd")
 
     docker run --rm -it \
         "${RUN_ARGS[@]}" \
@@ -434,7 +626,7 @@ cmd_shell() {
         -e "BENCH_WORKSPACE=/workspace/worktrees" \
         -e "CASE_NAME=${case_name}" \
         "$image" \
-        bash -c 'mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/"$CASE_NAME" ~/bug-bench/"$CASE_NAME"; exec bash'
+        bash -c "$entrypoint"
 }
 
 cmd_reset() {
@@ -542,6 +734,12 @@ cmd_clean_all() {
         docker volume rm "$v" || echo "  WARNING: could not remove volume $v (in use?)"
     done
 
+    # Remove addon tool cache volume
+    if docker volume inspect "$TOOLS_VOL" &>/dev/null; then
+        echo "  Removing addon tool cache: $TOOLS_VOL"
+        docker volume rm "$TOOLS_VOL" || echo "  WARNING: could not remove volume $TOOLS_VOL (in use?)"
+    fi
+
     # Collect image names first, then loop outside pipeline
     local -a imgs
     mapfile -t imgs < <(docker images --format '{{.Repository}}' | grep "^${IMAGE_PREFIX}/" | sort -u || true)
@@ -561,20 +759,31 @@ usage() {
 Usage: bench.sh <command> [args]
 
 Commands:
-  setup <case-name>       Build Docker image, clone repo, checkout commit, build
-  reproduce <case-name>   Run reproduce.sh inside container
-  shell <case-name>       Interactive shell inside container
-  reset <case-name>       Revert source to original buggy commit (undo all edits)
-  clean <case-name>       Remove worktree for a case
-  clean-all               Remove all bug-bench Docker artifacts
+  setup <case-name>                    Build Docker image, clone repo, checkout commit, build
+  reproduce <case-name>                Run reproduce.sh inside container
+  shell <case-name> [--addon <name>]   Interactive shell (with optional tool addons)
+  agent <case-name> --addon <name>     Launch an AI agent inside container
+  reset <case-name>                    Revert source to original buggy commit (undo all edits)
+  clean <case-name>                    Remove worktree for a case
+  clean-all                            Remove all bug-bench Docker artifacts
+
+Addon Options (for shell and agent):
+  --addon <name>       Install a tool addon (repeatable). See addons/README.md
+  --prompt <text>      Pass a prompt to the agent (agent command only)
+  --cmd <command>      Override the agent command to run (agent command only)
 
 Environment:
   BENCH_WORKSPACE         Override workspace path (default: \$HOME/bug-bench)
+  ANTHROPIC_API_KEY       Forwarded to container for Claude Code
+  OPENAI_API_KEY          Forwarded to container for Codex/Aider
 
 Examples:
   ./bench.sh setup dragonfly-6856-flushslots-oob
   ./bench.sh reproduce dragonfly-6856-flushslots-oob
   ./bench.sh shell dragonfly-6856-flushslots-oob
+  ./bench.sh shell dragonfly-6856-flushslots-oob --addon claude-code --addon custom-gdb-dashboard
+  ./bench.sh agent dragonfly-6856-flushslots-oob --addon claude-code
+  ./bench.sh agent dragonfly-6856-flushslots-oob --addon aider --prompt "Fix the bug in SYMPTOM.md"
 EOF
 }
 
@@ -584,7 +793,8 @@ docker info &>/dev/null || die "Docker daemon is not running or not accessible. 
 case "${1:-}" in
     setup)     [ -n "${2:-}" ] || die "Usage: bench.sh setup <case-name>"; cmd_setup "$2" ;;
     reproduce) [ -n "${2:-}" ] || die "Usage: bench.sh reproduce <case-name>"; cmd_reproduce "$2" ;;
-    shell)     [ -n "${2:-}" ] || die "Usage: bench.sh shell <case-name>"; cmd_shell "$2" ;;
+    shell)     [ -n "${2:-}" ] || die "Usage: bench.sh shell <case-name> [--addon <name>]"; shift; cmd_shell "$@" ;;
+    agent)     [ -n "${2:-}" ] || die "Usage: bench.sh agent <case-name> --addon <name>"; shift; cmd_agent "$@" ;;
     reset)     [ -n "${2:-}" ] || die "Usage: bench.sh reset <case-name>"; cmd_reset "$2" ;;
     clean)     [ -n "${2:-}" ] || die "Usage: bench.sh clean <case-name>"; cmd_clean "$2" ;;
     clean-all) cmd_clean_all ;;
