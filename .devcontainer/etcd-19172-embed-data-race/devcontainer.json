@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-etcd-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/etcd-19172-embed-data-race,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/etcd-19172-embed-data-race",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/etcd-19172-embed-data-race ~/bug-bench/etcd-19172-embed-data-race",

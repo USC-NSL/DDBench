@@ -37,12 +37,28 @@ For a full IDE experience with editor, IntelliSense, and graphical debugger:
 #    Pick "Bug Bench - dragonfly-6856-flushslots-oob" from the list
 
 # 3. In VS Code's integrated terminal, reproduce the bug:
-bash /repo/cases/dragonfly-6856-flushslots-oob/reproduce.sh
+bash /bench/reproduce.sh
 ```
 
 Each of the 31 verified cases has its own devcontainer config. VS Code opens directly into the case's source tree with C++ or Go extensions pre-installed.
 
 > **Remote-SSH users**: If VS Code fails to download its server binary (503 error), add `"remote.SSH.localServerDownload": "off"` to your VS Code settings.
+
+### Inside the Container
+
+The container has two mount points:
+
+| Path | Contents | Writable? |
+|------|----------|-----------|
+| `/workspace/worktrees/<case>/` | **Project source code** — the actual repo (e.g., Dragonfly) checked out at the buggy commit, with built binaries. This is where you edit, build, and debug. | Yes |
+| `/bench/` | **Case scripts** — reproduce.sh, case.yaml, documentation for this specific case. | No (read-only) |
+
+Regardless of how you entered the container (VS Code or `bench.sh shell`), the commands are the same:
+
+```bash
+bash /bench/reproduce.sh                            # reproduce the bug
+cd build-dbg && ninja dragonfly                     # rebuild after editing (Dragonfly example)
+```
 
 ### Host-Only Workflow (no Docker)
 
@@ -122,8 +138,7 @@ See [`index.md`](index.md) for the full list with links and descriptions.
 │   ├── seastar.Dockerfile             # base-cpp + Seastar deps
 │   ├── etcd.Dockerfile                # base-go
 │   ├── nats.Dockerfile                # base-go
-│   ├── raft.Dockerfile                # base-go
-│   └── bench-init.sh                  # In-container initialization helper
+│   └── raft.Dockerfile                # base-go
 ├── .devcontainer/                     # VS Code devcontainer configs (one per case)
 │   ├── dragonfly-6856-flushslots-oob/
 │   │   └── devcontainer.json

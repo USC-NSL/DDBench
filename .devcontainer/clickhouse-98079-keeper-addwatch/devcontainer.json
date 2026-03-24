@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-clickhouse-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/clickhouse-98079-keeper-addwatch,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/clickhouse-98079-keeper-addwatch",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/clickhouse-98079-keeper-addwatch ~/bug-bench/clickhouse-98079-keeper-addwatch",

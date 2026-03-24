@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-dragonfly-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/dragonfly-6909-search-nonfinite,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/dragonfly-6909-search-nonfinite",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/dragonfly-6909-search-nonfinite ~/bug-bench/dragonfly-6909-search-nonfinite",

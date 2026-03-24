@@ -35,6 +35,15 @@ A benchmark suite of 31 verified real-world bug cases from open-source distribut
 
 Same-project cases share a single git clone via Docker volumes.
 
+### Container mount layout
+
+| Path | Contents | Writable? |
+|------|----------|-----------|
+| `/workspace/worktrees/<case>/` | Project source code at the buggy commit, with built binaries. Edit/build/debug here. | Yes |
+| `/bench/` | Case scripts (reproduce.sh, case.yaml, docs). Same path in both VS Code and `bench.sh shell`. | No |
+
+Reproduce a bug: `bash /bench/reproduce.sh` (works the same regardless of entry method).
+
 ## Working with cases (host fallback, no Docker)
 
 ```bash

@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-raft-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/raft-268-shutdown-deadlock,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/raft-268-shutdown-deadlock",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/raft-268-shutdown-deadlock ~/bug-bench/raft-268-shutdown-deadlock",

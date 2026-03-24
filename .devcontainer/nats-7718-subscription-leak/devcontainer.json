@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-nats-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/nats-7718-subscription-leak,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/nats-7718-subscription-leak",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/nats-7718-subscription-leak ~/bug-bench/nats-7718-subscription-leak",

@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-etcd-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/etcd-20893-force-new-cluster-learner,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/etcd-20893-force-new-cluster-learner",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/etcd-20893-force-new-cluster-learner ~/bug-bench/etcd-20893-force-new-cluster-learner",

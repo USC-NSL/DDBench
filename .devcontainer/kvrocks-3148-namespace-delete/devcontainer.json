@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/kvrocks-3148-namespace-delete,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-3148-namespace-delete",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-3148-namespace-delete ~/bug-bench/kvrocks-3148-namespace-delete",

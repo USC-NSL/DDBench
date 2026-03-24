@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-rocksdb-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/rocksdb-10751-stalled-writes-shutdown,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/rocksdb-10751-stalled-writes-shutdown",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/rocksdb-10751-stalled-writes-shutdown ~/bug-bench/rocksdb-10751-stalled-writes-shutdown",

@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/kvrocks-3315-zdiff-crash,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-3315-zdiff-crash",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-3315-zdiff-crash ~/bug-bench/kvrocks-3315-zdiff-crash",

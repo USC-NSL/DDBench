@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/kvrocks-3339-xreadgroup-double,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-3339-xreadgroup-double",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-3339-xreadgroup-double ~/bug-bench/kvrocks-3339-xreadgroup-double",

@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-dragonfly-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/dragonfly-6856-flushslots-oob,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/dragonfly-6856-flushslots-oob",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/dragonfly-6856-flushslots-oob ~/bug-bench/dragonfly-6856-flushslots-oob",

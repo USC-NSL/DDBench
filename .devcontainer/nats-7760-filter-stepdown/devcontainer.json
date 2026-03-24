@@ -8,7 +8,7 @@
   ],
   "mounts": [
     "source=bug-bench-nats-src,target=/workspace,type=volume",
-    "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
+    "source=${localWorkspaceFolder}/cases/nats-7760-filter-stepdown,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/nats-7760-filter-stepdown",
   "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/nats-7760-filter-stepdown ~/bug-bench/nats-7760-filter-stepdown",
