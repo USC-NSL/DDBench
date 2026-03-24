@@ -1,4 +1,4 @@
-# Symptom: Dragonfly #6862
+# Symptom
 
 ## Description
 

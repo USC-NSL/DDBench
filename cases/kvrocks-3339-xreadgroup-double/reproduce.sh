@@ -18,6 +18,9 @@ PORT=13339
 DATA_DIR="$WORK_DIR/kvrocks-3339-data"
 DETECT_SCRIPT="$WORK_DIR/kvrocks-3339-detect.py"
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."

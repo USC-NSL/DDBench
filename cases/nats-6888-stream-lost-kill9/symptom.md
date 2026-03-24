@@ -1,4 +1,4 @@
-# Symptom: NATS #6888
+# Symptom
 
 After ungraceful termination (`kill -9`) and restart of NATS server nodes in a JetStream cluster, streams can be completely lost (forgotten by the cluster). The streams:
 

@@ -1,4 +1,4 @@
-# Symptom: Dragonfly #6912
+# Symptom
 
 Using the `DUMP` command on a key that holds a CMS (Count-Min Sketch) data structure causes a fatal crash:
 ```

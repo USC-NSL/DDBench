@@ -1,4 +1,4 @@
-# Symptom: NATS Server #7817
+# Symptom
 
 Messages are silently lost in a JetStream stream configured with WorkQueue retention policy and R3 replication when consumers reach their max-deliver limit.
 

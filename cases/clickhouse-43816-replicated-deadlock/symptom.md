@@ -1,4 +1,4 @@
-# Symptom: ClickHouse #43816
+# Symptom
 
 On a ReplicatedMergeTree cluster under sustained write load, background merges start but never complete. The system hangs with the following observable symptoms:
 

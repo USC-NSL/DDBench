@@ -15,6 +15,9 @@ WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/raft-268-shutdown-deadlock"
 BINARY="$WORK_DIR/test/raft-deadlock-test"
 export PATH="$PATH:/usr/local/go/bin"
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."

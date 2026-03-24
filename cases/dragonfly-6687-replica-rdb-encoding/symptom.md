@@ -1,4 +1,4 @@
-# Symptom: Dragonfly #6687
+# Symptom
 
 When replicating from a Dragonfly master that has tiered storage enabled, the replica fails to sync with the error:
 

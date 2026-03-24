@@ -1,4 +1,4 @@
-# Symptom: RocksDB #10751
+# Symptom
 
 When `DB::Close()` is called while some write operations are stalled (blocked by the write rate limiter or by L0 stop-writes conditions), the `Close()` call hangs indefinitely.
 

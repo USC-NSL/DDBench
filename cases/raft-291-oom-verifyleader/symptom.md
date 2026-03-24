@@ -1,4 +1,4 @@
-# Symptom: hashicorp/raft #291
+# Symptom
 
 When a follower node in a Raft cluster is down or unreachable, repeatedly calling `VerifyLeader()` on the leader causes unbounded memory growth. The leader process's memory usage grows continuously (e.g., from 50MB to 278MB+ over minutes) and eventually leads to OOM (Out of Memory) kill.
 

@@ -1,4 +1,4 @@
-# Symptom: Redpanda #15118
+# Symptom
 
 Under sustained Kafka client load, when authentication failures occur, Redpanda crashes with a Seastar future assertion error:
 

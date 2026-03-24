@@ -1,4 +1,4 @@
-# Symptom: NATS Server #7726
+# Symptom
 
 A JetStream consumer configured with multiple filter subjects that mix wildcard and literal patterns fails to deliver messages to the literal subjects.
 

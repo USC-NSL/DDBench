@@ -1,4 +1,4 @@
-# Symptom: etcd #20269
+# Symptom
 
 When a member is removed from an etcd cluster, has its data directory wiped (reset), and is then re-added to the cluster, it panics immediately upon receiving a heartbeat from the leader.
 

@@ -1,4 +1,4 @@
-# Symptom: ClickHouse #92375
+# Symptom
 
 When running `SELECT count() FROM (SELECT DISTINCT number FROM distributed_table)` on a Distributed table backed by two shards, the result changes depending on the `optimize_skip_unused_shards` setting:
 

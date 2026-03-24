@@ -1,4 +1,4 @@
-# Symptom: CockroachDB #166122
+# Symptom
 
 When a partial index is being backfilled (during `CREATE INDEX ... WHERE ...`) and concurrent UPDATEs are happening on the table, data corruption can occur:
 

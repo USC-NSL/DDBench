@@ -1,4 +1,4 @@
-# Symptom: ScyllaDB #28057
+# Symptom
 
 When a node replace operation fails during the streaming phase, and all remaining live nodes are then shut down before the failed replacing node can roll back, restarting the cluster causes errors in `nodetool status` and cluster operations.
 

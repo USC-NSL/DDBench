@@ -1,4 +1,4 @@
-# Symptom: hashicorp/raft #268
+# Symptom
 
 ## Description
 

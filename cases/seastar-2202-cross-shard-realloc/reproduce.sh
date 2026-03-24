@@ -14,6 +14,9 @@ CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/seastar-2202-cross-shard-realloc"
 BINARY="$WORK_DIR/test_cross_shard_realloc"
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."

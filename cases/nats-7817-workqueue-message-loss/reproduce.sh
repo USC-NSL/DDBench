@@ -17,6 +17,9 @@ TEST_NAME="TestJetStreamWQMaxDeliveryReached"
 
 export PATH=$PATH:/usr/local/go/bin
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -f "$WORK_DIR/nats-server" ]; then
     echo "ERROR: Binary not found at $WORK_DIR/nats-server. Run ./setup.sh first."

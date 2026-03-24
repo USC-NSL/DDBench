@@ -16,6 +16,9 @@ BINARY="$WORK_DIR/build-dbg/dragonfly"
 PORT=16764
 DATA_DIR="$WORK_DIR/dragonfly-6764-data"
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."

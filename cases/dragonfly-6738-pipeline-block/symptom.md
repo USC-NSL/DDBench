@@ -1,4 +1,4 @@
-# Symptom: Dragonfly #6738
+# Symptom
 
 `BRPOPLPUSH` (or `BLMOVE`) does not get woken up when `RPUSH` is executed inside a Lua `EVAL` script on the source list.
 

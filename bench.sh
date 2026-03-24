@@ -302,6 +302,59 @@ cmd_setup() {
             bash -c 'eval "$BUILD_CMD"'
     fi
 
+    # Step 5: Copy benchmark files into the worktree so agents can access
+    # them from the workspace without needing access to /bench
+    docker run --rm \
+        -v "${vol}:/workspace" \
+        -v "${case_dir}:/bench:ro" \
+        -e "CASE_WT_PATH=${wt_path}" \
+        -e "BUILD_CMD=${build_cmd}" \
+        "$image" \
+        bash -c '
+            # Copy sanitized symptom
+            [ -f /bench/symptom.md ] && cp /bench/symptom.md "$CASE_WT_PATH/SYMPTOM.md"
+            # Create rebuild script — uses just the build step (not configure)
+            if [ -n "$BUILD_CMD" ]; then
+                REBUILD=""
+                cd "$CASE_WT_PATH"
+                # Detect build system and generate minimal incremental command
+                if [ -d build-dbg ] && [ -f build-dbg/build.ninja ]; then
+                    # Ninja build (Dragonfly)
+                    TARGET=$(grep -oP "(?<=ninja )\S+" build-dbg/build.ninja 2>/dev/null || echo "")
+                    [ -z "$TARGET" ] && TARGET=$(echo "$BUILD_CMD" | grep -oP "ninja\s+\K\S+" || echo "")
+                    REBUILD="cd build-dbg && ninja ${TARGET:-}"
+                elif [ -d build ] && [ -f build/build.ninja ]; then
+                    # Ninja build (ClickHouse)
+                    TARGET=$(echo "$BUILD_CMD" | grep -oP "ninja[^&]*" | grep -oP "(?<=ninja\s).*" || echo "")
+                    REBUILD="cd build && ninja ${TARGET:-}"
+                elif [ -f build/dev/build.ninja ]; then
+                    # Ninja build (Seastar)
+                    REBUILD="ninja -C build/dev"
+                elif [ -d build ] && [ -f build/Makefile ]; then
+                    # Make build (Kvrocks, RocksDB)
+                    TARGET=$(echo "$BUILD_CMD" | grep -oP "make\s+.*?(?=\s*$)" | sed "s/make//" | xargs || echo "")
+                    REBUILD="cd build && make -j\$(nproc) ${TARGET:-}"
+                elif echo "$BUILD_CMD" | grep -q "go build"; then
+                    # Go build (NATS)
+                    REBUILD="$BUILD_CMD"
+                elif echo "$BUILD_CMD" | grep -q "^make"; then
+                    # Make at root (etcd)
+                    REBUILD="$BUILD_CMD"
+                else
+                    # Fallback: full build command
+                    REBUILD="$BUILD_CMD"
+                fi
+                cat > "$CASE_WT_PATH/REBUILD.sh" <<REBUILDEOF
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Rebuilding (incremental) ..."
+cd "\$(dirname "\${BASH_SOURCE[0]}")"
+$REBUILD
+REBUILDEOF
+                chmod +x "$CASE_WT_PATH/REBUILD.sh"
+            fi
+        '
+
     echo ""
     echo "=== Setup complete: $case_name ==="
     echo "  Worktree: $wt_path (inside volume $vol)"
@@ -320,16 +373,28 @@ cmd_reproduce() {
     local vol
     vol=$(volume_name "$project")
     local wt_path="/workspace/worktrees/${case_name}"
+    local build_cmd
+    build_cmd=$(yaml_nested "$yaml" "build" "command")
 
     echo "=== bench.sh reproduce: $case_name ==="
 
     build_run_args "$yaml"
 
-    # Mount the full case directory at /bench so reproduce.sh can access
-    # sibling files (configs, test scripts, etc.).
-    # Set BENCH_WORKSPACE so WORK_DIR resolves to the worktree path:
-    #   WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/<case-name>"
-    #   → /workspace/worktrees/<case-name>
+    # Rebuild before reproducing (incremental — only recompiles changed files)
+    if [ -n "$build_cmd" ]; then
+        echo "Rebuilding (incremental) ..."
+        docker run --rm \
+            "${RUN_ARGS[@]}" \
+            -v "${vol}:/workspace" \
+            -w "$wt_path" \
+            -e "BUILD_CMD=${build_cmd}" \
+            "$image" \
+            bash -c 'eval "$BUILD_CMD"'
+    fi
+
+    # Run reproduce.sh
+    # Mount the case directory at /bench, set BENCH_WORKSPACE so
+    # WORK_DIR resolves to the worktree path.
     docker run --rm \
         "${RUN_ARGS[@]}" \
         -v "${vol}:/workspace" \
@@ -397,8 +462,13 @@ cmd_reset() {
         "$image" \
         bash -c '
             cd "$CASE_WT_PATH" || exit 1
+            # Preserve benchmark files across reset
+            [ -f SYMPTOM.md ] && cp SYMPTOM.md /tmp/_symptom_backup.md
+            [ -f REBUILD.sh ] && cp REBUILD.sh /tmp/_rebuild_backup.sh
             git checkout -- .
             git clean -fd
+            [ -f /tmp/_symptom_backup.md ] && mv /tmp/_symptom_backup.md SYMPTOM.md
+            [ -f /tmp/_rebuild_backup.sh ] && mv /tmp/_rebuild_backup.sh REBUILD.sh
             if [ "$CASE_SUBMODULES" = "true" ]; then
                 git submodule foreach --recursive git checkout -- .
                 git submodule foreach --recursive git clean -fd
@@ -429,6 +499,16 @@ cmd_clean() {
         return 0
     fi
 
+    # Stop and remove any containers that use this volume (includes VS Code devcontainers)
+    local -a using
+    mapfile -t using < <(docker ps -aq --filter "volume=${vol}" 2>/dev/null || true)
+    for cid in "${using[@]}"; do
+        [ -z "$cid" ] && continue
+        echo "Stopping container $cid ..."
+        docker stop "$cid" 2>/dev/null || true
+        docker rm "$cid" 2>/dev/null || true
+    done
+
     echo "Removing worktree for $case_name ..."
     docker run --rm \
         -v "${vol}:/workspace" \
@@ -442,9 +522,20 @@ cmd_clean() {
 cmd_clean_all() {
     echo "Removing all bug-bench containers, volumes, and images..."
 
-    # Collect volume names first, then loop outside pipeline
+    # Find all bug-bench volumes, then stop any container using them
     local -a vols
     mapfile -t vols < <(docker volume ls --format '{{.Name}}' | grep "^${IMAGE_PREFIX}-" || true)
+    for v in "${vols[@]}"; do
+        [ -z "$v" ] && continue
+        local -a using
+        mapfile -t using < <(docker ps -aq --filter "volume=${v}" 2>/dev/null || true)
+        for cid in "${using[@]}"; do
+            [ -z "$cid" ] && continue
+            echo "  Stopping container $cid (uses volume $v) ..."
+            docker stop "$cid" 2>/dev/null || true
+            docker rm "$cid" 2>/dev/null || true
+        done
+    done
     for v in "${vols[@]}"; do
         [ -z "$v" ] && continue
         echo "  Removing volume: $v"

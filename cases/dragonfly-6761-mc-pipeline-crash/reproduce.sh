@@ -17,6 +17,9 @@ PORT=16761
 MC_PORT=11211
 DATA_DIR="$WORK_DIR/dragonfly-6761-data"
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."

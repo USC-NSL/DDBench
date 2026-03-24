@@ -22,6 +22,9 @@ REPLICA_DIR="$WORK_DIR/kvrocks-3356-replica"
 MASTER_CONF="$WORK_DIR/kvrocks-3356-master.conf"
 REPLICA_CONF="$WORK_DIR/kvrocks-3356-replica.conf"
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."

@@ -15,6 +15,9 @@ WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/etcd-19172-embed-data-race"
 
 export PATH="$PATH:/usr/local/go/bin"
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -d "$WORK_DIR" ]; then
     echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."

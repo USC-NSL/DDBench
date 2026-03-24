@@ -1,4 +1,4 @@
-# Symptom: etcd #20793
+# Symptom
 
 During a multi-step rolling upgrade of an etcd cluster (3.5.19 -> 3.5.21 -> 3.6.x), a cluster that previously had a learner member that was promoted to voter fails to complete the final upgrade.
 

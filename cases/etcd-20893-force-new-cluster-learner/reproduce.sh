@@ -19,6 +19,9 @@ DATA_DIR="$WORK_DIR/etcd-20893-data"
 
 export PATH="$PATH:/usr/local/go/bin"
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$ETCD" ]; then
     echo "ERROR: Binary not found at $ETCD. Run ./setup.sh first."

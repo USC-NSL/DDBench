@@ -17,6 +17,9 @@ NATS_CLI="$WORK_DIR/nats"
 
 export PATH=$PATH:/usr/local/go/bin
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."

@@ -1,4 +1,4 @@
-# Symptom: Dragonfly #6822
+# Symptom
 
 When a large number of keys (500k+) with TTL expire simultaneously, Dragonfly becomes completely unresponsive:
 

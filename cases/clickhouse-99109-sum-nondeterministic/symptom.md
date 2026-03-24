@@ -1,4 +1,4 @@
-# Symptom: ClickHouse #99109
+# Symptom
 
 Running `SELECT key, sum(value) FROM table GROUP BY key` on a table with Float64 values produces different results depending on the `max_threads` setting.
 

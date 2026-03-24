@@ -1,4 +1,4 @@
-# Symptom: Kvrocks #3315
+# Symptom
 
 Sending the command `ZDIFF 0 a` (where numkeys=0) to Kvrocks causes the
 server process to crash. The crash is due to an out-of-bounds array access

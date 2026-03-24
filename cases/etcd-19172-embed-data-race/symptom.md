@@ -1,4 +1,4 @@
-# Symptom: etcd #19172
+# Symptom
 
 A data race is detected between `Etcd.Close()` and `Etcd.errHandler()` when running the embedded etcd integration tests with the race detector enabled. The race occurs on an unsynchronized field access: one goroutine writes the field in `Close()` while another goroutine reads it in `errHandler()`.
 

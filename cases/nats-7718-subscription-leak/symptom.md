@@ -1,4 +1,4 @@
-# Symptom: NATS #7718
+# Symptom
 
 When using JetStream with overlapping stream imports (e.g., importing both `events.>` and `events.critical.>` from the same account), rapidly creating and destroying OrderedConsumers causes a subscription leak.
 

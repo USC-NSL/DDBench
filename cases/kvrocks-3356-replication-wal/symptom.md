@@ -1,4 +1,4 @@
-# Symptom: Kvrocks #3356
+# Symptom
 
 Under high write load, the replication feed thread on the master blocks indefinitely when a replica is slow to consume replication data. This causes:
 

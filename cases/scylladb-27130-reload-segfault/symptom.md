@@ -1,4 +1,4 @@
-# Symptom: ScyllaDB #27130
+# Symptom
 
 ## Description
 

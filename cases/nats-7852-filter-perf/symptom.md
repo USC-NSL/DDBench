@@ -1,4 +1,4 @@
-# Symptom: NATS #7852
+# Symptom
 
 When a JetStream consumer is created with a `FilterSubjects` configuration that matches all subjects in a stream, message delivery performance degrades by more than 20% compared to a consumer with no filter at all.
 

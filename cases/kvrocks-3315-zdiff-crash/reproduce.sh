@@ -16,6 +16,9 @@ BINARY="$WORK_DIR/build/kvrocks"
 PORT=13315
 DATA_DIR="$WORK_DIR/kvrocks-3315-data"
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."

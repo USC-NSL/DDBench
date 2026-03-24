@@ -1,4 +1,4 @@
-# Symptom: Redpanda #25769
+# Symptom
 
 ## Description
 

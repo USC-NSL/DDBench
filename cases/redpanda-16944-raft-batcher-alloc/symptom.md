@@ -1,4 +1,4 @@
-# Symptom: Redpanda #16944
+# Symptom
 
 Under high write throughput, Redpanda logs oversized allocation warnings from the raft replicate batcher:
 

@@ -16,6 +16,9 @@ WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/rocksdb-10751-stalled-writes-shutd
 BINARY="$WORK_DIR/test_stall_shutdown"
 DB_DIR="$WORK_DIR/testdb"
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."

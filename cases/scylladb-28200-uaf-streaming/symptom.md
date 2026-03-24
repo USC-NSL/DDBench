@@ -1,4 +1,4 @@
-# Symptom: ScyllaDB #28200
+# Symptom
 
 During topology changes that involve streaming (node join, decommission, or rebuild), ScyllaDB crashes with a use-after-free (UAF) in `streaming_task_impl::run`.
 

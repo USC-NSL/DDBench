@@ -1,4 +1,4 @@
-# Symptom: Dragonfly #6909
+# Symptom
 
 Two related crashes in the search subsystem:
 

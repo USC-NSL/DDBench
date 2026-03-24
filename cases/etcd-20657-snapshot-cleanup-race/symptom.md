@@ -1,4 +1,4 @@
-# Symptom: etcd #20657
+# Symptom
 
 A follower node in a multi-node etcd cluster panics with a "file not found" error when trying to read a snapshot `.snap.db` file. This occurs during periods of rapid leader changes combined with continuous writes when `--snapshot-count` is set to a low value (e.g., 2).
 

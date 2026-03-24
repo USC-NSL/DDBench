@@ -1,4 +1,4 @@
-# Symptom: ClickHouse #98079
+# Symptom
 
 ## Description
 

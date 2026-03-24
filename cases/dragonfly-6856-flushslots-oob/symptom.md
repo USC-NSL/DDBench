@@ -1,4 +1,4 @@
-# Symptom: Dragonfly #6856
+# Symptom
 
 When running Dragonfly in cluster mode, sending a `DFLYCLUSTER FLUSHSLOTS` command
 with a slot ID that is >= 16384 (the total number of Redis cluster hash slots)

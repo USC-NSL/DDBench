@@ -1,4 +1,4 @@
-# Symptom: ScyllaDB #27956
+# Symptom
 
 After a node restart, staging SSTables (SSTables that are pending view update processing) are not discovered by the view update generator. This causes a permanent inconsistency between the base table and its materialized views.
 

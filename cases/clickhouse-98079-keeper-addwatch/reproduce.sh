@@ -28,6 +28,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# ── Rebuild if source changed ──
+[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+
 # Verify setup
 if [ ! -x "$KEEPER" ]; then
     echo "ERROR: Keeper binary not found at $KEEPER. Run ./setup.sh first."

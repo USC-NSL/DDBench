@@ -1,4 +1,4 @@
-# Symptom: Dragonfly #6825
+# Symptom
 
 When running Dragonfly in cluster mode, sending a `DFLYCLUSTER CONFIG` command
 with values that cause integer overflow during parsing results in an assertion

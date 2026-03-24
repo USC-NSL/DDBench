@@ -1,4 +1,4 @@
-# Symptom: ScyllaDB #25173
+# Symptom
 
 When concurrent writes are happening to a table while a `DROP TABLE` or `DROP KEYSPACE` operation is executed, ScyllaDB's raft applier fiber permanently exits. After this happens, the node can no longer execute any raft-based operations (schema changes, topology operations, etc.).
 

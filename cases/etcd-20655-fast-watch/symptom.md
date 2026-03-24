@@ -1,4 +1,4 @@
-# Symptom: etcd #20655
+# Symptom
 
 High-frequency watch creation breaks etcd's reliable watch guarantee, causing events to be silently dropped. When watches are created rapidly in succession, a race condition in the watch subsystem causes some watches to miss events that occur during or shortly after their creation.
 

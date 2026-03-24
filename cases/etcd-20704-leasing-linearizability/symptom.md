@@ -1,4 +1,4 @@
-# Symptom: etcd #20704
+# Symptom
 
 The `client/v3/leasing` cache has multiple linearizability bugs. The cache promises linearizable reads but violates this guarantee under concurrent modifications:
 

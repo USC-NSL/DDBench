@@ -1,4 +1,4 @@
-# Symptom: RocksDB #13652
+# Symptom
 
 `Checkpoint::ExportColumnFamily` occasionally misses committed data. After exporting a column family and importing it into another database, some keys that were successfully committed (and confirmed via `Get()` on the source database) are missing from the exported data.
 

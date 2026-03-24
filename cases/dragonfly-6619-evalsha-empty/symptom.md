@@ -1,4 +1,4 @@
-# Symptom: Dragonfly #6619
+# Symptom
 
 Sending `EVALSHA "" 0` (empty SHA) to Dragonfly causes an assertion failure:
 ```

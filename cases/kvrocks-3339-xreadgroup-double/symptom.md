@@ -1,4 +1,4 @@
-# Symptom: Kvrocks #3339
+# Symptom
 
 Under concurrent load, `XREADGROUP GROUP ... BLOCK` sends a double response to the client. The client receives two replies for a single `XREADGROUP` command:
 

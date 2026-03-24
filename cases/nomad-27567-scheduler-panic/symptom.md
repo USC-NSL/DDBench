@@ -1,4 +1,4 @@
-# Symptom: Nomad #27567
+# Symptom
 
 ## Description
 
