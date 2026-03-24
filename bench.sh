@@ -256,6 +256,18 @@ build_run_args() {
 
 TOOLS_VOL="${IMAGE_PREFIX}-tools"
 
+# Container name for a case's interactive session (shell/agent).
+container_name() {
+    local case_name="$1"
+    echo "${IMAGE_PREFIX}-${case_name}"
+}
+
+# Check if a named container is running.
+container_running() {
+    local name="$1"
+    [ "$(docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null)" = "true" ]
+}
+
 # Parse --addon flags from an argument list.
 # Usage: parse_addons arg1 arg2 --addon claude-code --addon gdb-dashboard ...
 # Sets:  ADDON_NAMES (array), AGENT_PROMPT (string), AGENT_CMD (string),
@@ -326,19 +338,29 @@ build_addon_args() {
     done
 
     # Mount agent config directories if they exist on host
-    [ -d "$HOME/.claude" ] && RUN_ARGS+=("-v" "${HOME}/.claude:/root/.claude:ro")
-    [ -d "$HOME/.aider" ] && RUN_ARGS+=("-v" "${HOME}/.aider:/root/.aider:ro")
+    if [ -d "$HOME/.claude" ]; then
+        RUN_ARGS+=("-v" "${HOME}/.claude:/root/.claude:ro")
+    fi
+    if [ -d "$HOME/.aider" ]; then
+        RUN_ARGS+=("-v" "${HOME}/.aider:/root/.aider:ro")
+    fi
 }
 
 # Generate a bash snippet that installs addons and then exec's into a command.
 # Usage: addon_entrypoint "bash" → returns a bash -c string
+#
+# The entrypoint:
+#   1. Runs addon install scripts as root (they need apt-get, npm, etc.)
+#   2. Creates a non-root user "bench" (agents like Claude Code refuse to run as root)
+#   3. Sets up PATH, HOME, workspace ownership for the bench user
+#   4. exec's the final command as the bench user
 addon_entrypoint() {
     local final_cmd="$1"
     local setup_lines=""
 
     setup_lines+='export PATH="/opt/tools/bin:$PATH"'$'\n'
-    setup_lines+='mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/"$CASE_NAME" ~/bug-bench/"$CASE_NAME" 2>/dev/null || true'$'\n'
 
+    # Run addon install scripts as root
     for name in "${ADDON_NAMES[@]}"; do
         local script_path
         script_path=$(resolve_addon "$name")
@@ -354,7 +376,20 @@ addon_entrypoint() {
         setup_lines+="bash \"$container_path\" || echo \"WARNING: addon $name failed\""$'\n'
     done
 
-    setup_lines+="exec $final_cmd"
+    # Create non-root user and switch to it (agents like Claude Code refuse root)
+    setup_lines+='useradd -m -s /bin/bash bench 2>/dev/null || true'$'\n'
+    setup_lines+='chown -R bench:bench /workspace/worktrees/"$CASE_NAME"'$'\n'
+    setup_lines+='chmod -R a+rX /opt/tools 2>/dev/null || true'$'\n'
+    # Copy agent configs to bench user home
+    setup_lines+='for d in .claude .aider; do'$'\n'
+    setup_lines+='  if [ -d "/root/$d" ]; then cp -a "/root/$d" "/home/bench/$d" 2>/dev/null; chown -R bench:bench "/home/bench/$d" 2>/dev/null; fi'$'\n'
+    setup_lines+='done'$'\n'
+    # Symlink workspace into bench home
+    setup_lines+='mkdir -p /home/bench/bug-bench && ln -sfn /workspace/worktrees/"$CASE_NAME" /home/bench/bug-bench/"$CASE_NAME" 2>/dev/null || true'$'\n'
+    setup_lines+='chown -R bench:bench /home/bench 2>/dev/null || true'$'\n'
+    # Switch to bench user with correct env
+    setup_lines+="exec runuser -u bench -- bash -c 'export PATH=\"/opt/tools/bin:\$PATH\" && export HOME=/home/bench && cd /workspace/worktrees/\"\$CASE_NAME\" && exec $final_cmd'"$'\n'
+
     echo "$setup_lines"
 }
 
@@ -531,39 +566,77 @@ cmd_shell() {
     local vol
     vol=$(volume_name "$project")
     local wt_path="/workspace/worktrees/${case_name}"
+    local cname
+    cname=$(container_name "$case_name")
 
+    # If container is already running, exec into it
+    if container_running "$cname"; then
+        echo "=== bench.sh shell: $case_name (attaching to running container) ==="
+
+        # Install new addons if requested on a running container
+        if [ ${#ADDON_NAMES[@]} -gt 0 ]; then
+            echo "  Installing addons: ${ADDON_NAMES[*]}"
+            for name in "${ADDON_NAMES[@]}"; do
+                local script_path
+                script_path=$(resolve_addon "$name")
+                local bname
+                bname=$(basename "$script_path")
+                local cpath
+                if [[ "$script_path" == *"/examples/"* ]]; then
+                    cpath="/addons/examples/$bname"
+                else
+                    cpath="/addons/$bname"
+                fi
+                docker exec "$cname" bash -c "export PATH=/opt/tools/bin:\$PATH && bash \"$cpath\"" || echo "WARNING: addon $name failed"
+            done
+        fi
+
+        echo "Type 'exit' to leave the shell (container keeps running)."
+        echo ""
+        docker exec -it -w "$wt_path" \
+            -e "CASE_NAME=${case_name}" \
+            "$cname" \
+            bash -c 'export PATH="/opt/tools/bin:$PATH" && exec bash'
+        return
+    fi
+
+    # Start a new persistent container
     echo "=== bench.sh shell: $case_name ==="
-    echo "Dropping into interactive shell at $wt_path"
     [ ${#ADDON_NAMES[@]} -gt 0 ] && echo "  Addons: ${ADDON_NAMES[*]}"
-    echo "Type 'exit' to leave the container."
+    echo "Type 'exit' to leave the shell (container keeps running)."
+    echo "Run './bench.sh stop $case_name' to stop the container."
     echo ""
 
     build_run_args "$yaml"
 
     if [ ${#ADDON_NAMES[@]} -gt 0 ]; then
         build_addon_args
-        local entrypoint
-        entrypoint=$(addon_entrypoint "bash")
-        docker run --rm -it \
-            "${RUN_ARGS[@]}" \
-            -v "${vol}:/workspace" \
-            -v "${case_dir}:/bench:ro" \
-            -w "$wt_path" \
-            -e "BENCH_WORKSPACE=/workspace/worktrees" \
-            -e "CASE_NAME=${case_name}" \
-            "$image" \
-            bash -c "$entrypoint"
-    else
-        docker run --rm -it \
-            "${RUN_ARGS[@]}" \
-            -v "${vol}:/workspace" \
-            -v "${case_dir}:/bench:ro" \
-            -w "$wt_path" \
-            -e "BENCH_WORKSPACE=/workspace/worktrees" \
-            -e "CASE_NAME=${case_name}" \
-            "$image" \
-            bash -c 'mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/"$CASE_NAME" ~/bug-bench/"$CASE_NAME"; exec bash'
     fi
+
+    # Start container in background (persistent — no --rm)
+    docker run -d \
+        --name "$cname" \
+        "${RUN_ARGS[@]}" \
+        -v "${vol}:/workspace" \
+        -v "${case_dir}:/bench:ro" \
+        -w "$wt_path" \
+        -e "BENCH_WORKSPACE=/workspace/worktrees" \
+        -e "CASE_NAME=${case_name}" \
+        "$image" \
+        sleep infinity >/dev/null
+
+    # Run addon setup inside the container (as root)
+    if [ ${#ADDON_NAMES[@]} -gt 0 ]; then
+        local entrypoint
+        entrypoint=$(addon_entrypoint "true")
+        docker exec "$cname" bash -c "$entrypoint"
+    fi
+
+    # Exec into the container
+    docker exec -it -w "$wt_path" \
+        -e "CASE_NAME=${case_name}" \
+        "$cname" \
+        bash -c 'export PATH="/opt/tools/bin:$PATH" && exec bash'
 }
 
 cmd_agent() {
@@ -584,17 +657,10 @@ cmd_agent() {
     local vol
     vol=$(volume_name "$project")
     local wt_path="/workspace/worktrees/${case_name}"
+    local cname
+    cname=$(container_name "$case_name")
 
-    echo "=== bench.sh agent: $case_name ==="
-    echo "  Addons: ${ADDON_NAMES[*]}"
-    [ -n "$AGENT_PROMPT" ] && echo "  Prompt: ${AGENT_PROMPT:0:80}..."
-    echo ""
-
-    build_run_args "$yaml"
-    build_addon_args
-
-    # Determine the agent command to run after addon installation.
-    # --cmd overrides auto-detection. Otherwise infer from the first addon name.
+    # Determine the agent command
     local agent_cmd="${AGENT_CMD}"
     if [ -z "$agent_cmd" ]; then
         case "${ADDON_NAMES[0]}" in
@@ -605,7 +671,6 @@ cmd_agent() {
         esac
     fi
 
-    # Append prompt if provided (agent-specific flag handling)
     local final_cmd="$agent_cmd"
     if [ -n "$AGENT_PROMPT" ]; then
         case "$agent_cmd" in
@@ -615,10 +680,27 @@ cmd_agent() {
         esac
     fi
 
-    local entrypoint
-    entrypoint=$(addon_entrypoint "$final_cmd")
+    echo "=== bench.sh agent: $case_name ==="
+    echo "  Addons: ${ADDON_NAMES[*]}"
+    [ -n "$AGENT_PROMPT" ] && echo "  Prompt: ${AGENT_PROMPT:0:80}..."
+    echo ""
 
-    docker run --rm -it \
+    # Reuse running container if available
+    if container_running "$cname"; then
+        echo "Attaching to running container ..."
+        docker exec -it -w "$wt_path" \
+            -e "CASE_NAME=${case_name}" \
+            "$cname" \
+            bash -c "export PATH=/opt/tools/bin:\$PATH && exec $final_cmd"
+        return
+    fi
+
+    # Start a new persistent container
+    build_run_args "$yaml"
+    build_addon_args
+
+    docker run -d \
+        --name "$cname" \
         "${RUN_ARGS[@]}" \
         -v "${vol}:/workspace" \
         -v "${case_dir}:/bench:ro" \
@@ -626,7 +708,37 @@ cmd_agent() {
         -e "BENCH_WORKSPACE=/workspace/worktrees" \
         -e "CASE_NAME=${case_name}" \
         "$image" \
-        bash -c "$entrypoint"
+        sleep infinity >/dev/null
+
+    # Run addon setup inside the container (as root)
+    local entrypoint
+    entrypoint=$(addon_entrypoint "true")
+    docker exec "$cname" bash -c "$entrypoint"
+
+    # Launch agent
+    docker exec -it -w "$wt_path" \
+        -e "CASE_NAME=${case_name}" \
+        "$cname" \
+        bash -c "export PATH=/opt/tools/bin:\$PATH && exec $final_cmd"
+}
+
+cmd_stop() {
+    local case_name="$1"
+    local cname
+    cname=$(container_name "$case_name")
+
+    if container_running "$cname"; then
+        echo "Stopping container $cname ..."
+        docker stop "$cname" >/dev/null
+        docker rm "$cname" >/dev/null 2>&1 || true
+        echo "Stopped."
+    elif docker inspect "$cname" &>/dev/null; then
+        echo "Container $cname exists but is not running. Removing ..."
+        docker rm "$cname" >/dev/null 2>&1 || true
+        echo "Removed."
+    else
+        echo "No running container for $case_name."
+    fi
 }
 
 cmd_reset() {
@@ -761,10 +873,11 @@ Usage: bench.sh <command> [args]
 Commands:
   setup <case-name>                    Build Docker image, clone repo, checkout commit, build
   reproduce <case-name>                Run reproduce.sh inside container
-  shell <case-name> [--addon <name>]   Interactive shell (with optional tool addons)
+  shell <case-name> [--addon <name>]   Interactive shell (reuses running container)
   agent <case-name> --addon <name>     Launch an AI agent inside container
+  stop <case-name>                     Stop the running container for a case
   reset <case-name>                    Revert source to original buggy commit (undo all edits)
-  clean <case-name>                    Remove worktree for a case
+  clean <case-name>                    Remove worktree + container for a case
   clean-all                            Remove all bug-bench Docker artifacts
 
 Addon Options (for shell and agent):
@@ -795,6 +908,7 @@ case "${1:-}" in
     reproduce) [ -n "${2:-}" ] || die "Usage: bench.sh reproduce <case-name>"; cmd_reproduce "$2" ;;
     shell)     [ -n "${2:-}" ] || die "Usage: bench.sh shell <case-name> [--addon <name>]"; shift; cmd_shell "$@" ;;
     agent)     [ -n "${2:-}" ] || die "Usage: bench.sh agent <case-name> --addon <name>"; shift; cmd_agent "$@" ;;
+    stop)      [ -n "${2:-}" ] || die "Usage: bench.sh stop <case-name>"; cmd_stop "$2" ;;
     reset)     [ -n "${2:-}" ] || die "Usage: bench.sh reset <case-name>"; cmd_reset "$2" ;;
     clean)     [ -n "${2:-}" ] || die "Usage: bench.sh clean <case-name>"; cmd_clean "$2" ;;
     clean-all) cmd_clean_all ;;

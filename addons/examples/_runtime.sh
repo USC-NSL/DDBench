@@ -34,8 +34,8 @@ ensure_node() {
         armv7l)  arch="armv7l" ;;
         *)       echo "[runtime] ERROR: unsupported architecture $(uname -m)"; return 1 ;;
     esac
-    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${arch}.tar.xz" \
-        | tar -xJ -C "$TOOL_DIR" --strip-components=1 --no-same-owner
+    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${arch}.tar.gz" \
+        | tar -xz -C "$TOOL_DIR" --strip-components=1 --no-same-owner
     echo "[runtime] Node.js $("$TOOL_DIR/bin/node" --version) ready at $TOOL_DIR/bin/node"
 }
 
