@@ -3,7 +3,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git ca-certificates curl wget make gcc \
+    git ca-certificates curl wget make gcc libc6-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go from official tarball (apt golang-go is often outdated)

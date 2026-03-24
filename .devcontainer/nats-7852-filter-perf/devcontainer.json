@@ -11,7 +11,7 @@
     "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/nats-7852-filter-perf",
-  "postCreateCommand": "bash /repo/docker/bench-init.sh nats-7852-filter-perf",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/nats-7852-filter-perf ~/bug-bench/nats-7852-filter-perf",
   "customizations": {
     "vscode": {
       "extensions": ["golang.go"]

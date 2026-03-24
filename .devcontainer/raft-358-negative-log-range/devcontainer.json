@@ -11,7 +11,7 @@
     "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/raft-358-negative-log-range",
-  "postCreateCommand": "bash /repo/docker/bench-init.sh raft-358-negative-log-range",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/raft-358-negative-log-range ~/bug-bench/raft-358-negative-log-range",
   "customizations": {
     "vscode": {
       "extensions": ["golang.go"]

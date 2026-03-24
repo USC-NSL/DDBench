@@ -11,7 +11,7 @@
     "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/nats-7726-mixed-filter",
-  "postCreateCommand": "bash /repo/docker/bench-init.sh nats-7726-mixed-filter",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/nats-7726-mixed-filter ~/bug-bench/nats-7726-mixed-filter",
   "customizations": {
     "vscode": {
       "extensions": ["golang.go"]

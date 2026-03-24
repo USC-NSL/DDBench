@@ -11,7 +11,7 @@
     "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-3315-zdiff-crash",
-  "postCreateCommand": "bash /repo/docker/bench-init.sh kvrocks-3315-zdiff-crash",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-3315-zdiff-crash ~/bug-bench/kvrocks-3315-zdiff-crash",
   "customizations": {
     "vscode": {
       "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]

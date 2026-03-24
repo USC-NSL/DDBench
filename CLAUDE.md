@@ -4,33 +4,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A benchmark suite of 31 verified real-world bug cases from open-source distributed systems. Each case has automated scripts (`setup.sh` + `reproduce.sh`) that build from source on Ubuntu 24.04 and reliably reproduce the bug.
+A benchmark suite of 31 verified real-world bug cases from open-source distributed systems. Each case has automated scripts (`setup.sh` + `reproduce.sh`) that build from source and reliably reproduce the bug. Cases run in isolated Docker containers via `bench.sh`, with a host-only fallback for environments without Docker.
 
 ## Repository structure
 
+- `bench.sh` — Central orchestrator (setup, reproduce, shell, reset, clean)
+- `docker/` — Layered Dockerfiles (base-cpp, base-go → per-project images)
+- `.devcontainer/` — Per-case VS Code devcontainer configs (31 total)
 - `cases/<project>-<issue#>-<slug>/` — Bug case files
+  - `case.yaml` — Declarative metadata (project, commit, build cmd, Docker caps)
+  - `setup.sh` — Docker wrapper with host fallback
+  - `reproduce.sh` — Docker wrapper with host fallback
   - `README.md` — Quick start guide
-  - `setup.sh` — Clone, checkout buggy commit, install deps, build (executable)
-  - `reproduce.sh` — Trigger bug, report PASS/FAIL (executable)
   - `symptom.md` — Observable behavior and error messages
-  - `setup.md` — Detailed setup documentation
   - `reproduce.md` — Step-by-step reproduction procedure
   - `verification.md` — Pass/fail verification criteria
 - `cases-solution/<project>-<issue#>-<slug>/solution.md` — Root cause + fix (do not consult during evaluation)
 - `index.md` — Master index of all 31 verified cases
-- `reproduction_results.md` — Detailed reproduction evidence
 
-## Working with cases
+## Working with cases (Docker, recommended)
+
+```bash
+./bench.sh setup <case-name>       # build image, clone, checkout, compile
+./bench.sh reproduce <case-name>   # run reproduce.sh in container → PASS/FAIL
+./bench.sh shell <case-name>       # interactive shell (gdb, source, tools)
+./bench.sh reset <case-name>       # revert source to original buggy commit
+./bench.sh clean <case-name>       # remove worktree for this case
+./bench.sh clean-all               # remove all Docker artifacts
+```
+
+Same-project cases share a single git clone via Docker volumes.
+
+## Working with cases (host fallback, no Docker)
 
 ```bash
 cd cases/<case-name>/
-./setup.sh       # one-time: clone, build (~5-90 min depending on project)
-./reproduce.sh   # reproduce bug, prints FAIL (present) or PASS (fixed)
+./setup.sh       # installs deps via apt-get, clones, builds on host
+./reproduce.sh   # triggers bug → PASS/FAIL
 ```
 
 - Workspace defaults to `$HOME/bug-bench/`, override with `BENCH_WORKSPACE=/path`
-- All builds are from source, no Docker
-- Each `setup.sh` installs its own dependencies via `apt-get`
+- Requires Ubuntu 24.04, sudo access for apt-get
 
 ## Covered projects (31 verified cases)
 

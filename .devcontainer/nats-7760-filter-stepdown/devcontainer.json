@@ -11,7 +11,7 @@
     "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/nats-7760-filter-stepdown",
-  "postCreateCommand": "bash /repo/docker/bench-init.sh nats-7760-filter-stepdown",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/nats-7760-filter-stepdown ~/bug-bench/nats-7760-filter-stepdown",
   "customizations": {
     "vscode": {
       "extensions": ["golang.go"]

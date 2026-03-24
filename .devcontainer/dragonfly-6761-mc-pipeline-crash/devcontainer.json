@@ -11,7 +11,7 @@
     "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/dragonfly-6761-mc-pipeline-crash",
-  "postCreateCommand": "bash /repo/docker/bench-init.sh dragonfly-6761-mc-pipeline-crash",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/dragonfly-6761-mc-pipeline-crash ~/bug-bench/dragonfly-6761-mc-pipeline-crash",
   "customizations": {
     "vscode": {
       "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]

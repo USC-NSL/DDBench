@@ -11,7 +11,7 @@
     "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/rocksdb-10751-stalled-writes-shutdown",
-  "postCreateCommand": "bash /repo/docker/bench-init.sh rocksdb-10751-stalled-writes-shutdown",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/rocksdb-10751-stalled-writes-shutdown ~/bug-bench/rocksdb-10751-stalled-writes-shutdown",
   "customizations": {
     "vscode": {
       "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]

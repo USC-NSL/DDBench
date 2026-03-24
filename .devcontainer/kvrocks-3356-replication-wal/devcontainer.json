@@ -12,7 +12,7 @@
     "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-3356-replication-wal",
-  "postCreateCommand": "bash /repo/docker/bench-init.sh kvrocks-3356-replication-wal",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-3356-replication-wal ~/bug-bench/kvrocks-3356-replication-wal",
   "customizations": {
     "vscode": {
       "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]

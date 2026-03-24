@@ -367,8 +367,46 @@ cmd_shell() {
         -v "${case_dir}:/bench:ro" \
         -w "$wt_path" \
         -e "BENCH_WORKSPACE=/workspace/worktrees" \
+        -e "CASE_NAME=${case_name}" \
         "$image" \
-        bash
+        bash -c 'mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/"$CASE_NAME" ~/bug-bench/"$CASE_NAME"; exec bash'
+}
+
+cmd_reset() {
+    local case_name="$1"
+    local case_dir
+    case_dir=$(find_case_dir "$case_name")
+    local yaml
+    yaml=$(find_case_yaml "$case_dir")
+
+    local project submodules
+    project=$(yaml_val "$yaml" "project")
+    submodules=$(yaml_val "$yaml" "submodules")
+    local image="${IMAGE_PREFIX}/${project}"
+    local vol
+    vol=$(volume_name "$project")
+    local wt_path="/workspace/worktrees/${case_name}"
+
+    echo "=== bench.sh reset: $case_name ==="
+    echo "Reverting all changes to the original buggy commit..."
+
+    docker run --rm \
+        -v "${vol}:/workspace" \
+        -e "CASE_WT_PATH=${wt_path}" \
+        -e "CASE_SUBMODULES=${submodules}" \
+        "$image" \
+        bash -c '
+            cd "$CASE_WT_PATH" || exit 1
+            git checkout -- .
+            git clean -fd
+            if [ "$CASE_SUBMODULES" = "true" ]; then
+                git submodule foreach --recursive git checkout -- .
+                git submodule foreach --recursive git clean -fd
+            fi
+        '
+
+    echo "Reset complete. Source is back to the original buggy state."
+    echo "Run './bench.sh reproduce $case_name' to verify the bug is still present."
 }
 
 cmd_clean() {
@@ -435,6 +473,7 @@ Commands:
   setup <case-name>       Build Docker image, clone repo, checkout commit, build
   reproduce <case-name>   Run reproduce.sh inside container
   shell <case-name>       Interactive shell inside container
+  reset <case-name>       Revert source to original buggy commit (undo all edits)
   clean <case-name>       Remove worktree for a case
   clean-all               Remove all bug-bench Docker artifacts
 
@@ -455,6 +494,7 @@ case "${1:-}" in
     setup)     [ -n "${2:-}" ] || die "Usage: bench.sh setup <case-name>"; cmd_setup "$2" ;;
     reproduce) [ -n "${2:-}" ] || die "Usage: bench.sh reproduce <case-name>"; cmd_reproduce "$2" ;;
     shell)     [ -n "${2:-}" ] || die "Usage: bench.sh shell <case-name>"; cmd_shell "$2" ;;
+    reset)     [ -n "${2:-}" ] || die "Usage: bench.sh reset <case-name>"; cmd_reset "$2" ;;
     clean)     [ -n "${2:-}" ] || die "Usage: bench.sh clean <case-name>"; cmd_clean "$2" ;;
     clean-all) cmd_clean_all ;;
     *)         usage; exit 1 ;;

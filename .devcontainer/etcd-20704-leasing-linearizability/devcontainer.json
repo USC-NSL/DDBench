@@ -11,7 +11,7 @@
     "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/etcd-20704-leasing-linearizability",
-  "postCreateCommand": "bash /repo/docker/bench-init.sh etcd-20704-leasing-linearizability",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/etcd-20704-leasing-linearizability ~/bug-bench/etcd-20704-leasing-linearizability",
   "customizations": {
     "vscode": {
       "extensions": ["golang.go"]

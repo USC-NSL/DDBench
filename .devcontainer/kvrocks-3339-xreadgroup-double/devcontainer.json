@@ -11,7 +11,7 @@
     "source=${localWorkspaceFolder},target=/repo,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-3339-xreadgroup-double",
-  "postCreateCommand": "bash /repo/docker/bench-init.sh kvrocks-3339-xreadgroup-double",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-3339-xreadgroup-double ~/bug-bench/kvrocks-3339-xreadgroup-double",
   "customizations": {
     "vscode": {
       "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
