@@ -86,17 +86,4 @@ The workspace location defaults to `$HOME/bug-bench/` and can be overridden with
 
 ---
 
-## Excluded Cases (6 — cannot build from source on Ubuntu 24.04)
-
-These bugs are real (verified via Docker images) but the source code cannot be compiled on stock Ubuntu 24.04:
-
-| Case | Reason |
-|------|--------|
-| `clickhouse-29332-predicate-pushdown` | v21.10 submodules have broken git refs |
-| `clickhouse-75699-join-merge-distributed` | Bundled magic_enum incompatible with any available Clang |
-| `clickhouse-92375-distinct-distributed` | Same magic_enum issue as v24.12 |
-| `clickhouse-99109-sum-nondeterministic` | Same magic_enum issue as v24.12 |
-| `redpanda-16944-raft-batcher-alloc` | Seastar sub-project enforces -Werror with GCC 13-incompatible warnings |
-| `redpanda-25769-listoffsets-wrong` | Same Seastar build issue |
-
-These projects use custom internal compiler toolchains not available as packages. Their `setup.md` files document the bugs; the `cases-solution/` directory has the fixes.
+For the full list of 29 excluded (non-reproducible) cases and their removal reasons, see `excluded_cases.md`.
