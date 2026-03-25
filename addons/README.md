@@ -24,6 +24,7 @@ First run downloads and installs the tool (~1-3 min depending on addon). Subsequ
 | `claude-code` | [Claude Code](https://claude.ai/code) | Anthropic's CLI coding agent |
 | `aider` | [Aider](https://aider.chat) | AI pair programming in the terminal |
 | `codex` | [Codex CLI](https://github.com/openai/codex) | OpenAI's coding agent |
+| `mini-swe-agent` | [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) | Minimalist SWE-bench agent (~100 lines, bash-only tool) |
 | `custom-gdb-dashboard` | [GDB Dashboard](https://github.com/cyrus-and/gdb-dashboard) | Rich terminal UI for GDB |
 | `rr-debugger` | [rr](https://rr-project.org) | Record & replay debugger |
 
@@ -132,9 +133,10 @@ Agent addons need API keys. These are passed from your host environment automati
 
 | Variable | Agent |
 |----------|-------|
-| `ANTHROPIC_API_KEY` | Claude Code |
-| `OPENAI_API_KEY` | Aider, Codex |
+| `ANTHROPIC_API_KEY` | Claude Code, mini-swe-agent |
+| `OPENAI_API_KEY` | Aider, Codex, mini-swe-agent |
 | `GEMINI_API_KEY` | Aider (Gemini backend) |
+| `MSWEA_MODEL_NAME` | mini-swe-agent (optional, sets default model) |
 
 Set them on your host (e.g., in `~/.bashrc`), and `bench.sh` forwards them into the container.
 

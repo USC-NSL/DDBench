@@ -54,7 +54,7 @@ Addons inject tools (AI agents, debuggers) into containers at runtime without mo
 ./bench.sh agent <case-name> --addon aider --prompt "Read SYMPTOM.md and fix the bug"
 ```
 
-Available addons: `claude-code`, `aider`, `codex`, `custom-gdb-dashboard`, `rr-debugger`. See `addons/README.md` for writing custom addons.
+Available addons: `claude-code`, `aider`, `codex`, `mini-swe-agent`, `custom-gdb-dashboard`, `rr-debugger`. See `addons/README.md` for writing custom addons.
 
 API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) are forwarded from host. Agent configs (`~/.claude/`) mounted read-only.
 

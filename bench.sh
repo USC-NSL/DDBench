@@ -333,7 +333,7 @@ build_addon_args() {
     RUN_ARGS+=("-e" "ADDON_TOOL_DIR=/opt/tools")
 
     # Forward common API keys if set on host
-    for key in ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY; do
+    for key in ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY MSWEA_MODEL_NAME MSWEA_MINI_CONFIG_PATH; do
         [ -n "${!key:-}" ] && RUN_ARGS+=("-e" "$key")
     done
 
@@ -664,10 +664,11 @@ cmd_agent() {
     local agent_cmd="${AGENT_CMD}"
     if [ -z "$agent_cmd" ]; then
         case "${ADDON_NAMES[0]}" in
-            claude-code) agent_cmd="claude" ;;
-            aider)       agent_cmd="aider" ;;
-            codex)       agent_cmd="codex" ;;
-            *)           agent_cmd="bash" ;;
+            claude-code)    agent_cmd="claude" ;;
+            aider)          agent_cmd="aider" ;;
+            codex)          agent_cmd="codex" ;;
+            mini-swe-agent) agent_cmd="mini" ;;
+            *)              agent_cmd="bash" ;;
         esac
     fi
 
@@ -676,6 +677,7 @@ cmd_agent() {
         case "$agent_cmd" in
             claude) final_cmd="claude --print \"$AGENT_PROMPT\"" ;;
             aider)  final_cmd="aider --message \"$AGENT_PROMPT\"" ;;
+            mini)   final_cmd="mini -y --exit-immediately -t \"$AGENT_PROMPT\"" ;;
             *)      final_cmd="$agent_cmd" ;;
         esac
     fi
@@ -889,6 +891,7 @@ Environment:
   BENCH_WORKSPACE         Override workspace path (default: \$HOME/bug-bench)
   ANTHROPIC_API_KEY       Forwarded to container for Claude Code
   OPENAI_API_KEY          Forwarded to container for Codex/Aider
+  MSWEA_MODEL_NAME        Forwarded to container for mini-swe-agent (optional)
 
 Examples:
   ./bench.sh setup dragonfly-6856-flushslots-oob
@@ -897,6 +900,7 @@ Examples:
   ./bench.sh shell dragonfly-6856-flushslots-oob --addon claude-code --addon custom-gdb-dashboard
   ./bench.sh agent dragonfly-6856-flushslots-oob --addon claude-code
   ./bench.sh agent dragonfly-6856-flushslots-oob --addon aider --prompt "Fix the bug in SYMPTOM.md"
+  ./bench.sh agent dragonfly-6856-flushslots-oob --addon mini-swe-agent --prompt "Fix the bug"
 EOF
 }
 
