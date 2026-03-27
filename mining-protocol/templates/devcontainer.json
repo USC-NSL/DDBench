@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - CASE_NAME",
+  "build": {
+    "dockerfile": "../../docker/PROJECT.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-PROJECT-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/CASE_NAME,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/CASE_NAME",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/CASE_NAME ~/bug-bench/CASE_NAME",
+  "customizations": {
+    "vscode": {
+      "extensions": ["TODO_EXTENSIONS"]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+name: CASE_NAME
+project: PROJECT
+repo: https://github.com/ORG/REPO.git
+buggy_commit: "FIX_COMMIT_HASH~1"
+submodules: false
+build:
+  command: "BUILD_COMMAND"
+  binary: BINARY_PATH
+docker:
+  caps: []
+  min_cpus: 1
