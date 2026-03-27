@@ -52,23 +52,26 @@ docker:
 
 ## 2. symptom.md
 
-Describes the bug from the perspective of someone who encounters it, without revealing the root cause.
+Describes the bug from the perspective of someone who encounters it — an operator, developer, or on-call engineer observing system behavior — without revealing the root cause. This file is the entry point for agents and human debuggers during evaluation.
 
 ```markdown
 # Symptom
 
-<1-3 sentence summary of the bug's observable effect.>
+<1-3 sentence summary of the bug's observable effect. Frame it as what an operator would see.>
 
 ## Observable behavior
 - <Bullet list of specific symptoms: crash signal, error message, data anomaly, etc.>
 - <Include what works correctly as contrast, if helpful.>
+- <Describe relevant runtime/cluster context: what operation was in progress, what cluster state triggers it.>
 ```
 
 **Rules:**
 - Do NOT include root cause analysis or fix hints
 - Do NOT include code snippets from the fix
+- Do NOT name the buggy function, variable, or code path
 - Use concrete, observable language: "process crashes with SIGABRT", "subscription count grows monotonically", "test fails with DATA RACE"
-- This file is provided to agents/humans as the starting point for debugging
+- **Describe the runtime context that triggers the bug** — this is where the runtime evidence begins. E.g., "after a leader step-down", "when a slow replica is connected", "under concurrent MULTI/EXEC from multiple clients". The symptom should make clear that understanding the distributed/runtime context is necessary, without pointing to the code.
+- The symptom should convey *what kind of evidence* a debugger would need to collect (logs, cluster state, replication status, client responses) without spelling out the diagnosis
 
 ---
 
@@ -108,7 +111,7 @@ Human-readable step-by-step instructions to trigger the bug manually. Written fo
 
 ## 4. verification.md
 
-Contains the automated verification logic as a bash script block, plus human-readable pass/fail criteria.
+Contains the automated verification logic as a bash script block, plus human-readable pass/fail criteria. This file documents the **correctness oracle** — the ground-truth definition of expected behavior.
 
 ```markdown
 # Verification: <Project> #<Issue>
@@ -125,6 +128,8 @@ Contains the automated verification logic as a bash script block, plus human-rea
 - The bash block should be a self-contained excerpt of the logic in `reproduce.sh`
 - Clearly define what constitutes PASS vs FAIL
 - Include the specific signal or exit code where applicable (e.g., "SIGABRT=134")
+- **Oracle soundness**: the oracle must be validated in both directions — confirmed FAIL on buggy commit, confirmed PASS after applying the fix. Document both directions in the criteria.
+- The oracle should test the *correct behavior*, not merely the absence of a crash. Where possible, assert on expected output (e.g., "PING returns PONG", "namespace still accessible", "subscription count stable")
 
 ---
 
@@ -358,7 +363,7 @@ Entry point for the case. Links to all other files.
 
 ## 9. solution.md (in cases-solution/)
 
-Isolated from the case directory to prevent answer leakage during evaluation.
+Isolated from the case directory to prevent answer leakage during evaluation. Also serves as the evaluation key — documents the fix locus and the reasoning chain a correct diagnosis would follow.
 
 ```markdown
 # Solution: <Project> #<Issue>
@@ -367,14 +372,20 @@ Isolated from the case directory to prevent answer leakage during evaluation.
 - **PR:** <GitHub PR URL>
 - **Commit:** `<fix-commit-hash>`
 
+## Fix locus
+- **Component:** <subsystem/module name, e.g., "transaction engine", "Raft snapshot", "subscription manager">
+- **Files:** <list of files changed in the fix>
+
 ## Root cause
 <2-3 sentences explaining WHY the bug happens at a code level.>
 
+## Diagnosis chain
+<How would a debugger arrive at the root cause? What runtime evidence points toward the component?
+What code reasoning narrows it to the specific fault? This section documents the expected
+reasoning path — the interplay of runtime observation and code analysis.>
+
 ## Fix description
 <1-2 paragraphs explaining WHAT the fix changes.>
-
-## Key files (optional)
-- `path/to/file` -- what was changed and why
 
 ## How to apply
 ```bash
@@ -386,6 +397,10 @@ git checkout <fix-commit>
 ## How to verify (optional)
 <Reference to verification.md or additional verification steps.>
 ```
+
+**Rules:**
+- **Fix locus is required** — at minimum, name the component and list the files. This enables evaluation of whether a debugging tool correctly localized the fault.
+- **Diagnosis chain is required** — describe the reasoning path from symptom to root cause, explicitly noting where runtime evidence and code reasoning each contribute. This is the evaluation rubric for diagnostic accuracy.
 
 ---
 

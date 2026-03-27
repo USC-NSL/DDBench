@@ -88,13 +88,35 @@ Use this checklist to validate a new case before merging it into the benchmark.
 - [ ] `./bench.sh clean <case-name>` followed by `setup` + `reproduce` still works (clean slate)
 - [ ] Second `setup` run is fast (idempotent — skips clone and build)
 
+## Selection Criteria Compliance
+
+### Dual-reasoning requirement
+- [ ] The bug cannot be diagnosed by code reading alone (requires runtime observation to understand the trigger)
+- [ ] The bug cannot be diagnosed by runtime evidence alone (requires code analysis to identify the root cause)
+- [ ] The symptom.md describes the runtime/cluster context without pointing to the code
+
+### Fix locus
+- [ ] `solution.md` names the component and lists the changed files
+- [ ] The fix is localized (clear component, preferably 1-3 files)
+
+### Oracle soundness
+- [ ] `reproduce.sh` produces FAIL on the buggy commit (confirmed)
+- [ ] `reproduce.sh` produces PASS after applying the fix commit (confirmed)
+- [ ] No false positives (buggy code cannot accidentally pass)
+- [ ] No false negatives (fixed code does not spuriously fail)
+
+### Diagnosis chain
+- [ ] `solution.md` includes a diagnosis chain documenting the reasoning from symptom to root cause
+- [ ] The chain references both runtime evidence and code-level reasoning
+
 ## No Answer Leakage
 
-- [ ] `symptom.md` does not mention function names from the fix
+- [ ] `symptom.md` does not mention function names, variable names, or code paths from the fix
 - [ ] `reproduce.md` does not reference the fix PR or commit
 - [ ] `verification.md` does not hint at the root cause
 - [ ] `setup.sh` and `reproduce.sh` do not contain comments revealing the fix
 - [ ] `solution.md` is in `cases-solution/`, NOT in `cases/`
+- [ ] The GitHub issue text does not trivially reveal the fix (if it does, the case is excluded — see selection criteria)
 
 ## Index and Metadata
 

@@ -36,6 +36,19 @@ git checkout <fix-commit>~1
 
 If you cannot reproduce reliably, the bug is not suitable.
 
+### 1.4 Evaluate diagnostic depth
+
+Before investing in case files, apply the three gatekeeping tests:
+
+**Dual-reasoning test**: Would a debugger need to combine code reading with runtime observation to reach the root cause?
+- Ask: "Could I diagnose this from a stack trace / error log alone?" If yes → too shallow.
+- Ask: "Could I diagnose this from reading the code without ever running the system?" If yes → purely static bug, not suitable.
+- The sweet spot: runtime evidence (crash signal, cluster behavior, replication failure) points toward a subsystem, but code reasoning is needed to understand *why* that subsystem fails under those conditions.
+
+**Fix locus test**: Can you name the component and the 1-3 files where the fix lives? If the fix is scattered across many unrelated modules with no clear center, the case is hard to evaluate.
+
+**Issue text test**: Read the GitHub issue. Does it describe the root cause and fix location explicitly? If an agent could derive the patch just by reading the issue, the case bypasses diagnosis entirely.
+
 ---
 
 ## Phase 2: Create Case Files
@@ -120,9 +133,10 @@ Fill in the template with:
 
 Place in `cases-solution/<case-name>/solution.md`. Include:
 - Link to the fix PR and commit
+- **Fix locus** — name the component/subsystem and list the files changed (this enables evaluation of diagnostic accuracy)
 - Root cause explanation (code-level)
+- **Diagnosis chain** — document the reasoning path from symptom to root cause, explicitly noting where runtime evidence (logs, crash output, cluster state) and code reasoning (invariant violations, control flow analysis) each contribute. This serves as the evaluation rubric.
 - Fix description
-- Key files changed
 - How to apply the fix
 
 ### 2.11 Create devcontainer.json
@@ -235,8 +249,11 @@ If this case introduces a new project, update the "Covered projects" table in `C
 ### 5.3 Final review
 
 - All 8 case files present and formatted correctly
-- solution.md present in cases-solution/
+- solution.md present in cases-solution/ with fix locus and diagnosis chain
 - devcontainer.json present in .devcontainer/
 - Docker pipeline produces FAIL on buggy commit
+- Docker pipeline produces PASS after applying fix (oracle soundness, both directions)
 - `bench.sh reproduce` output ends with exactly `FAIL: ...` or `PASS: ...`
 - No answer leakage in symptom.md, reproduce.md, or verification.md
+- Dual-reasoning requirement met: diagnosis requires both code and runtime evidence
+- GitHub issue text does not trivially reveal the fix
