@@ -40,23 +40,37 @@ Use this checklist to validate a new case before merging it into the benchmark.
 - [ ] Host fallback checks out `buggy_commit` (not fix commit)
 - [ ] Script is idempotent (re-running skips completed steps)
 - [ ] Build produces the binary at the path declared in case.yaml
+- [ ] All required tools explicitly installed (no assumption about base image contents beyond what's in the Dockerfile)
+- [ ] No `set -e` conflicts with conditional checks (e.g., `git checkout ... || git checkout ...`)
+- [ ] Submodule update runs after checkout if `submodules: true`
 
 ### reproduce.sh
 - [ ] Docker preamble is present and identical to the standard template
 - [ ] Checks for binary existence and errors clearly if missing
-- [ ] Cleans up from previous runs before starting
-- [ ] Defines `cleanup` function with `trap cleanup EXIT`
+- [ ] Cleans up from previous runs before starting (kills leftover processes)
+- [ ] Defines `cleanup` function with `trap cleanup EXIT` (defined BEFORE starting processes)
+- [ ] Uses `set -uo pipefail` (NOT `set -e`) to allow controlled failure detection
 - [ ] Final output is exactly `PASS: Bug is fixed — <description>` or `FAIL: Bug is present — <description>`
 - [ ] Exits with code 0 (PASS) or 1 (FAIL)
 - [ ] Uses unique port number (convention: `1<issue#>`)
 - [ ] Handles `REBUILD.sh` if present (`[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"`)
+- [ ] Server readiness uses active polling, not blind `sleep`
+- [ ] Temp directories cleaned up in both cleanup function and success path
 
 ## Documentation Quality
 
 ### symptom.md
 - [ ] Describes observable behavior only (no root cause hints)
 - [ ] Includes specific error signals (SIGABRT, "DATA RACE", etc.)
+- [ ] Describes the runtime/cluster context that triggers the bug
 - [ ] Would not help an agent locate the buggy code directly
+- [ ] Cross-referenced against `solution.md` — none of the following appear:
+  - [ ] Function, method, or variable names from the fix diff
+  - [ ] Struct field names or internal constants from the buggy code path
+  - [ ] File paths pointing to the fix location
+  - [ ] Fix strategy descriptions ("make X idempotent", "add synchronization")
+  - [ ] Error messages only visible in source code (not user-facing output)
+  - [ ] PR numbers or commit hashes of the fix
 
 ### reproduce.md
 - [ ] Steps are numbered and complete

@@ -73,6 +73,23 @@ Describes the bug from the perspective of someone who encounters it — an opera
 - **Describe the runtime context that triggers the bug** — this is where the runtime evidence begins. E.g., "after a leader step-down", "when a slow replica is connected", "under concurrent MULTI/EXEC from multiple clients". The symptom should make clear that understanding the distributed/runtime context is necessary, without pointing to the code.
 - The symptom should convey *what kind of evidence* a debugger would need to collect (logs, cluster state, replication status, client responses) without spelling out the diagnosis
 
+### Prohibited patterns (information leakage)
+
+The following MUST NOT appear in `symptom.md`. Cross-reference against `solution.md` when reviewing.
+
+| Prohibited | Example (BAD) | Rewrite (GOOD) |
+|------------|---------------|-----------------|
+| Function/method names from the fix | "ChangeMonitor is not idempotent" | "Calling MONITOR twice crashes the process" |
+| Variable or struct field names from the fix | "the `cc_` field is set twice" | "An assertion failure occurs" |
+| Internal constants or magic numbers from the buggy path | "RDB encoding type 62 is unhandled" | "The replica fails with an unknown encoding error" |
+| File paths pointing to the fix location | "the bug is in `server/jetstream.go`" | "The consumer stops delivering messages" |
+| Fix description or strategy | "adding synchronization around the close path" | "A data race is detected during shutdown" |
+| Root cause mechanism | "the waitgroup.Add is called after Wait returns" | "The test fails intermittently with a data race warning" |
+| Error messages only visible in source code | "Check failed: cc_" (from a CHECK macro) | "The process crashes with an assertion failure" |
+| PR/commit references to the fix | "Fixed in PR #6615" | (omit entirely) |
+
+**Litmus test**: Read the symptom file, then read the solution. If the symptom text would let you `grep` your way to the fix location, it leaks too much.
+
 ---
 
 ## 3. reproduce.md
@@ -234,6 +251,15 @@ echo "Binary: $WORK_DIR/<binary-path>"
 - Skip clone/build if artifacts already exist (idempotent)
 - Print status messages for each phase
 
+### Common shell pitfalls (setup.sh)
+
+These are recurring bugs from past authoring sessions. Check for them before finalizing:
+
+- **Missing tool dependencies**: Never assume tools like `xz`, `jq`, `python3-pip`, or `rustup` exist in base images. Explicitly install everything the build needs. Check what's in the base Dockerfile and install the delta.
+- **`set -e` vs conditional logic**: `set -e` causes the script to exit on ANY non-zero exit code, including inside `if` conditions or `||` chains. If the script needs to test whether a command fails (e.g., `git checkout ... 2>/dev/null || git checkout ...`), either use `set +e` locally or restructure as an `if` block.
+- **Non-root execution**: Docker containers may run as a non-root `bench` user (when launched via `bench.sh agent`). Avoid `sudo` inside the build steps that run in-container. The host fallback path may use `sudo apt-get`, but the build itself should not require it.
+- **Submodule state after checkout**: After `git checkout`, submodules may be in a detached/dirty state. Always run `git submodule update --init --recursive` after checkout if `submodules: true`.
+
 ---
 
 ## 7. reproduce.sh
@@ -297,6 +323,14 @@ fi
 - For Go test-based cases: extract the regression test from the fix commit, inject it into the buggy codebase, run it
 - For server-based cases: start server, trigger via client, check if process survived or produced correct output
 - For race/flaky cases: loop N times, count failures, report aggregate
+
+### Common shell pitfalls (reproduce.sh)
+
+- **`set -e` in reproduce scripts**: Do NOT use `set -e` here. The script needs to detect failures without exiting. Use `set -uo pipefail` and check exit codes explicitly.
+- **Sleep-based readiness checks**: Don't `sleep 5` and hope the server is ready. Use active polling: `for i in $(seq 1 30); do redis-cli -p $PORT PING 2>/dev/null && break; sleep 0.2; done`. This is both faster and more reliable.
+- **Port conflicts**: Always kill leftover processes from previous runs BEFORE starting: `pkill -f "dragonfly.*--port $PORT" 2>/dev/null || true; sleep 1`. The `|| true` prevents exit on no-match.
+- **Trap + cleanup ordering**: Define `cleanup()` before starting any processes. The trap must fire even if the script exits early. Never put `set -e` before the trap definition.
+- **Temp directory cleanup**: Use `DATA_DIR=$(mktemp -d)` or a case-specific path, and clean it up in both the cleanup function and at the end of successful runs. Never leave state that affects the next run.
 
 ### Reproduction Strategies (by bug type)
 

@@ -155,13 +155,33 @@ ls docker/<project>.Dockerfile
 
 If it exists, skip to Phase 4.
 
-### 3.2 Determine the base image
+### 3.2 Preflight: validate build requirements BEFORE writing Dockerfiles
+
+Do this research step first to avoid late-stage toolchain failures:
+
+```bash
+# On the buggy commit, check what the project needs:
+# 1. Read the project's build docs (CMakeLists.txt, Makefile, go.mod, etc.)
+# 2. Identify compiler version requirements, specific library versions
+# 3. Check for known toolchain incompatibilities at this commit
+# 4. Estimate build time and resource requirements
+```
+
+**Common traps to check for:**
+- Does the project pin a specific compiler version? (e.g., ClickHouse requires clang-23)
+- Does the project need Rust toolchain in addition to C++? (e.g., ClickHouse with Rust nightly)
+- Are there git submodules that pull large dependencies? Check total clone size.
+- Does the build require more than 4GB RAM? Flag this in `case.yaml` min_cpus.
+
+Only proceed to writing the Dockerfile once you've confirmed the toolchain is viable.
+
+### 3.3 Determine the base image
 
 - C/C++ projects → `FROM bug-bench/base-cpp`
 - Go projects → `FROM bug-bench/base-go`
 - New language → create a new base image first (see [docker-containment.md](docker-containment.md))
 
-### 3.3 Create the project Dockerfile
+### 3.4 Create the project Dockerfile
 
 ```bash
 # docker/<project>.Dockerfile
@@ -177,6 +197,13 @@ docker build -t bug-bench/<project> -f docker/<project>.Dockerfile docker/
 # Test: start container and try to build
 docker run --rm -it bug-bench/<project> bash
 ```
+
+**Dockerfile rules:**
+- Use `--no-install-recommends` to minimize image size
+- Clean apt cache (`rm -rf /var/lib/apt/lists/*`) after install
+- Pin tool versions where the project requires them (don't rely on `apt-get` latest)
+- Do NOT bake source code or run builds — source is mounted at runtime
+- Test that the build works as both root and non-root user
 
 ---
 
