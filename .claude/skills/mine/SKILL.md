@@ -1,33 +1,38 @@
 # /mine — End-to-End Bug Case Mining
 
-Mine a new benchmark case. Accepts natural language, a PR URL, or an issue URL. Orchestrates analysis, evaluation, scaffolding, and iterative verification with built-in failure diagnosis.
+Mine benchmark cases. Accepts a PR URL, issue URL, or natural language — from a single targeted case to a multi-repo mining campaign. Orchestrates analysis, evaluation, scaffolding, and iterative verification with built-in failure diagnosis.
 
 ## Usage
 
 ```
-/mine <natural language description>
 /mine <PR-URL>
 /mine <ISSUE-URL>
+/mine <natural language — single case or campaign>
 /mine <any of the above> --dry-run
 /mine <any of the above> --slug <slug>
 ```
 
 **Examples:**
 ```
+# Single case from PR or issue
 /mine https://github.com/etcd-io/etcd/pull/20281
 /mine https://github.com/apache/kvrocks/issues/2520
+
+# Single case from natural language
 /mine find a race condition bug in nats-server's JetStream consumer path
-/mine look for data loss bugs in kvrocks replication, prefer issues from 2024
-/mine https://github.com/hashicorp/raft/pull/581 --slug transfer-write-race
+
+# Campaign — mine multiple cases with strategy
+/mine mine 8-12 cases across etcd, raft, nats, kvrocks. Prioritize replication
+      consistency and leader election bugs. Balance across repos.
 ```
 
 ---
 
 ## Phase 0: Input Resolution
 
-Resolve input into a concrete **fix PR + fix commit**. Three paths converge into Phase 1.
+Determine the **mode** (single vs campaign) and resolve to concrete candidates.
 
-### Path A: PR URL
+### Path A: PR URL → single case
 
 Input matches `https://github.com/<org>/<repo>/pull/<number>`.
 
@@ -37,7 +42,7 @@ gh pr view <URL> --json state,mergeCommit,title,body,files,additions,deletions
 
 If `state != MERGED` → warn and abort. Extract `mergeCommit.oid`. Proceed to Phase 1.
 
-### Path B: Issue URL
+### Path B: Issue URL → single case
 
 Input matches `https://github.com/<org>/<repo>/issues/<number>`.
 
@@ -48,26 +53,159 @@ gh api repos/<org>/<repo>/issues/<number>/timeline --paginate
 
 Find linked/closing PRs. If one merged fix PR → use it (Path A). If multiple → pick most focused. If none → abort.
 
-### Path C: Natural language
+### Path C: Natural language → single case
 
-Parse input for project hints, bug type, component, recency constraints.
+Input is free-form but describes **one** case (e.g., "find a race condition in nats").
+
+Parse for project hints, bug type, component, recency. Search:
 
 ```bash
-# Search known project issues
 gh search issues --repo <org>/<repo> --label bug --state closed \
   --sort updated -- "<keywords>"
 ```
 
-Present top 3-5 candidates with one-line summaries:
-```
-1. nats-io/nats-server#7707 — concurrent map crash in WQ consumer partition
-   Fix: PR #7708, 2 files, +15/-3 lines. Type: data race
-2. ...
+Present top 3-5 candidates. After user selects → Path A.
+
+### Path D: Natural language → campaign (multiple cases)
+
+Input describes a **mining campaign** with any of these signals:
+- A target count ("mine 8-12 cases", "find 5 more bugs")
+- Multiple repos listed ("across etcd, raft, nats, kvrocks")
+- Balance/distribution constraints ("balance across repos", "don't let any repo dominate")
+- Priority ordering ("prioritize etcd, then consul")
+- Bug type preferences ("prefer replication, leader election, snapshot bugs")
+
+When detected, run the **Campaign Planning** sub-phase before any execution.
+
+#### D.1: Parse the campaign strategy
+
+Extract a structured plan from the natural language:
+
+```yaml
+campaign:
+  target_count: 8-12          # how many cases to produce
+  repos:                       # ordered by priority
+    - org: etcd-io, repo: etcd, priority: 1, max_cases: 3
+    - org: hashicorp, repo: raft, priority: 1, max_cases: 3
+    - org: nats-io, repo: nats-server, priority: 1, max_cases: 3
+    - org: apache, repo: kvrocks, priority: 1, max_cases: 3
+    - org: hashicorp, repo: consul, priority: 2, max_cases: 2
+    - org: rabbitmq, repo: rabbitmq-server, priority: 3, max_cases: 1
+  bug_types:                   # preferred categories
+    - replication consistency
+    - snapshot/restore
+    - leader election
+    - failover/recovery
+    - membership change
+  balance_rule: "max 3 per repo, aim for 4-6 repos represented"
+  exclusions:                  # from user or auto-detected
+    - shallow single-node bugs
+    - race-detector-only without distributed semantics
+    - unreproducible/flaky
+    - solvable from issue text alone
 ```
 
-After user selects → resolve to PR URL → Path A.
+#### D.2: Survey existing benchmark coverage
 
-**Auto-selection**: Prefer bugs not already in benchmark, underrepresented types, smaller fix locus, clear repro steps.
+```bash
+# Count existing cases per project
+ls cases/ | cut -d- -f1 | sort | uniq -c | sort -rn
+```
+
+Identify which repos are underrepresented vs overrepresented. Factor this into candidate ranking.
+
+#### D.3: Search across repos
+
+For each repo (in priority order), search for candidates matching the bug type preferences:
+
+```bash
+gh search issues --repo <org>/<repo> --label bug --state closed \
+  --sort updated -- "fix <bug-type-keyword>"
+gh search prs --repo <org>/<repo> --state merged \
+  -- "fix <bug-type-keyword>"
+```
+
+For each candidate, quick-evaluate:
+- Has merged fix PR?
+- Fix locus size (files changed, lines changed)?
+- Already in benchmark? (`ls cases/ | grep <issue#>`)
+- Does issue text reveal the fix? (skim title + first paragraph)
+- Bug type matches preferences?
+
+#### D.4: Rank and present the campaign plan
+
+Score candidates using:
+1. **Balance score**: Higher if the repo is underrepresented in existing benchmark
+2. **Type score**: Higher if the bug type matches preferences
+3. **Locus score**: Higher if fix is 1-3 files, <50 lines
+4. **Reproducibility signal**: Higher if issue describes clear repro steps or PR includes a test
+5. **Distributed depth**: Higher if bug involves multi-node interaction, not single-node
+
+Present the plan:
+
+```
+=== Mining Campaign Plan ===
+Target: 10 cases across 5 repos
+
+Existing coverage: dragonfly(14), nats(6), kvrocks(6), etcd(4), raft(4)
+Strategy: Prioritize etcd, raft, nats, kvrocks for depth; add consul for breadth
+
+| # | Repo | Issue | Title | Type | Locus | Score |
+|---|------|-------|-------|------|-------|-------|
+| 1 | etcd | #19899 | watch progress notify stalls after compaction | data loss | 2 files | 92 |
+| 2 | raft | #540 | snapshot restore drops uncommitted entries | snapshot | 1 file | 90 |
+| 3 | nats | #7650 | consumer filter lost after raft snapshot | data loss | 3 files | 88 |
+| 4 | consul | #21045 | anti-entropy sync drops during leader change | replication | 2 files | 85 |
+| ...
+
+Proceed with this plan? (yes / edit / add <url> / drop <#>)
+```
+
+User can:
+- **yes**: execute all in order
+- **edit**: modify the plan (add/remove/reorder)
+- **add `<url>`**: insert a specific PR/issue into the queue
+- **drop `<#>`**: remove a candidate
+
+#### D.5: Execute sequentially
+
+Process each candidate through Phases 1-6. Between cases:
+
+```
+[3/10] Mining consul-21045-antientropy-leader-change...
+  Phase 1: Analyzing PR #21046... ✓
+  Phase 2: Selection criteria 9/9 PASS
+  Phase 3: Scaffolding... ✓
+  Phase 4: Verify case... VERIFIED (attempt 1/3)
+  Phase 5: Verify oracle... SOUND (attempt 1/3)
+  Phase 6: Sanitize... CLEAN
+  → COMPLETE
+
+Campaign progress: 3/10 complete, 0 failed, 7 remaining
+Balance: etcd(2), raft(1), nats(0), consul(0) — next: nats
+```
+
+**Balance enforcement**: After each successful case, re-check repo distribution. If a repo has hit its `max_cases`, skip remaining candidates from that repo and pull from the next priority level.
+
+**Failure handling**: If a candidate fails after 3 diagnose-case attempts, log it and continue to the next. Don't abort the campaign.
+
+#### D.6: Campaign report
+
+```
+=== Campaign Report ===
+Target: 10 cases  |  Completed: 8  |  Failed: 2  |  Skipped: 1
+
+| # | Case | Repo | Type | Status |
+|---|------|------|------|--------|
+| 1 | etcd-19899-watch-compaction-stall | etcd | data loss | COMPLETE |
+| 2 | raft-540-snapshot-uncommitted | raft | snapshot | COMPLETE |
+| 3 | nats-7650-consumer-filter-snapshot | nats | data loss | COMPLETE |
+| 4 | consul-21045-antientropy-leader | consul | replication | ORACLE_FAIL |
+| ...
+
+Balance achieved: etcd(3), raft(2), nats(2), kvrocks(1), consul(0)
+Failed candidates saved to: mining-campaign-failures.md (for manual review)
+```
 
 ---
 
@@ -177,18 +315,7 @@ Abort after 3 failed attempts.
 
 1. Run `/sanitize <case-name>` — check symptom.md for leakage against solution.md
 2. Follow `mining-protocol/authoring-guide.md` Phase 5: update `index.md`, update `CLAUDE.md` if new project
-3. Final report:
-
-```
-=== Mining Report: <case-name> ===
-Source: <PR-URL | issue-URL | "natural language search">
-Fix Commit: <hash>  |  Buggy Commit: <hash>~1
-Selection: 9/9 PASS
-Verify: VERIFIED (attempt N/3)  |  Oracle: SOUND (attempt N/3)
-Sanitize: CLEAN
-Files: cases/<case-name>/ (8) + cases-solution/ + .devcontainer/
-Status: COMPLETE
-```
+3. Final report (single case) or progress update (campaign mode)
 
 ---
 
@@ -198,6 +325,7 @@ Status: COMPLETE
 - **Multi-commit PRs**: Fix may not be the merge commit. Check `gh pr view --json commits`.
 - **Go projects without binaries** (e.g., hashicorp/raft): `build.command` and `build.binary` are empty strings.
 - **Race cases**: 5+ iterations with `-race`, pre-seed data to widen the window. Target >90% aggregate detection.
+- **New repos in campaigns**: When a repo is new to the benchmark (no existing Dockerfile), the first case from that repo will take significantly longer due to Dockerfile creation and initial build.
 
 ## References
 
@@ -210,4 +338,4 @@ Status: COMPLETE
 - `/verify-oracle` — oracle soundness check
 - `/sanitize` — symptom leakage scanner
 - `/newcase` — interactive scaffolder (alternative to Phase 3)
-- `/mine-batch` — batch processing wrapper for multiple candidates
+- `/mine-batch` — file-based batch processing (alternative to campaign mode)
