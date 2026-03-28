@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - raft-517-candidate-appendentries-race",
+  "build": {
+    "dockerfile": "../../docker/raft.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-raft-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/raft-517-candidate-appendentries-race,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/raft-517-candidate-appendentries-race",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/raft-517-candidate-appendentries-race ~/bug-bench/raft-517-candidate-appendentries-race",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}

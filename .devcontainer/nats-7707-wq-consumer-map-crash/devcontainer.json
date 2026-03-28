@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - nats-7707-wq-consumer-map-crash",
+  "build": {
+    "dockerfile": "../../docker/nats.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-nats-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/nats-7707-wq-consumer-map-crash,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/nats-7707-wq-consumer-map-crash",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/nats-7707-wq-consumer-map-crash ~/bug-bench/nats-7707-wq-consumer-map-crash",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}

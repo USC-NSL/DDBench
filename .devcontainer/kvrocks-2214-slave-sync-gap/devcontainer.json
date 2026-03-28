@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - kvrocks-2214-slave-sync-gap",
+  "build": {
+    "dockerfile": "../../docker/kvrocks.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/kvrocks-2214-slave-sync-gap,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/kvrocks-2214-slave-sync-gap",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-2214-slave-sync-gap ~/bug-bench/kvrocks-2214-slave-sync-gap",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+    }
+  }
+}

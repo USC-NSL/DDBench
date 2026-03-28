@@ -1,0 +1,11 @@
+name: raft-581-transfer-write-race
+project: raft
+repo: https://github.com/hashicorp/raft.git
+buggy_commit: "62eaa1c192d4c09c90caa5e227177eb9205a6267~1"
+submodules: false
+build:
+  command: ""
+  binary: ""
+docker:
+  caps: []
+  min_cpus: 1

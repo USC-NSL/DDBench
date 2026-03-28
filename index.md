@@ -1,8 +1,8 @@
 # Bug Cases Index
 ## Distributed Interactive Debugger Evaluation
 
-**Total verified cases: 31**
-**Updated: 2026-03-23**
+**Total verified cases: 37**
+**Updated: 2026-03-27**
 
 Each case has `./setup.sh` and `./reproduce.sh` scripts that build from source on Ubuntu 24.04 and reliably reproduce the bug. Run `cd cases/<folder_name>/ && ./setup.sh && ./reproduce.sh`.
 
@@ -41,3 +41,9 @@ Each case has `./setup.sh` and `./reproduce.sh` scripts that build from source o
 | 29 | hashicorp/raft | https://github.com/hashicorp/raft/issues/268 | Raft.Shutdown() deadlocks with concurrent takeSnapshot() | `raft-268-shutdown-deadlock` |
 | 30 | NATS Server | https://github.com/nats-io/nats-server/issues/7852 | Consumer subject filtering causes >20% performance degradation even when matching all | `nats-7852-filter-perf` |
 | 31 | RocksDB | https://github.com/facebook/rocksdb/issues/10751 | Stalled writes block forever during DB::Close() shutdown | `rocksdb-10751-stalled-writes-shutdown` |
+| 32 | Kvrocks | https://github.com/apache/kvrocks/issues/2520 | Namespaces not loaded into memory after full sync from master | `kvrocks-2520-namespace-fullsync` |
+| 33 | Kvrocks | https://github.com/apache/kvrocks/issues/2214 | Slave misses key updates during downtime due to replication offset drift | `kvrocks-2214-slave-sync-gap` |
+| 34 | hashicorp/raft | https://github.com/hashicorp/raft/issues/517 | Data race between candidate state exit and AppendEntries handler | `raft-517-candidate-appendentries-race` |
+| 35 | hashicorp/raft | https://github.com/hashicorp/raft/pull/581 | Leadership transfer fails when writes advance log during transfer window | `raft-581-transfer-write-race` |
+| 36 | etcd | https://github.com/etcd-io/etcd/issues/20221 | Watch on future revision receives old events after snapshot restore | `etcd-20221-watch-restore-revision` |
+| 37 | NATS Server | https://github.com/nats-io/nats-server/issues/7707 | Concurrent map crash in WorkQueue consumer partition management | `nats-7707-wq-consumer-map-crash` |

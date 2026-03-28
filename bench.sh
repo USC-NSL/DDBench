@@ -207,6 +207,7 @@ ensure_worktree() {
             "$image" \
             bash -c '
                 cd /workspace
+                git config --global --add safe.directory /workspace 2>/dev/null || true
                 git fetch --all 2>/dev/null || true
                 RESOLVED=$(git rev-parse "$CASE_COMMIT" 2>/dev/null || echo "$CASE_COMMIT")
                 mkdir -p /workspace/worktrees
@@ -820,7 +821,7 @@ cmd_clean() {
         -v "${vol}:/workspace" \
         -e "CASE_WT_PATH=${wt_path}" \
         "$image" \
-        bash -c 'cd /workspace && git worktree remove "$CASE_WT_PATH" --force 2>/dev/null || rm -rf "$CASE_WT_PATH"' 2>/dev/null || true
+        bash -c 'git config --global --add safe.directory /workspace 2>/dev/null; cd /workspace && git worktree remove "$CASE_WT_PATH" --force 2>/dev/null || rm -rf "$CASE_WT_PATH"' 2>/dev/null || true
 
     echo "Cleaned $case_name."
 }

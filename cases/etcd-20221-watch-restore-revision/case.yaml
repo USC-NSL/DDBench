@@ -1,0 +1,11 @@
+name: etcd-20221-watch-restore-revision
+project: etcd
+repo: https://github.com/etcd-io/etcd.git
+buggy_commit: "9fb8c3685fd4573e39470a5451d3f85c0f29bfb1~1"
+submodules: false
+build:
+  command: "make build"
+  binary: bin/etcd
+docker:
+  caps: []
+  min_cpus: 1

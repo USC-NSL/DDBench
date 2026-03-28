@@ -1,0 +1,11 @@
+name: kvrocks-2520-namespace-fullsync
+project: kvrocks
+repo: https://github.com/apache/kvrocks.git
+buggy_commit: "a29df097dd23c36a749e5c616f4d1cae1051e853~1"
+submodules: true
+build:
+  command: "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DDISABLE_JEMALLOC=ON && make -j$(nproc)"
+  binary: build/kvrocks
+docker:
+  caps: []
+  min_cpus: 1
