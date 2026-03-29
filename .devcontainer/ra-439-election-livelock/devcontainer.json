@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - ra-439-election-livelock",
+  "build": {
+    "dockerfile": "../../docker/ra.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-ra-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/ra-439-election-livelock,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/ra-439-election-livelock",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/ra-439-election-livelock ~/bug-bench/ra-439-election-livelock",
+  "customizations": {
+    "vscode": {
+      "extensions": ["erlang-ls.erlang-ls"]
+    }
+  }
+}

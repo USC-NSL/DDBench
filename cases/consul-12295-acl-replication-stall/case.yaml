@@ -1,0 +1,11 @@
+name: consul-12295-acl-replication-stall
+project: consul
+repo: https://github.com/hashicorp/consul.git
+buggy_commit: "24245edfcc9d56eb1033908c607f56b19f7d1360~1"
+submodules: false
+build:
+  command: "go build -o bin/consul ./... 2>/dev/null || true"
+  binary: bin/consul
+docker:
+  caps: []
+  min_cpus: 1

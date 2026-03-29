@@ -1,0 +1,12 @@
+{
+  "name": "raft-rs-221-campaign-conf-change",
+  "build": {
+    "dockerfile": "../../docker/raft-rs.Dockerfile"
+  },
+  "workspaceMount": "source=bug-bench-raft-rs-src,target=/workspace,type=volume",
+  "workspaceFolder": "/workspace/worktrees/raft-rs-221-campaign-conf-change",
+  "mounts": [
+    "source=bug-bench-tools,target=/bench-tools,type=volume"
+  ],
+  "postStartCommand": "git config --global --add safe.directory /workspace && git config --global --add safe.directory /workspace/worktrees/raft-rs-221-campaign-conf-change"
+}

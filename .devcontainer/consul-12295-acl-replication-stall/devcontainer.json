@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - consul-12295-acl-replication-stall",
+  "build": {
+    "dockerfile": "../../docker/consul.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-consul-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/consul-12295-acl-replication-stall,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/consul-12295-acl-replication-stall",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/consul-12295-acl-replication-stall ~/bug-bench/consul-12295-acl-replication-stall",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}

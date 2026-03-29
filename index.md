@@ -1,8 +1,8 @@
 # Bug Cases Index
 ## Distributed Interactive Debugger Evaluation
 
-**Total verified cases: 52**
-**Updated: 2026-03-28**
+**Total verified cases: 56**
+**Updated: 2026-03-29**
 
 Each case has `./setup.sh` and `./reproduce.sh` scripts that build from source on Ubuntu 24.04 and reliably reproduce the bug. Run `cd cases/<folder_name>/ && ./setup.sh && ./reproduce.sh`.
 
@@ -62,3 +62,7 @@ Each case has `./setup.sh` and `./reproduce.sh` scripts that build from source o
 | 50 | RabbitMQ | https://github.com/rabbitmq/rabbitmq-server/issues/12635 | Quorum queue member crashes after Raft snapshot installation (stale log read) | `rabbitmq-12635-qq-snapshot-crash` |
 | 51 | BookKeeper | https://github.com/apache/bookkeeper/pull/4701 | Fencing bypassed due to race in HandleFactory causing entry loss | `bookkeeper-4701-fencing-race` |
 | 52 | hashicorp/raft | https://github.com/hashicorp/raft/issues/429 | LogCache caches entries before StoreLogs causing phantom data on restart | `raft-460-logcache-store-order` |
+| 53 | Consul | https://github.com/hashicorp/consul/issues/12295 | ACL replication permanently stalls after same-server leadership re-election | `consul-12295-acl-replication-stall` |
+| 54 | Ra | https://github.com/rabbitmq/ra/issues/439 | Election livelock when candidate has lower log index than pre-vote member | `ra-439-election-livelock` |
+| 55 | BookKeeper | https://github.com/apache/bookkeeper/pull/2616 | Recovery reads missing fencing flag allow original writer to commit after ledger close | `bookkeeper-2614-recovery-fencing-gap` |
+| 56 | tikv/raft-rs | https://github.com/tikv/raft-rs/issues/221 | Node campaigns via leader transfer despite pending unapplied conf change | `raft-rs-221-campaign-conf-change` |

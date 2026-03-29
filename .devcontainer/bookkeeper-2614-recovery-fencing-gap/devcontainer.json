@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - bookkeeper-2614-recovery-fencing-gap",
+  "build": {
+    "dockerfile": "../../docker/bookkeeper.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-bookkeeper-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/bookkeeper-2614-recovery-fencing-gap,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/bookkeeper-2614-recovery-fencing-gap",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/bookkeeper-2614-recovery-fencing-gap ~/bug-bench/bookkeeper-2614-recovery-fencing-gap",
+  "customizations": {
+    "vscode": {
+      "extensions": ["redhat.java", "vscjava.vscode-java-pack"]
+    }
+  }
+}

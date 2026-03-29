@@ -1,0 +1,11 @@
+name: ra-439-election-livelock
+project: ra
+repo: https://github.com/rabbitmq/ra.git
+buggy_commit: "bdf8349a5515df5871e36918e8c5e1ee4c0011b3"
+submodules: false
+build:
+  command: "make -j$(nproc) && make test-deps TEST_DEPS='proper meck'"
+  binary: ""
+docker:
+  caps: []
+  min_cpus: 1
