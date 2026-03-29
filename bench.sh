@@ -757,32 +757,51 @@ cmd_reset() {
     local yaml
     yaml=$(find_case_yaml "$case_dir")
 
-    local project submodules
+    local project submodules commit
     project=$(yaml_val "$yaml" "project")
     submodules=$(yaml_val "$yaml" "submodules")
+    commit=$(yaml_val "$yaml" "buggy_commit")
     local image="${IMAGE_PREFIX}/${project}"
     local vol
     vol=$(volume_name "$project")
     local wt_path="/workspace/worktrees/${case_name}"
 
     echo "=== bench.sh reset: $case_name ==="
-    echo "Reverting all changes to the original buggy commit..."
+    echo "Reverting to the original buggy commit ($commit)..."
 
     docker run --rm \
         -v "${vol}:/workspace" \
         -e "CASE_WT_PATH=${wt_path}" \
+        -e "CASE_COMMIT=${commit}" \
         -e "CASE_SUBMODULES=${submodules}" \
         "$image" \
         bash -c '
             cd "$CASE_WT_PATH" || exit 1
+            git config --global --add safe.directory /workspace 2>/dev/null || true
+
             # Preserve benchmark files across reset
             [ -f SYMPTOM.md ] && cp SYMPTOM.md /tmp/_symptom_backup.md
             [ -f REBUILD.sh ] && cp REBUILD.sh /tmp/_rebuild_backup.sh
+
+            # Step 1: Clean working tree (discard all modifications)
             git checkout -- .
             git clean -fd
+
+            # Step 2: Move HEAD back to the buggy commit
+            RESOLVED=$(git rev-parse "$CASE_COMMIT" 2>/dev/null || echo "$CASE_COMMIT")
+            CURRENT=$(git rev-parse HEAD)
+            if [ "$CURRENT" != "$RESOLVED" ]; then
+                echo "HEAD was at $(git rev-parse --short HEAD), checking out $CASE_COMMIT ..."
+                git checkout "$RESOLVED" 2>&1 | tail -1
+            fi
+
+            # Step 3: Restore benchmark files
             [ -f /tmp/_symptom_backup.md ] && mv /tmp/_symptom_backup.md SYMPTOM.md
             [ -f /tmp/_rebuild_backup.sh ] && mv /tmp/_rebuild_backup.sh REBUILD.sh
+
+            # Step 4: Reset submodules if applicable
             if [ "$CASE_SUBMODULES" = "true" ]; then
+                git submodule update --init --recursive 2>&1 | tail -1
                 git submodule foreach --recursive git checkout -- .
                 git submodule foreach --recursive git clean -fd
             fi
