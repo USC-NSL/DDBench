@@ -1,0 +1,11 @@
+name: nats-7308-delete-nonexistent-reset
+project: nats
+repo: https://github.com/nats-io/nats-server.git
+buggy_commit: "v2.11.8"
+submodules: false
+build:
+  command: "go build -buildvcs=false -o nats-server ."
+  binary: nats-server
+docker:
+  caps: []
+  min_cpus: 1

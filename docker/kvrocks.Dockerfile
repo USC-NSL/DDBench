@@ -4,6 +4,7 @@ FROM bug-bench/base-cpp
 # Go is needed for running kvrocks Go integration tests (kvrocks-2520).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     iptables \
+    autoconf \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go (needed for kvrocks Go integration tests)

@@ -1,0 +1,11 @@
+name: raft-460-logcache-store-order
+project: raft
+repo: https://github.com/hashicorp/raft.git
+buggy_commit: "f810f43d71b4a051a0c0e16e003f0a55456dd0fb~1"
+submodules: false
+build:
+  command: ""
+  binary: ""
+docker:
+  caps: []
+  min_cpus: 1

@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - kvrocks-3208-replication-watermark",
+  "build": {
+    "dockerfile": "../../docker/kvrocks.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/kvrocks-3208-replication-watermark,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/kvrocks-3208-replication-watermark",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-3208-replication-watermark ~/bug-bench/kvrocks-3208-replication-watermark",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+    }
+  }
+}

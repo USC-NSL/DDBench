@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - bookkeeper-4701-fencing-race",
+  "build": {
+    "dockerfile": "../../docker/bookkeeper.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-bookkeeper-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/bookkeeper-4701-fencing-race,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/bookkeeper-4701-fencing-race",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/bookkeeper-4701-fencing-race ~/bug-bench/bookkeeper-4701-fencing-race",
+  "customizations": {
+    "vscode": {
+      "extensions": ["vscjava.vscode-java-pack"]
+    }
+  }
+}

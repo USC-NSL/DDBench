@@ -1,0 +1,11 @@
+name: etcd-19179-watch-tombstone-compact
+project: etcd
+repo: https://github.com/etcd-io/etcd.git
+buggy_commit: "83cf7bb4fc621f017fcaa9a735194fcec23420b8~1"
+submodules: false
+build:
+  command: "make build"
+  binary: bin/etcd
+docker:
+  caps: []
+  min_cpus: 1

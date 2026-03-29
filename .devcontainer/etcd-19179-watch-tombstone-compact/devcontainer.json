@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - etcd-19179-watch-tombstone-compact",
+  "build": {
+    "dockerfile": "../../docker/etcd.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-etcd-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/etcd-19179-watch-tombstone-compact,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/etcd-19179-watch-tombstone-compact",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/etcd-19179-watch-tombstone-compact ~/bug-bench/etcd-19179-watch-tombstone-compact",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}

@@ -521,6 +521,8 @@ cmd_reproduce() {
     local wt_path="/workspace/worktrees/${case_name}"
     local build_cmd
     build_cmd=$(yaml_nested "$yaml" "build" "command")
+    local cname
+    cname="$(container_name "$case_name")"
 
     echo "=== bench.sh reproduce: $case_name ==="
 
@@ -538,10 +540,14 @@ cmd_reproduce() {
             bash -c 'eval "$BUILD_CMD"'
     fi
 
-    # Run reproduce.sh
-    # Mount the case directory at /bench, set BENCH_WORKSPACE so
-    # WORK_DIR resolves to the worktree path.
-    docker run --rm \
+    # Kill any leftover container RIGHT BEFORE starting the named one
+    # (not earlier — the rebuild step above can take minutes, during which
+    # another process could recreate the container).
+    docker rm -f "$cname" 2>/dev/null || true
+
+    # Run reproduce.sh in a named container so external scripts can track/kill it
+    # on timeout. The --rm flag still ensures cleanup on normal exit.
+    docker run --rm --name "$cname" \
         "${RUN_ARGS[@]}" \
         -v "${vol}:/workspace" \
         -v "${case_dir}:/bench:ro" \

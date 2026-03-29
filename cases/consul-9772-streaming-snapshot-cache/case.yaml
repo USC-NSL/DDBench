@@ -1,0 +1,11 @@
+name: consul-9772-streaming-snapshot-cache
+project: consul
+repo: https://github.com/hashicorp/consul.git
+buggy_commit: "363d738fd2ee1ee25ad872a63894cffa8faf9df2~1"
+submodules: false
+build:
+  command: "go build -o bin/consul ./... 2>/dev/null || true"
+  binary: bin/consul
+docker:
+  caps: []
+  min_cpus: 1

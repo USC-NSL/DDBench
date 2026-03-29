@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - rabbitmq-12635-qq-snapshot-crash",
+  "build": {
+    "dockerfile": "../../docker/rabbitmq.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-rabbitmq-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/rabbitmq-12635-qq-snapshot-crash,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/rabbitmq-12635-qq-snapshot-crash",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/rabbitmq-12635-qq-snapshot-crash ~/bug-bench/rabbitmq-12635-qq-snapshot-crash",
+  "customizations": {
+    "vscode": {
+      "extensions": ["erlang-ls.erlang-ls"]
+    }
+  }
+}

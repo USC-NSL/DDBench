@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - etcd-17529-watch-compaction-loss",
+  "build": {
+    "dockerfile": "../../docker/etcd.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-etcd-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/etcd-17529-watch-compaction-loss,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/etcd-17529-watch-compaction-loss",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/etcd-17529-watch-compaction-loss ~/bug-bench/etcd-17529-watch-compaction-loss",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}

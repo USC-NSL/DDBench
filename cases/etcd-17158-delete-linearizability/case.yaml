@@ -1,0 +1,11 @@
+name: etcd-17158-delete-linearizability
+project: etcd
+repo: https://github.com/etcd-io/etcd.git
+buggy_commit: "b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d~1"
+submodules: false
+build:
+  command: "make build"
+  binary: bin/etcd
+docker:
+  caps: []
+  min_cpus: 1

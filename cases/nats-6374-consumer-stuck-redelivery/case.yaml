@@ -1,0 +1,11 @@
+name: nats-6374-consumer-stuck-redelivery
+project: nats
+repo: https://github.com/nats-io/nats-server.git
+buggy_commit: "2a8ee64628f6bd87a4d86557af4330ec69783f7f"
+submodules: false
+build:
+  command: "go build -buildvcs=false -o nats-server ."
+  binary: nats-server
+docker:
+  caps: []
+  min_cpus: 1

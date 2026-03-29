@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - raft-rs-345-readindex-config-change",
+  "build": {
+    "dockerfile": "../../docker/raft-rs.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-raft-rs-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/raft-rs-345-readindex-config-change,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/raft-rs-345-readindex-config-change",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/raft-rs-345-readindex-config-change ~/bug-bench/raft-rs-345-readindex-config-change",
+  "customizations": {
+    "vscode": {
+      "extensions": ["rust-lang.rust-analyzer"]
+    }
+  }
+}

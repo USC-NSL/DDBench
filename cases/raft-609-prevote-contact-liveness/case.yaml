@@ -1,0 +1,11 @@
+name: raft-609-prevote-contact-liveness
+project: raft
+repo: https://github.com/hashicorp/raft.git
+buggy_commit: "42d34464b2d203e389e11ed6d43db698792c0604~1"
+submodules: false
+build:
+  command: ""
+  binary: ""
+docker:
+  caps: []
+  min_cpus: 1

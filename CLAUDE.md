@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A benchmark suite of 37 verified real-world bug cases from open-source distributed systems. Each case has automated scripts (`setup.sh` + `reproduce.sh`) that build from source and reliably reproduce the bug. Cases run in isolated Docker containers via `bench.sh`, with a host-only fallback for environments without Docker.
+A benchmark suite of 52 verified real-world bug cases from open-source distributed systems. Each case has automated scripts (`setup.sh` + `reproduce.sh`) that build from source and reliably reproduce the bug. Cases run in isolated Docker containers via `bench.sh`, with a host-only fallback for environments without Docker.
 
 ## Repository structure
 
@@ -13,7 +13,7 @@ A benchmark suite of 37 verified real-world bug cases from open-source distribut
 - `addons/` — Runtime tool injection scripts (AI agents, debuggers, profilers)
   - `addons/examples/` — Shipped addon scripts (claude-code, aider, codex, gdb-dashboard, rr)
   - `addons/*.sh` — User custom addon scripts (gitignored)
-- `.devcontainer/` — Per-case VS Code devcontainer configs (37 total)
+- `.devcontainer/` — Per-case VS Code devcontainer configs (52 total)
 - `cases/<project>-<issue#>-<slug>/` — Bug case files
   - `case.yaml` — Declarative metadata (project, commit, build cmd, Docker caps)
   - `setup.sh` — Docker wrapper with host fallback
@@ -23,7 +23,7 @@ A benchmark suite of 37 verified real-world bug cases from open-source distribut
   - `reproduce.md` — Step-by-step reproduction procedure
   - `verification.md` — Pass/fail verification criteria
 - `cases-solution/<project>-<issue#>-<slug>/solution.md` — Root cause + fix (do not consult during evaluation)
-- `index.md` — Master index of all 37 verified cases
+- `index.md` — Master index of all 52 verified cases
 
 ## Working with cases (Docker, recommended)
 
@@ -78,18 +78,22 @@ cd cases/<case-name>/
 - Workspace defaults to `$HOME/bug-bench/`, override with `BENCH_WORKSPACE=/path`
 - Requires Ubuntu 24.04, sudo access for apt-get
 
-## Covered projects (37 verified cases)
+## Covered projects (52 verified cases)
 
 | Project | Language | Cases |
 |---------|----------|-------|
 | Dragonfly | C++ | 14 |
-| NATS Server | Go | 6 |
-| Kvrocks | C++ | 6 |
-| etcd | Go | 4 |
-| Raft (hashicorp) | Go | 4 |
+| NATS Server | Go | 9 |
+| Kvrocks | C++ | 8 |
+| etcd | Go | 7 |
+| Raft (hashicorp) | Go | 6 |
+| Consul | Go | 2 |
 | ClickHouse | C++ | 1 |
 | RocksDB | C++ | 1 |
 | Seastar | C++ | 1 |
+| RabbitMQ | Erlang | 1 |
+| BookKeeper | Java | 1 |
+| raft-rs (TiKV) | Rust | 1 |
 
 ## No build/test commands for this repo itself
 

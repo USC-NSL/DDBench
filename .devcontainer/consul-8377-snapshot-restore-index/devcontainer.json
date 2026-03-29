@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - consul-8377-snapshot-restore-index",
+  "build": {
+    "dockerfile": "../../docker/consul.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-consul-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/consul-8377-snapshot-restore-index,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/consul-8377-snapshot-restore-index",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/consul-8377-snapshot-restore-index ~/bug-bench/consul-8377-snapshot-restore-index",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}

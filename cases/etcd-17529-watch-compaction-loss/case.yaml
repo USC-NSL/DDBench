@@ -1,0 +1,11 @@
+name: etcd-17529-watch-compaction-loss
+project: etcd
+repo: https://github.com/etcd-io/etcd.git
+buggy_commit: "fca3e8a9b5c5b52a65d4ac0fe2fd7fdc7577551a~1"
+submodules: false
+build:
+  command: "make build"
+  binary: bin/etcd
+docker:
+  caps: []
+  min_cpus: 1

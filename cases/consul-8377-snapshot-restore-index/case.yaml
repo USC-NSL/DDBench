@@ -1,0 +1,11 @@
+name: consul-8377-snapshot-restore-index
+project: consul
+repo: https://github.com/hashicorp/consul.git
+buggy_commit: "9bc9d3014d2d8f48c4c87926bfb98c8536364532~1"
+submodules: false
+build:
+  command: "make dev-build"
+  binary: bin/consul
+docker:
+  caps: []
+  min_cpus: 2
