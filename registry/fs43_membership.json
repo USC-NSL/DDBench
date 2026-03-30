@@ -1,0 +1,401 @@
+{
+  "status": "frozen",
+  "frozen_at": "2026-03-30",
+  "corpus_scope": "62 released cases",
+  "selection_source": "registry/fs43_selection_criteria.md",
+  "peer_review_summary": {
+    "exact_case_count": 43,
+    "inherits_fs29": true,
+    "added_structured_promotion_count": 14,
+    "notes": "FS43 = FS29 + the full S14 structured-promotion lane."
+  },
+  "cases": [
+    {
+      "rank": 1,
+      "corpus_case": "bookkeeper-2614-recovery-fencing-gap",
+      "system": "BookKeeper",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 2,
+      "corpus_case": "clickhouse-98079-keeper-addwatch",
+      "system": "ClickHouse",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 3,
+      "corpus_case": "consul-8377-snapshot-restore-index",
+      "system": "Consul",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 4,
+      "corpus_case": "consul-9772-streaming-snapshot-cache",
+      "system": "Consul",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 5,
+      "corpus_case": "dragonfly-6687-replica-rdb-encoding",
+      "system": "Dragonfly",
+      "bug_family": "storage-io-path",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 6,
+      "corpus_case": "etcd-17158-delete-linearizability",
+      "system": "etcd",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 7,
+      "corpus_case": "etcd-17529-watch-compaction-loss",
+      "system": "etcd",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 8,
+      "corpus_case": "etcd-20221-watch-restore-revision",
+      "system": "etcd",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 9,
+      "corpus_case": "etcd-20893-force-new-cluster-learner",
+      "system": "etcd",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 10,
+      "corpus_case": "kvrocks-2214-slave-sync-gap",
+      "system": "Kvrocks",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 11,
+      "corpus_case": "kvrocks-2520-namespace-fullsync",
+      "system": "Kvrocks",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 12,
+      "corpus_case": "kvrocks-3208-replication-watermark",
+      "system": "Kvrocks",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 13,
+      "corpus_case": "kvrocks-3356-replication-wal",
+      "system": "Kvrocks",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 14,
+      "corpus_case": "nats-6374-consumer-stuck-redelivery",
+      "system": "NATS",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 15,
+      "corpus_case": "nats-7308-delete-nonexistent-reset",
+      "system": "NATS",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 16,
+      "corpus_case": "nats-7718-subscription-leak",
+      "system": "NATS",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 17,
+      "corpus_case": "nats-7760-filter-stepdown",
+      "system": "NATS",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 18,
+      "corpus_case": "nats-7817-workqueue-message-loss",
+      "system": "NATS",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 19,
+      "corpus_case": "raft-268-shutdown-deadlock",
+      "system": "raft",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 20,
+      "corpus_case": "raft-358-negative-log-range",
+      "system": "raft",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 21,
+      "corpus_case": "raft-460-logcache-store-order",
+      "system": "raft",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 22,
+      "corpus_case": "raft-581-transfer-write-race",
+      "system": "raft",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 23,
+      "corpus_case": "raft-609-prevote-contact-liveness",
+      "system": "raft",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 24,
+      "corpus_case": "kafka-14334-delayed-fetch-purgatory",
+      "system": "Kafka",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "probable",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 25,
+      "corpus_case": "kafka-15170-endless-rebalance-loop",
+      "system": "Kafka",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 26,
+      "corpus_case": "kafka-15784-txn-offset-atomicity",
+      "system": "Kafka",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 27,
+      "corpus_case": "zookeeper-4643-sync-epoch-ordering",
+      "system": "ZooKeeper",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 28,
+      "corpus_case": "zookeeper-4846-fuzzy-snapshot-acl",
+      "system": "ZooKeeper",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "probable",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 29,
+      "corpus_case": "zookeeper-4925-diff-sync-committedlog-hole",
+      "system": "ZooKeeper",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 30,
+      "corpus_case": "etcd-20704-leasing-linearizability",
+      "system": "etcd",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 31,
+      "corpus_case": "etcd-19172-embed-data-race",
+      "system": "etcd",
+      "bug_family": "cross-node-concurrency-race",
+      "hybrid_necessity": "no",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 32,
+      "corpus_case": "dragonfly-6738-pipeline-block",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 33,
+      "corpus_case": "kvrocks-2512-slaveof-deadlock",
+      "system": "Kvrocks",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 34,
+      "corpus_case": "kvrocks-3148-namespace-delete",
+      "system": "Kvrocks",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "probable",
+      "gold_tier": "G3",
+      "included": true
+    },
+    {
+      "rank": 35,
+      "corpus_case": "kvrocks-3339-xreadgroup-double",
+      "system": "Kvrocks",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 36,
+      "corpus_case": "nats-6455-reserved-resource-leak",
+      "system": "NATS",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 37,
+      "corpus_case": "nats-7707-wq-consumer-map-crash",
+      "system": "NATS",
+      "bug_family": "cross-node-concurrency-race",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 38,
+      "corpus_case": "nats-7726-mixed-filter",
+      "system": "NATS",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "probable",
+      "gold_tier": "G3",
+      "included": true
+    },
+    {
+      "rank": 39,
+      "corpus_case": "nats-7852-filter-perf",
+      "system": "NATS",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "no",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 40,
+      "corpus_case": "raft-517-candidate-appendentries-race",
+      "system": "raft",
+      "bug_family": "cross-node-concurrency-race",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 41,
+      "corpus_case": "raft-rs-345-readindex-config-change",
+      "system": "raft-rs",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 42,
+      "corpus_case": "consul-12295-acl-replication-stall",
+      "system": "Consul",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 43,
+      "corpus_case": "raft-rs-221-campaign-conf-change",
+      "system": "raft-rs",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true
+    }
+  ]
+}
