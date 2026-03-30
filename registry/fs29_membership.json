@@ -1,0 +1,321 @@
+{
+  "status": "frozen",
+  "frozen_at": "2026-03-30",
+  "corpus_scope": "62 released cases",
+  "selection_source": "registry/fs29_selection_criteria.md",
+  "peer_review_summary": {
+    "exact_case_count": 29,
+    "system_families": 10,
+    "bug_families": 5,
+    "all_g4_achievable": true,
+    "hybrid_yes_count": 27,
+    "hybrid_probable_count": 2,
+    "notes": "FS29 = previous FS23 plus all 6 newly added Kafka/ZooKeeper rows."
+  },
+  "borderline_included": [
+    {
+      "corpus_case": "kafka-14334-delayed-fetch-purgatory",
+      "hybrid_necessity": "probable",
+      "gold_tier": "G4",
+      "reason": "Slightly more repo-localized than the strongest rows, but clearly worth inclusion in the broader FS29 object."
+    },
+    {
+      "corpus_case": "zookeeper-4846-fuzzy-snapshot-acl",
+      "hybrid_necessity": "probable",
+      "gold_tier": "G4",
+      "reason": "Slightly more borderline on strict hybrid purity, but adds distinct restart/snapshot corruption value."
+    }
+  ],
+  "cases": [
+    {
+      "rank": 1,
+      "corpus_case": "bookkeeper-2614-recovery-fencing-gap",
+      "system": "BookKeeper",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Preserves the BookKeeper bridge anchor with a strong replicated-recovery truncation bug."
+    },
+    {
+      "rank": 2,
+      "corpus_case": "clickhouse-98079-keeper-addwatch",
+      "system": "ClickHouse",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Preserves the ClickHouse protocol/state-machine bridge anchor."
+    },
+    {
+      "rank": 3,
+      "corpus_case": "consul-8377-snapshot-restore-index",
+      "system": "Consul",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Retains a strong Consul restore/divergence row."
+    },
+    {
+      "rank": 4,
+      "corpus_case": "consul-9772-streaming-snapshot-cache",
+      "system": "Consul",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Retains a second Consul row with strong event-stream/state-machine value."
+    },
+    {
+      "rank": 5,
+      "corpus_case": "dragonfly-6687-replica-rdb-encoding",
+      "system": "Dragonfly",
+      "bug_family": "storage-io-path",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Retains a storage/replication bridge anchor."
+    },
+    {
+      "rank": 6,
+      "corpus_case": "etcd-17158-delete-linearizability",
+      "system": "etcd",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong replication-consistency anchor."
+    },
+    {
+      "rank": 7,
+      "corpus_case": "etcd-17529-watch-compaction-loss",
+      "system": "etcd",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong watcher/compaction hybrid row."
+    },
+    {
+      "rank": 8,
+      "corpus_case": "etcd-20221-watch-restore-revision",
+      "system": "etcd",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong watch-restore hybrid row."
+    },
+    {
+      "rank": 9,
+      "corpus_case": "etcd-20893-force-new-cluster-learner",
+      "system": "etcd",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong recovery/reconfiguration membership row."
+    },
+    {
+      "rank": 10,
+      "corpus_case": "kvrocks-2214-slave-sync-gap",
+      "system": "Kvrocks",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong replication-gap row with clear cross-node divergence."
+    },
+    {
+      "rank": 11,
+      "corpus_case": "kvrocks-2520-namespace-fullsync",
+      "system": "Kvrocks",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong recovery/full-sync row."
+    },
+    {
+      "rank": 12,
+      "corpus_case": "kvrocks-3208-replication-watermark",
+      "system": "Kvrocks",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Retains a measurable performance/resource replicated-system row."
+    },
+    {
+      "rank": 13,
+      "corpus_case": "kvrocks-3356-replication-wal",
+      "system": "Kvrocks",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Retains a second strong performance/resource replicated-system row."
+    },
+    {
+      "rank": 14,
+      "corpus_case": "nats-6374-consumer-stuck-redelivery",
+      "system": "NATS",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong failover-sensitive consumer-state row."
+    },
+    {
+      "rank": 15,
+      "corpus_case": "nats-7308-delete-nonexistent-reset",
+      "system": "NATS",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong RPC/state-machine corruption row."
+    },
+    {
+      "rank": 16,
+      "corpus_case": "nats-7718-subscription-leak",
+      "system": "NATS",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Retains a resource-leak row with clear operational value."
+    },
+    {
+      "rank": 17,
+      "corpus_case": "nats-7760-filter-stepdown",
+      "system": "NATS",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong leader-stepdown stale-state row."
+    },
+    {
+      "rank": 18,
+      "corpus_case": "nats-7817-workqueue-message-loss",
+      "system": "NATS",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong replication-consistency/message-loss row."
+    },
+    {
+      "rank": 19,
+      "corpus_case": "raft-268-shutdown-deadlock",
+      "system": "raft",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong shutdown/recovery race row."
+    },
+    {
+      "rank": 20,
+      "corpus_case": "raft-358-negative-log-range",
+      "system": "raft",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong snapshot-compaction failure row."
+    },
+    {
+      "rank": 21,
+      "corpus_case": "raft-460-logcache-store-order",
+      "system": "raft",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong replication-consistency/log-cache row."
+    },
+    {
+      "rank": 22,
+      "corpus_case": "raft-581-transfer-write-race",
+      "system": "raft",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong failover/control-path transfer race row."
+    },
+    {
+      "rank": 23,
+      "corpus_case": "raft-609-prevote-contact-liveness",
+      "system": "raft",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Strong election-liveness/control-plane row."
+    },
+    {
+      "rank": 24,
+      "corpus_case": "kafka-14334-delayed-fetch-purgatory",
+      "system": "Kafka",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "probable",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Included because it adds a real Kafka follower-fetch latency/performance path despite being slightly more repo-localized than the strongest rows."
+    },
+    {
+      "rank": 25,
+      "corpus_case": "kafka-15170-endless-rebalance-loop",
+      "system": "Kafka",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Included as a strong Kafka cooperative-rebalance/control-plane row."
+    },
+    {
+      "rank": 26,
+      "corpus_case": "kafka-15784-txn-offset-atomicity",
+      "system": "Kafka",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Included as a strong Kafka coordinator atomicity/state-divergence row."
+    },
+    {
+      "rank": 27,
+      "corpus_case": "zookeeper-4643-sync-epoch-ordering",
+      "system": "ZooKeeper",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Included as a strong ZooKeeper ZAB ordering/data-loss row."
+    },
+    {
+      "rank": 28,
+      "corpus_case": "zookeeper-4846-fuzzy-snapshot-acl",
+      "system": "ZooKeeper",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "probable",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Included because the restart/fuzzy-snapshot ACL corruption path adds distinct ZooKeeper failure value even if it is a bit more borderline on strict hybrid necessity."
+    },
+    {
+      "rank": 29,
+      "corpus_case": "zookeeper-4925-diff-sync-committedlog-hole",
+      "system": "ZooKeeper",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Included as a strong ZooKeeper DIFF-sync propagation/data-loss row."
+    }
+  ]
+}
