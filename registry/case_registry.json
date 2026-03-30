@@ -1,0 +1,1617 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-03-30T22:12:16Z",
+  "total_cases": 62,
+  "cases": [
+    {
+      "case_id": "bookkeeper-2614-recovery-fencing-gap",
+      "project": "bookkeeper",
+      "repo": "https://github.com/apache/bookkeeper.git",
+      "buggy_commit": "c11baba7dcedc227849021d0aee8303cfcc9765c",
+      "language": "Java",
+      "oracle_type": "CRASH",
+      "system_family": "consensus",
+      "github_url": "https://github.com/apache/bookkeeper/pull/2616",
+      "description": "Recovery reads missing fencing flag allow original writer to commit after ledger close",
+      "build": {
+        "command": "mvn -pl bookkeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q",
+        "binary": "bookkeeper-server/target/bookkeeper-server-4.14.0-SNAPSHOT.jar"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 2
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "bookkeeper-4701-fencing-race",
+      "project": "bookkeeper",
+      "repo": "https://github.com/apache/bookkeeper.git",
+      "buggy_commit": "44607a0e31ee8f979211eb5a4ef424de2871b92e~1",
+      "language": "Java",
+      "oracle_type": "HANG",
+      "system_family": "consensus",
+      "github_url": "https://github.com/apache/bookkeeper/pull/4701",
+      "description": "Fencing bypassed due to race in HandleFactory causing entry loss",
+      "build": {
+        "command": "mvn -pl bookkeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q",
+        "binary": "bookkeeper-server/target/bookkeeper-server-4.18.0-SNAPSHOT.jar"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 2
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "clickhouse-98079-keeper-addwatch",
+      "project": "clickhouse",
+      "repo": "https://github.com/ClickHouse/ClickHouse.git",
+      "buggy_commit": "3515972fbc064f7b62c963c8e25969053a6a38c2~1",
+      "language": "C++",
+      "oracle_type": "HANG",
+      "system_family": "analytics",
+      "github_url": "https://github.com/ClickHouse/ClickHouse/issues/98079",
+      "description": "Keeper disconnects client after addWatch() breaking Java ZK CuratorCache",
+      "build": {
+        "command": "sed -i 's/set (CLANG_MINIMUM_VERSION [0-9]*)/set (CLANG_MINIMUM_VERSION 23)/' cmake/tools.cmake && REQUIRED_RUST_NIGHTLY=$(grep -oP 'nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}' cmake/tools.cmake 2>/dev/null || echo '') && [ -n \"$REQUIRED_RUST_NIGHTLY\" ] && rustup toolchain install \"$REQUIRED_RUST_NIGHTLY\" || true && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=OFF -DENABLE_UTILS=OFF -DCMAKE_CXX_COMPILER=clang++-23 -DCMAKE_C_COMPILER=clang-23 -DWERROR=OFF && ninja -j$(nproc) programs/clickhouse\n",
+        "binary": "build/programs/clickhouse"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "rpc-protocol-state-machine",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "consul-12295-acl-replication-stall",
+      "project": "consul",
+      "repo": "https://github.com/hashicorp/consul.git",
+      "buggy_commit": "24245edfcc9d56eb1033908c607f56b19f7d1360~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "service-mesh",
+      "github_url": "https://github.com/hashicorp/consul/issues/12295",
+      "description": "ACL replication permanently stalls after same-server leadership re-election",
+      "build": {
+        "command": "go build -o bin/consul ./... 2>/dev/null || true",
+        "binary": "bin/consul"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "consul-8377-snapshot-restore-index",
+      "project": "consul",
+      "repo": "https://github.com/hashicorp/consul.git",
+      "buggy_commit": "9bc9d3014d2d8f48c4c87926bfb98c8536364532~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "service-mesh",
+      "github_url": "https://github.com/hashicorp/consul/issues/8377",
+      "description": "Snapshot restore loses node/service/check CreateIndex across replicas",
+      "build": {
+        "command": "make dev-build",
+        "binary": "bin/consul"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 2
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "consul-9772-streaming-snapshot-cache",
+      "project": "consul",
+      "repo": "https://github.com/hashicorp/consul.git",
+      "buggy_commit": "363d738fd2ee1ee25ad872a63894cffa8faf9df2~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "service-mesh",
+      "github_url": "https://github.com/hashicorp/consul/pull/9772",
+      "description": "Streaming event publisher caches framing event in snapshot corrupting fresh subscribers",
+      "build": {
+        "command": "go build -o bin/consul ./... 2>/dev/null || true",
+        "binary": "bin/consul"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "rpc-protocol-state-machine",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6614-monitor-multiexec",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "84034d0903e8409dd48adcce974e5250d357a7ce~1",
+      "language": "C++",
+      "oracle_type": "OUTPUT",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6614",
+      "description": "Double MONITOR inside MULTI/EXEC causes assertion crash",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6619-evalsha-empty",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "761387a51433a5becb06db2ac7bf7e9f18b832d2~1",
+      "language": "C++",
+      "oracle_type": "OUTPUT",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6619",
+      "description": "EVALSHA with empty SHA string causes assertion failure crash",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6654-mc-reply-large",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "ff4ef508985cb91a7fdf418682af1534c24acf83~1",
+      "language": "C++",
+      "oracle_type": "METRIC",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6654",
+      "description": "Memcache meta get reply exceeds buffer size for large values",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6687-replica-rdb-encoding",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "8347cd80192a7be967a3983a6a55a10525915015~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6687",
+      "description": "Replica sync fails with unknown RDB encoding 62 and retries in loop",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Release -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly && cd .. && [ ! -e build-opt ] && ln -s build-dbg build-opt || true\n",
+        "binary": "build-opt/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "storage-io-path",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6738-pipeline-block",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "c4849b4d008d1dd6fd950f251cdb9a9a2e264e00~1",
+      "language": "C++",
+      "oracle_type": "OUTPUT",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6738",
+      "description": "BRPOPLPUSH not woken when RPUSH happens inside Lua EVAL script",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6753-populate-sigfpe",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "5e31c9f84acfcfc2a7fb421cde7845ffcdf5536e~1",
+      "language": "C++",
+      "oracle_type": "OUTPUT",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6753",
+      "description": "DEBUG POPULATE with val_size=0 causes SIGFPE division by zero",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6761-mc-pipeline-crash",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "5a78b758ff21f179963de4da9e7ad301459e23bb~1",
+      "language": "C++",
+      "oracle_type": "RACE",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6761",
+      "description": "Memcache STATS/VERSION in pipeline causes crash",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6764-hincrbyfloat-nan",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "01ce1ca9ea6c429e531d6177f72963b1fd29c26d~1",
+      "language": "C++",
+      "oracle_type": "OUTPUT",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6764",
+      "description": "HINCRBYFLOAT with inf/NaN creates invalid hash state and crashes",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6819-stale-expiry",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "fa4d116313779182571f70a537ab31f09ec043a5~1",
+      "language": "C++",
+      "oracle_type": "OUTPUT",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6819",
+      "description": "Overwriting key without expiry leaves stale expiry entry causing crash",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6825-config-overflow",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "4b16da4d2e80eafc57ecb5fef511a9d49afe5c54~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6825",
+      "description": "Cluster CONFIG parsing integer overflow causes crash",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6856-flushslots-oob",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "c79bbe0c646c1bce47f76168dbe813951aecd8ce~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6856",
+      "description": "Cluster FLUSHSLOTS with slot ID >= 16384 causes out-of-bounds crash",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6907-ftsearch-vector-crash",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "c09a5a16bacc4b107435b0f144c1eb4a7553fd04~1",
+      "language": "C++",
+      "oracle_type": "OUTPUT",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6907",
+      "description": "FT.SEARCH crashes on wrong-sized vector/numeric field values",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6909-search-nonfinite",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "1c38bb63d2824080430d6d25e5a6fe6d714a2882~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6909",
+      "description": "Non-finite NUMERIC values and KeepTopKSorted OOB crash search",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "dragonfly-6912-rdb-encoding",
+      "project": "dragonfly",
+      "repo": "https://github.com/dragonflydb/dragonfly.git",
+      "buggy_commit": "ef296f099b6e210ad28f043be9d0a8cec4dc4885~1",
+      "language": "C++",
+      "oracle_type": "LOG",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/dragonflydb/dragonfly/issues/6912",
+      "description": "Unknown encoding for type 17 in rdb_save during DUMP command",
+      "build": {
+        "command": "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly",
+        "binary": "build-dbg/dragonfly"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "etcd-17158-delete-linearizability",
+      "project": "etcd",
+      "repo": "https://github.com/etcd-io/etcd.git",
+      "buggy_commit": "b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d~1",
+      "language": "Go",
+      "oracle_type": "OUTPUT",
+      "system_family": "consensus",
+      "github_url": "https://github.com/etcd-io/etcd/issues/17158",
+      "description": "UnsafeDelete breaks linearizability due to buffered read seeing stale data",
+      "build": {
+        "command": "make build",
+        "binary": "bin/etcd"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "replication-consistency",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "etcd-17529-watch-compaction-loss",
+      "project": "etcd",
+      "repo": "https://github.com/etcd-io/etcd.git",
+      "buggy_commit": "fca3e8a9b5c5b52a65d4ac0fe2fd7fdc7577551a~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "consensus",
+      "github_url": "https://github.com/etcd-io/etcd/issues/17529",
+      "description": "Watch event loss after compaction when watcher channel is full",
+      "build": {
+        "command": "make build",
+        "binary": "bin/etcd"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "replication-consistency",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "etcd-19172-embed-data-race",
+      "project": "etcd",
+      "repo": "https://github.com/etcd-io/etcd.git",
+      "buggy_commit": "43431bd6f83b60d13a29ef9df53d7f04fe63fcfd~1",
+      "language": "Go",
+      "oracle_type": "OUTPUT",
+      "system_family": "consensus",
+      "github_url": "https://github.com/etcd-io/etcd/issues/19172",
+      "description": "Data race between Close() and errHandler() in embedded etcd",
+      "build": {
+        "command": "make build",
+        "binary": "bin/etcd"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "etcd-19179-watch-tombstone-compact",
+      "project": "etcd",
+      "repo": "https://github.com/etcd-io/etcd.git",
+      "buggy_commit": "83cf7bb4fc621f017fcaa9a735194fcec23420b8~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "consensus",
+      "github_url": "https://github.com/etcd-io/etcd/issues/19179",
+      "description": "Missing delete event on watch after compaction removes all put revisions",
+      "build": {
+        "command": "make build",
+        "binary": "bin/etcd"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "etcd-20221-watch-restore-revision",
+      "project": "etcd",
+      "repo": "https://github.com/etcd-io/etcd.git",
+      "buggy_commit": "9fb8c3685fd4573e39470a5451d3f85c0f29bfb1~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "consensus",
+      "github_url": "https://github.com/etcd-io/etcd/issues/20221",
+      "description": "Watch on future revision receives old events after snapshot restore",
+      "build": {
+        "command": "make build",
+        "binary": "bin/etcd"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "replication-consistency",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "etcd-20704-leasing-linearizability",
+      "project": "etcd",
+      "repo": "https://github.com/etcd-io/etcd.git",
+      "buggy_commit": "main",
+      "language": "Go",
+      "oracle_type": "OUTPUT",
+      "system_family": "consensus",
+      "github_url": "https://github.com/etcd-io/etcd/issues/20704",
+      "description": "Multiple linearizability bugs in client/v3/leasing cache",
+      "build": {
+        "command": "make build",
+        "binary": "bin/etcd"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "etcd-20893-force-new-cluster-learner",
+      "project": "etcd",
+      "repo": "https://github.com/etcd-io/etcd.git",
+      "buggy_commit": "c58e6f1caf7dfe07da002230a2b61d664ab21a34~1",
+      "language": "Go",
+      "oracle_type": "OUTPUT",
+      "system_family": "consensus",
+      "github_url": "https://github.com/etcd-io/etcd/issues/20893",
+      "description": "--force-new-cluster fails to remove learner members after snapshot",
+      "build": {
+        "command": "make build",
+        "binary": "bin/etcd"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kafka-14334-delayed-fetch-purgatory",
+      "project": "kafka",
+      "repo": "https://github.com/apache/kafka.git",
+      "buggy_commit": "dbf5826cd545820652ed6d136727aa80a03f4f54~1",
+      "language": "Java",
+      "oracle_type": "OUTPUT",
+      "system_family": "streaming",
+      "github_url": "https://issues.apache.org/jira/browse/KAFKA-14334",
+      "description": "Delayed fetch purgatory not completed on follower replica append",
+      "build": {
+        "command": "sed -i 's/def repo = Grgit.open(currentDir: project.getRootDir())/def repo = null/' build.gradle && sed -i 's/excludes = new ArrayList<String>(repo.clean(ignore: false, directories: true, dryRun: true))/excludes = new ArrayList<String>()/' build.gradle && ./gradlew jar -x test -x spotlessCheck -x checkstyleMain -x checkstyleTest --quiet",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 2
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "performance-resource-interaction",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kafka-15170-endless-rebalance-loop",
+      "project": "kafka",
+      "repo": "https://github.com/apache/kafka.git",
+      "buggy_commit": "f0291ac74b88b988c4ab07c16286942838ba4556~1",
+      "language": "Java",
+      "oracle_type": "OUTPUT",
+      "system_family": "streaming",
+      "github_url": "https://issues.apache.org/jira/browse/KAFKA-15170",
+      "description": "CooperativeStickyAssignor endless rebalance loop with rack-aware balancing",
+      "build": {
+        "command": "./gradlew :clients:compileJava :clients:compileTestJava -x spotlessCheck -x checkstyleMain -x checkstyleTest --quiet",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kafka-15784-txn-offset-atomicity",
+      "project": "kafka",
+      "repo": "https://github.com/apache/kafka.git",
+      "buggy_commit": "e4249b69bda215d308ac5580a89fcc58ca054b97~1",
+      "language": "Java",
+      "oracle_type": "OUTPUT",
+      "system_family": "streaming",
+      "github_url": "https://issues.apache.org/jira/browse/KAFKA-15784",
+      "description": "Transactional offset commit atomicity violation when log append fails",
+      "build": {
+        "command": "./gradlew jar -x test -x spotlessCheck -x checkstyleMain -x checkstyleTest --quiet",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 2
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "replication-consistency",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kvrocks-2214-slave-sync-gap",
+      "project": "kvrocks",
+      "repo": "https://github.com/apache/kvrocks.git",
+      "buggy_commit": "7e1b797920517edf9c798cd4b440789b524d7956~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/apache/kvrocks/issues/2214",
+      "description": "Slave misses key updates during downtime due to replication offset drift",
+      "build": {
+        "command": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DDISABLE_JEMALLOC=ON && make -j$(nproc)",
+        "binary": "build/kvrocks"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "replication-consistency",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kvrocks-2512-slaveof-deadlock",
+      "project": "kvrocks",
+      "repo": "https://github.com/apache/kvrocks.git",
+      "buggy_commit": "ab41cbb69d081711437e25846c86c920cb5253e1~1",
+      "language": "C++",
+      "oracle_type": "HANG",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/apache/kvrocks/issues/2512",
+      "description": "Deadlock when switching master frequently via SLAVEOF",
+      "build": {
+        "command": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DDISABLE_JEMALLOC=ON && make -j$(nproc)",
+        "binary": "build/kvrocks"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kvrocks-2520-namespace-fullsync",
+      "project": "kvrocks",
+      "repo": "https://github.com/apache/kvrocks.git",
+      "buggy_commit": "a29df097dd23c36a749e5c616f4d1cae1051e853~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/apache/kvrocks/issues/2520",
+      "description": "Namespaces not loaded into memory after full sync from master",
+      "build": {
+        "command": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DDISABLE_JEMALLOC=ON && make -j$(nproc)",
+        "binary": "build/kvrocks"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kvrocks-3148-namespace-delete",
+      "project": "kvrocks",
+      "repo": "https://github.com/apache/kvrocks.git",
+      "buggy_commit": "833ae36aa1d17e87be494724689b87e5234286ec~1",
+      "language": "C++",
+      "oracle_type": "METRIC",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/apache/kvrocks/issues/3148",
+      "description": "NAMESPACE SET with another namespace's token deletes that namespace",
+      "build": {
+        "command": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)",
+        "binary": "build/kvrocks"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kvrocks-3208-replication-watermark",
+      "project": "kvrocks",
+      "repo": "https://github.com/apache/kvrocks.git",
+      "buggy_commit": "54929cd01603f9a19cd3b700b8b4da1683e4eda9~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/apache/kvrocks/issues/3208",
+      "description": "Replication stalls after large batch due to stuck read watermark",
+      "build": {
+        "command": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)",
+        "binary": "build/kvrocks"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "performance-resource-interaction",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kvrocks-3315-zdiff-crash",
+      "project": "kvrocks",
+      "repo": "https://github.com/apache/kvrocks.git",
+      "buggy_commit": "c2c5d094d4335c4951f88e7de319d78e1bf5b3b8~1",
+      "language": "C++",
+      "oracle_type": "OUTPUT",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/apache/kvrocks/issues/3315",
+      "description": "ZDIFF with numkeys=0 crashes due to out-of-bounds access",
+      "build": {
+        "command": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)",
+        "binary": "build/kvrocks"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kvrocks-3339-xreadgroup-double",
+      "project": "kvrocks",
+      "repo": "https://github.com/apache/kvrocks.git",
+      "buggy_commit": "25216331bce6f9e97b945aad1cbb04e2db261287~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/apache/kvrocks/issues/3339",
+      "description": "XREADGROUP BLOCK sends double response under concurrent load",
+      "build": {
+        "command": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)",
+        "binary": "build/kvrocks"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "kvrocks-3356-replication-wal",
+      "project": "kvrocks",
+      "repo": "https://github.com/apache/kvrocks.git",
+      "buggy_commit": "559a667bef223a07fea350a27168e91fe0a74601~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "kv-store",
+      "github_url": "https://github.com/apache/kvrocks/issues/3356",
+      "description": "Replication feed thread blocks on slow consumer causing WAL exhaustion",
+      "build": {
+        "command": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)",
+        "binary": "build/kvrocks"
+      },
+      "docker": {
+        "caps": [
+          "NET_ADMIN"
+        ],
+        "min_cpus": 1
+      },
+      "submodules": true,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "performance-resource-interaction",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "nats-6374-consumer-stuck-redelivery",
+      "project": "nats",
+      "repo": "https://github.com/nats-io/nats-server.git",
+      "buggy_commit": "2a8ee64628f6bd87a4d86557af4330ec69783f7f",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "messaging",
+      "github_url": "https://github.com/nats-io/nats-server/issues/6374",
+      "description": "Consumer stuck and slow after leader step-down with pending redeliveries",
+      "build": {
+        "command": "go build -buildvcs=false -o nats-server .",
+        "binary": "nats-server"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "nats-6455-reserved-resource-leak",
+      "project": "nats",
+      "repo": "https://github.com/nats-io/nats-server.git",
+      "buggy_commit": "29fbf46d70601600af6b1152fa02e41fd646d0e2",
+      "language": "Go",
+      "oracle_type": "LOG",
+      "system_family": "messaging",
+      "github_url": "https://github.com/nats-io/nats-server/issues/6455",
+      "description": "Reserved disk resources double-counted after cluster state reset",
+      "build": {
+        "command": "go build -buildvcs=false -o nats-server .",
+        "binary": "nats-server"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "nats-7308-delete-nonexistent-reset",
+      "project": "nats",
+      "repo": "https://github.com/nats-io/nats-server.git",
+      "buggy_commit": "v2.11.8",
+      "language": "Go",
+      "oracle_type": "METRIC",
+      "system_family": "messaging",
+      "github_url": "https://github.com/nats-io/nats-server/issues/7308",
+      "description": "Deleting non-existent message triggers cluster state reset and stream unavailability",
+      "build": {
+        "command": "go build -buildvcs=false -o nats-server .",
+        "binary": "nats-server"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "rpc-protocol-state-machine",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "nats-7707-wq-consumer-map-crash",
+      "project": "nats",
+      "repo": "https://github.com/nats-io/nats-server.git",
+      "buggy_commit": "3a90a2d087b792c10d4cbed27f3cc5ef0fb77571~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "messaging",
+      "github_url": "https://github.com/nats-io/nats-server/issues/7707",
+      "description": "Concurrent map crash in WorkQueue consumer partition management",
+      "build": {
+        "command": "go build -buildvcs=false -o nats-server .",
+        "binary": "nats-server"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "nats-7718-subscription-leak",
+      "project": "nats",
+      "repo": "https://github.com/nats-io/nats-server.git",
+      "buggy_commit": "b72becc443073300e5599d06fa0cde1cd5518589~1",
+      "language": "Go",
+      "oracle_type": "OUTPUT",
+      "system_family": "messaging",
+      "github_url": "https://github.com/nats-io/nats-server/issues/7718",
+      "description": "JetStream leaks subscriptions with overlapping stream imports and OrderedConsumer churn",
+      "build": {
+        "command": "go build -o nats-server .",
+        "binary": "nats-server"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "performance-resource-interaction",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "nats-7726-mixed-filter",
+      "project": "nats",
+      "repo": "https://github.com/nats-io/nats-server.git",
+      "buggy_commit": "6aded805ec9625b20ee50ded3b63135d5fe3d0a8~1",
+      "language": "Go",
+      "oracle_type": "METRIC",
+      "system_family": "messaging",
+      "github_url": "https://github.com/nats-io/nats-server/issues/7726",
+      "description": "Consumer with mixed wildcard/literal filter subjects fails delivery",
+      "build": {
+        "command": "go build -o nats-server .",
+        "binary": "nats-server"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "nats-7760-filter-stepdown",
+      "project": "nats",
+      "repo": "https://github.com/nats-io/nats-server.git",
+      "buggy_commit": "v2.12.3",
+      "language": "Go",
+      "oracle_type": "LOG",
+      "system_family": "messaging",
+      "github_url": "https://github.com/nats-io/nats-server/issues/7760",
+      "description": "Consumer filter subjects stop matching after leader step-down",
+      "build": {
+        "command": "go build -o nats-server .",
+        "binary": "nats-server"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "nats-7817-workqueue-message-loss",
+      "project": "nats",
+      "repo": "https://github.com/nats-io/nats-server.git",
+      "buggy_commit": "v2.12.3",
+      "language": "Go",
+      "oracle_type": "OUTPUT",
+      "system_family": "messaging",
+      "github_url": "https://github.com/nats-io/nats-server/issues/7817",
+      "description": "Messages lost with JetStream WorkQueue retention and R3 on max-deliver",
+      "build": {
+        "command": "go build -o nats-server .",
+        "binary": "nats-server"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "replication-consistency",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "nats-7852-filter-perf",
+      "project": "nats",
+      "repo": "https://github.com/nats-io/nats-server.git",
+      "buggy_commit": "66e9bbc7f8684dd1b31c54ef686924e0841f9846~1",
+      "language": "Go",
+      "oracle_type": "METRIC",
+      "system_family": "messaging",
+      "github_url": "https://github.com/nats-io/nats-server/issues/7852",
+      "description": "Consumer subject filtering causes >20% performance degradation even when matching all",
+      "build": {
+        "command": "go build -o nats-server .",
+        "binary": "nats-server"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "ra-439-election-livelock",
+      "project": "ra",
+      "repo": "https://github.com/rabbitmq/ra.git",
+      "buggy_commit": "bdf8349a5515df5871e36918e8c5e1ee4c0011b3",
+      "language": "Erlang",
+      "oracle_type": "LOG",
+      "system_family": "consensus",
+      "github_url": "https://github.com/rabbitmq/ra/issues/439",
+      "description": "Election livelock when candidate has lower log index than pre-vote member",
+      "build": {
+        "command": "make -j$(nproc) && make test-deps TEST_DEPS='proper meck'",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "rabbitmq-12635-qq-snapshot-crash",
+      "project": "rabbitmq",
+      "repo": "https://github.com/rabbitmq/rabbitmq-server.git",
+      "buggy_commit": "889fdc9163a43207f80a578769486bcce909f129",
+      "language": "Erlang",
+      "oracle_type": "OUTPUT",
+      "system_family": "messaging",
+      "github_url": "https://github.com/rabbitmq/rabbitmq-server/issues/12635",
+      "description": "Quorum queue member crashes after Raft snapshot installation (stale log read)",
+      "build": {
+        "command": "make -j$(nproc) || make -j$(nproc); make -C deps/rabbit test-build -j$(nproc)",
+        "binary": "sbin/rabbitmq-server"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 2
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "raft-268-shutdown-deadlock",
+      "project": "raft",
+      "repo": "https://github.com/hashicorp/raft.git",
+      "buggy_commit": "2e997410f28efe8106fc606d21cb655be1b05dee~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "consensus",
+      "github_url": "https://github.com/hashicorp/raft/issues/268",
+      "description": "Raft.Shutdown() deadlocks with concurrent takeSnapshot()",
+      "build": {
+        "command": "",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "raft-358-negative-log-range",
+      "project": "raft",
+      "repo": "https://github.com/hashicorp/raft.git",
+      "buggy_commit": "7b09f38f739f486a692096c35236c7eef094e933~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "consensus",
+      "github_url": "https://github.com/hashicorp/raft/issues/358",
+      "description": "Snapshot log compaction attempts DeleteRange with max < min",
+      "build": {
+        "command": "",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "raft-460-logcache-store-order",
+      "project": "raft",
+      "repo": "https://github.com/hashicorp/raft.git",
+      "buggy_commit": "f810f43d71b4a051a0c0e16e003f0a55456dd0fb~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "consensus",
+      "github_url": "https://github.com/hashicorp/raft/issues/429",
+      "description": "LogCache caches entries before StoreLogs causing phantom data on restart",
+      "build": {
+        "command": "",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "replication-consistency",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "raft-517-candidate-appendentries-race",
+      "project": "raft",
+      "repo": "https://github.com/hashicorp/raft.git",
+      "buggy_commit": "49bd61b66666fa76cb23fa81897e350f6e9b75de~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "consensus",
+      "github_url": "https://github.com/hashicorp/raft/issues/517",
+      "description": "Data race between candidate state exit and AppendEntries handler",
+      "build": {
+        "command": "",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "raft-581-transfer-write-race",
+      "project": "raft",
+      "repo": "https://github.com/hashicorp/raft.git",
+      "buggy_commit": "62eaa1c192d4c09c90caa5e227177eb9205a6267~1",
+      "language": "Go",
+      "oracle_type": "CRASH",
+      "system_family": "consensus",
+      "github_url": "https://github.com/hashicorp/raft/pull/581",
+      "description": "Leadership transfer fails when writes advance log during transfer window",
+      "build": {
+        "command": "",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "raft-609-prevote-contact-liveness",
+      "project": "raft",
+      "repo": "https://github.com/hashicorp/raft.git",
+      "buggy_commit": "42d34464b2d203e389e11ed6d43db698792c0604~1",
+      "language": "Go",
+      "oracle_type": "OUTPUT",
+      "system_family": "consensus",
+      "github_url": "https://github.com/hashicorp/raft/pull/609",
+      "description": "Pre-vote refreshes last-contact timestamp blocking new elections",
+      "build": {
+        "command": "",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "raft-rs-221-campaign-conf-change",
+      "project": "raft-rs",
+      "repo": "https://github.com/tikv/raft-rs.git",
+      "buggy_commit": "aa131db1ba95166501c1cf5b8d90cd7c7bde2308",
+      "language": "Rust",
+      "oracle_type": "LOG",
+      "system_family": "consensus",
+      "github_url": "https://github.com/tikv/raft-rs/issues/221",
+      "description": "Node campaigns via leader transfer despite pending unapplied conf change",
+      "build": {
+        "command": "RUSTFLAGS='--cap-lints allow' cargo test --no-run 2>&1 | tail -5",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "raft-rs-345-readindex-config-change",
+      "project": "raft-rs",
+      "repo": "https://github.com/tikv/raft-rs.git",
+      "buggy_commit": "513b82ce4507747a678fee7b4405c8b8b106fc12~1",
+      "language": "Rust",
+      "oracle_type": "OUTPUT",
+      "system_family": "consensus",
+      "github_url": "https://github.com/tikv/raft-rs/issues/345",
+      "description": "ReadIndex requests stall after quorum shrinks on configuration change",
+      "build": {
+        "command": "cd harness && cargo test --no-run 2>&1 | tail -5",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "rocksdb-10751-stalled-writes-shutdown",
+      "project": "rocksdb",
+      "repo": "https://github.com/facebook/rocksdb.git",
+      "buggy_commit": "a45e6878f39cdc777c54e5d6749d53c1f70e2b52~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "storage-engine",
+      "github_url": "https://github.com/facebook/rocksdb/issues/10751",
+      "description": "Stalled writes block forever during DB::Close() shutdown",
+      "build": {
+        "command": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=\"-include cstdint -w\" -DFAIL_ON_WARNINGS=OFF -DWITH_TESTS=OFF && make -j$(nproc) rocksdb\n",
+        "binary": "build/librocksdb.a"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "seastar-2202-cross-shard-realloc",
+      "project": "seastar",
+      "repo": "https://github.com/scylladb/seastar.git",
+      "buggy_commit": "2bc4f22b~1",
+      "language": "C++",
+      "oracle_type": "CRASH",
+      "system_family": "framework",
+      "github_url": "https://github.com/scylladb/seastar/issues/2202",
+      "description": "Cross-shard realloc to smaller size crashes with assertion failure",
+      "build": {
+        "command": "./configure.py --mode=dev --cook fmt && ninja -C build/dev",
+        "binary": "build/dev/libseastar.a"
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 2
+      },
+      "submodules": true,
+      "surface_membership": {},
+      "contamination_tier": null,
+      "bug_family": null,
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "zookeeper-4643-sync-epoch-ordering",
+      "project": "zookeeper",
+      "repo": "https://github.com/apache/zookeeper.git",
+      "buggy_commit": "9fcb805fa1bb37b1f64ceb3bc5d7ccf349971bb7~1",
+      "language": "Java",
+      "oracle_type": "HANG",
+      "system_family": "consensus",
+      "github_url": "https://issues.apache.org/jira/browse/ZOOKEEPER-4643",
+      "description": "Follower persists uncommitted proposals before updating epoch during ZAB sync",
+      "build": {
+        "command": "mvn -pl zookeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "recovery-reconfiguration-failover",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "zookeeper-4846-fuzzy-snapshot-acl",
+      "project": "zookeeper",
+      "repo": "https://github.com/apache/zookeeper.git",
+      "buggy_commit": "8532163df198466913f26141c0278dc11dbf53ab~1",
+      "language": "Java",
+      "oracle_type": "OUTPUT",
+      "system_family": "consensus",
+      "github_url": "https://issues.apache.org/jira/browse/ZOOKEEPER-4846",
+      "description": "Fuzzy snapshot ACL cache race causes fatal RuntimeException on restart",
+      "build": {
+        "command": "mvn -pl zookeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "rpc-protocol-state-machine",
+      "gold_complete": false,
+      "has_solution": true
+    },
+    {
+      "case_id": "zookeeper-4925-diff-sync-committedlog-hole",
+      "project": "zookeeper",
+      "repo": "https://github.com/apache/zookeeper.git",
+      "buggy_commit": "e5dd60bf0512ccc1e090d99410a8da48623219da~1",
+      "language": "Java",
+      "oracle_type": "OUTPUT",
+      "system_family": "consensus",
+      "github_url": "https://issues.apache.org/jira/browse/ZOOKEEPER-4925",
+      "description": "Stale follower propagates committedLog hole after DIFF sync becoming leader",
+      "build": {
+        "command": "mvn -pl zookeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q",
+        "binary": ""
+      },
+      "docker": {
+        "caps": [],
+        "min_cpus": 1
+      },
+      "submodules": false,
+      "surface_membership": {
+        "FS29": true
+      },
+      "contamination_tier": null,
+      "bug_family": "replication-consistency",
+      "gold_complete": false,
+      "has_solution": true
+    }
+  ]
+}
