@@ -1,8 +1,8 @@
 # Bug Cases Index
 ## Distributed Interactive Debugger Evaluation
 
-**Total verified cases: 56**
-**Updated: 2026-03-29**
+**Total verified cases: 62**
+**Updated: 2026-03-30**
 
 Each case has `./setup.sh` and `./reproduce.sh` scripts that build from source on Ubuntu 24.04 and reliably reproduce the bug. Run `cd cases/<folder_name>/ && ./setup.sh && ./reproduce.sh`.
 
@@ -66,3 +66,9 @@ Each case has `./setup.sh` and `./reproduce.sh` scripts that build from source o
 | 54 | Ra | https://github.com/rabbitmq/ra/issues/439 | Election livelock when candidate has lower log index than pre-vote member | `ra-439-election-livelock` |
 | 55 | BookKeeper | https://github.com/apache/bookkeeper/pull/2616 | Recovery reads missing fencing flag allow original writer to commit after ledger close | `bookkeeper-2614-recovery-fencing-gap` |
 | 56 | tikv/raft-rs | https://github.com/tikv/raft-rs/issues/221 | Node campaigns via leader transfer despite pending unapplied conf change | `raft-rs-221-campaign-conf-change` |
+| 57 | ZooKeeper | https://issues.apache.org/jira/browse/ZOOKEEPER-4643 | Follower persists uncommitted proposals before updating epoch during ZAB sync | `zookeeper-4643-sync-epoch-ordering` |
+| 58 | ZooKeeper | https://issues.apache.org/jira/browse/ZOOKEEPER-4925 | Stale follower propagates committedLog hole after DIFF sync becoming leader | `zookeeper-4925-diff-sync-committedlog-hole` |
+| 59 | ZooKeeper | https://issues.apache.org/jira/browse/ZOOKEEPER-4846 | Fuzzy snapshot ACL cache race causes fatal RuntimeException on restart | `zookeeper-4846-fuzzy-snapshot-acl` |
+| 60 | Kafka | https://issues.apache.org/jira/browse/KAFKA-15784 | Transactional offset commit atomicity violation when log append fails | `kafka-15784-txn-offset-atomicity` |
+| 61 | Kafka | https://issues.apache.org/jira/browse/KAFKA-14334 | Delayed fetch purgatory not completed on follower replica append | `kafka-14334-delayed-fetch-purgatory` |
+| 62 | Kafka | https://issues.apache.org/jira/browse/KAFKA-15170 | CooperativeStickyAssignor endless rebalance loop with rack-aware balancing | `kafka-15170-endless-rebalance-loop` |

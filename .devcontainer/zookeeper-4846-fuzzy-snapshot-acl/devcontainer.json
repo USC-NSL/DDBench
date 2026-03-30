@@ -1,0 +1,17 @@
+{
+  "name": "Bug Bench - zookeeper-4846-fuzzy-snapshot-acl",
+  "build": {
+    "dockerfile": "../../docker/zookeeper.Dockerfile"
+  },
+  "mounts": [
+    "source=bug-bench-zookeeper-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/zookeeper-4846-fuzzy-snapshot-acl,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/zookeeper-4846-fuzzy-snapshot-acl",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/zookeeper-4846-fuzzy-snapshot-acl ~/bug-bench/zookeeper-4846-fuzzy-snapshot-acl",
+  "customizations": {
+    "vscode": {
+      "extensions": ["vscjava.vscode-java-pack", "vscjava.vscode-maven"]
+    }
+  }
+}

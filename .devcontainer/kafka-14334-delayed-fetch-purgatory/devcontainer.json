@@ -1,0 +1,20 @@
+{
+  "name": "Bug Bench - kafka-14334-delayed-fetch-purgatory",
+  "build": {
+    "dockerfile": "../../docker/kafka.Dockerfile"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-kafka-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/kafka-14334-delayed-fetch-purgatory,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/kafka-14334-delayed-fetch-purgatory",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kafka-14334-delayed-fetch-purgatory ~/bug-bench/kafka-14334-delayed-fetch-purgatory",
+  "customizations": {
+    "vscode": {
+      "extensions": ["scalameta.metals", "vscjava.vscode-java"]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+name: kafka-15170-endless-rebalance-loop
+project: kafka
+repo: https://github.com/apache/kafka.git
+buggy_commit: "f0291ac74b88b988c4ab07c16286942838ba4556~1"
+submodules: false
+build:
+  command: "./gradlew :clients:compileJava :clients:compileTestJava -x spotlessCheck -x checkstyleMain -x checkstyleTest --quiet"
+  binary: ""
+docker:
+  caps: []
+  min_cpus: 1

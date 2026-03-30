@@ -1,0 +1,11 @@
+name: zookeeper-4925-diff-sync-committedlog-hole
+project: zookeeper
+repo: https://github.com/apache/zookeeper.git
+buggy_commit: "e5dd60bf0512ccc1e090d99410a8da48623219da~1"
+submodules: false
+build:
+  command: "mvn -pl zookeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q"
+  binary: ""
+docker:
+  caps: []
+  min_cpus: 1

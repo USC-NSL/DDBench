@@ -1,0 +1,17 @@
+{
+  "name": "Bug Bench - kafka-15170-endless-rebalance-loop",
+  "build": {
+    "dockerfile": "../../docker/kafka.Dockerfile"
+  },
+  "mounts": [
+    "source=bug-bench-kafka-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/kafka-15170-endless-rebalance-loop,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/kafka-15170-endless-rebalance-loop",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kafka-15170-endless-rebalance-loop ~/bug-bench/kafka-15170-endless-rebalance-loop",
+  "customizations": {
+    "vscode": {
+      "extensions": ["vscjava.vscode-java-pack", "vscjava.vscode-gradle"]
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Bug Bench - zookeeper-4925-diff-sync-committedlog-hole",
+  "build": {
+    "dockerfile": "../../docker/zookeeper.Dockerfile"
+  },
+  "mounts": [
+    "source=bug-bench-zookeeper-src,target=/workspace,type=volume",
+    "source=${localWorkspaceFolder}/cases/zookeeper-4925-diff-sync-committedlog-hole,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/worktrees/zookeeper-4925-diff-sync-committedlog-hole",
+  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/zookeeper-4925-diff-sync-committedlog-hole ~/bug-bench/zookeeper-4925-diff-sync-committedlog-hole",
+  "customizations": {
+    "vscode": {
+      "extensions": ["vscjava.vscode-java-pack", "vscjava.vscode-maven"]
+    }
+  }
+}

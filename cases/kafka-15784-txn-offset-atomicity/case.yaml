@@ -1,0 +1,11 @@
+name: kafka-15784-txn-offset-atomicity
+project: kafka
+repo: https://github.com/apache/kafka.git
+buggy_commit: "e4249b69bda215d308ac5580a89fcc58ca054b97~1"
+submodules: false
+build:
+  command: "./gradlew jar -x test -x spotlessCheck -x checkstyleMain -x checkstyleTest --quiet"
+  binary: ""
+docker:
+  caps: []
+  min_cpus: 2
