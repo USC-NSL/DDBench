@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for raft-268-shutdown-deadlock
-# Runs the test binary 20 times and counts deadlocks (timeout = deadlock).
+# The test binary internally runs 50 attempts and exits 1 on first deadlock.
 # ── Docker mode (preferred) ──
 CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -31,25 +31,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-FAILURES=0
-TOTAL=50
-
-for i in $(seq 1 $TOTAL); do
-    timeout 15 "$BINARY" > /dev/null 2>&1
-    EXIT_CODE=$?
-    if [ $EXIT_CODE -ne 0 ]; then
-        FAILURES=$((FAILURES + 1))
-        echo "Attempt $i: DEADLOCK (exit code $EXIT_CODE)"
-    else
-        echo "Attempt $i: OK"
-    fi
-done
-
-echo ""
-if [ $FAILURES -gt 0 ]; then
-    echo "FAIL: Bug is present — $FAILURES/$TOTAL runs deadlocked"
-    exit 1
-else
-    echo "PASS: Bug is fixed — all $TOTAL runs completed without deadlock"
-    exit 0
-fi
+# The binary runs 50 internal attempts.
+# Exit 1 = bug present (deadlock detected), Exit 0 = bug absent.
+timeout 600 "$BINARY"
+exit $?

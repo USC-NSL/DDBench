@@ -216,7 +216,7 @@ echo "Injected regression test: $INJECT_TEST"
 echo "Running Maven test..."
 
 cd "$WORK_DIR/zookeeper-server"
-OUTPUT=$(mvn test -Dtest="Zk4643RegressionTest#testOnlyCommittedTxnsPersistedBeforeEpochUpdate" -DfailIfNoTests=false -q 2>&1)
+OUTPUT=$(mvn test -Dmaven.repo.local=/workspace/.m2 -Dtest="Zk4643RegressionTest#testOnlyCommittedTxnsPersistedBeforeEpochUpdate" -DfailIfNoTests=false -q 2>&1)
 TEST_EXIT=$?
 echo "$OUTPUT"
 

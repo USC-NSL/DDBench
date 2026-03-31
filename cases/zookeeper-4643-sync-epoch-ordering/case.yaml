@@ -4,7 +4,7 @@ repo: https://github.com/apache/zookeeper.git
 buggy_commit: "9fcb805fa1bb37b1f64ceb3bc5d7ccf349971bb7~1"
 submodules: false
 build:
-  command: "mvn -pl zookeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q"
+  command: "mvn -pl zookeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -Dmaven.repo.local=/workspace/.m2 -q"
   binary: ""
 docker:
   caps: []

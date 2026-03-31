@@ -56,33 +56,6 @@
       "has_solution": true
     },
     {
-      "case_id": "clickhouse-98079-keeper-addwatch",
-      "project": "clickhouse",
-      "repo": "https://github.com/ClickHouse/ClickHouse.git",
-      "buggy_commit": "3515972fbc064f7b62c963c8e25969053a6a38c2~1",
-      "language": "C++",
-      "oracle_type": "HANG",
-      "system_family": "analytics",
-      "github_url": "https://github.com/ClickHouse/ClickHouse/issues/98079",
-      "description": "Keeper disconnects client after addWatch() breaking Java ZK CuratorCache",
-      "build": {
-        "command": "sed -i 's/set (CLANG_MINIMUM_VERSION [0-9]*)/set (CLANG_MINIMUM_VERSION 23)/' cmake/tools.cmake && REQUIRED_RUST_NIGHTLY=$(grep -oP 'nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}' cmake/tools.cmake 2>/dev/null || echo '') && [ -n \"$REQUIRED_RUST_NIGHTLY\" ] && rustup toolchain install \"$REQUIRED_RUST_NIGHTLY\" || true && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=OFF -DENABLE_UTILS=OFF -DCMAKE_CXX_COMPILER=clang++-23 -DCMAKE_C_COMPILER=clang-23 -DWERROR=OFF && ninja -j$(nproc) programs/clickhouse\n",
-        "binary": "build/programs/clickhouse"
-      },
-      "docker": {
-        "caps": [],
-        "min_cpus": 1
-      },
-      "submodules": true,
-      "surface_membership": {
-        "FS29": true
-      },
-      "contamination_tier": null,
-      "bug_family": "rpc-protocol-state-machine",
-      "gold_complete": false,
-      "has_solution": true
-    },
-    {
       "case_id": "consul-12295-acl-replication-stall",
       "project": "consul",
       "repo": "https://github.com/hashicorp/consul.git",

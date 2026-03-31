@@ -4,7 +4,7 @@ repo: https://github.com/hashicorp/consul.git
 buggy_commit: "9bc9d3014d2d8f48c4c87926bfb98c8536364532~1"
 submodules: false
 build:
-  command: "make dev-build"
+  command: "mkdir -p pkg.bin.new/linux_amd64 && make dev-build"
   binary: bin/consul
 docker:
   caps: []

@@ -29,15 +29,6 @@
       "included": true
     },
     {
-      "rank": 2,
-      "corpus_case": "clickhouse-98079-keeper-addwatch",
-      "system": "ClickHouse",
-      "bug_family": "rpc-protocol-state-machine",
-      "hybrid_necessity": "yes",
-      "gold_tier": "G4",
-      "included": true
-    },
-    {
       "rank": 3,
       "corpus_case": "consul-8377-snapshot-restore-index",
       "system": "Consul",

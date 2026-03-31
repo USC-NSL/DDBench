@@ -19,11 +19,11 @@ echo "=== Reproducing bookkeeper-2614-recovery-fencing-gap ==="
 
 cd "$WORK_DIR"
 
-# Rebuild to install SNAPSHOT artifacts into the local Maven cache.
-# This is required because reproduce.sh runs in a fresh container without
-# a pre-populated ~/.m2 from the setup phase.
+# Use a persistent Maven local repo inside the workspace volume so the
+# SNAPSHOT artifacts from setup are reusable across containers.
+M2_REPO="/workspace/.m2"
 [ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh" 2>&1 | tail -5 || \
-    mvn -pl bookkeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q
+    mvn -pl bookkeeper-server -am clean install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -Dmaven.repo.local="$M2_REPO" -q
 
 # Reset to buggy state (production code must be at buggy commit)
 git checkout -- bookkeeper-server/src/main/java/org/apache/bookkeeper/client/PendingReadOp.java 2>/dev/null || true
@@ -49,6 +49,7 @@ mvn -pl bookkeeper-server test \
     -Dtest="LedgerRecovery2Test#testFirstWriterCannotCommitWriteAfter2ndWriterCloses" \
     -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip \
     -Dsurefire.failIfNoSpecifiedTests=false \
+    -Dmaven.repo.local="$M2_REPO" \
     2>&1 | tee "$RESULT_LOG"
 set -e
 

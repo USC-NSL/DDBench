@@ -4,7 +4,7 @@ repo: https://github.com/apache/kafka.git
 buggy_commit: "dbf5826cd545820652ed6d136727aa80a03f4f54~1"
 submodules: false
 build:
-  command: "sed -i 's/def repo = Grgit.open(currentDir: project.getRootDir())/def repo = null/' build.gradle && sed -i 's/excludes = new ArrayList<String>(repo.clean(ignore: false, directories: true, dryRun: true))/excludes = new ArrayList<String>()/' build.gradle && ./gradlew jar -x test -x spotlessCheck -x checkstyleMain -x checkstyleTest --quiet"
+  command: "sed -i 's/def repo = Grgit.open(currentDir: project.getRootDir())/def repo = null/' build.gradle && sed -i 's/excludes = new ArrayList<String>(repo.clean(ignore: false, directories: true, dryRun: true))/excludes = new ArrayList<String>()/' build.gradle && ./gradlew jar -x test -x spotlessCheck -x checkstyleMain -x checkstyleTest --quiet --no-daemon"
   binary: ""
 docker:
   caps: []
