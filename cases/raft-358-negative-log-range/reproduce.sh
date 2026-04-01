@@ -20,7 +20,7 @@ export PATH="$PATH:/usr/local/go/bin"
 [ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
 
 # Verify setup
-if [ ! -d "$WORK_DIR/.git" ]; then
+if [ ! -e "$WORK_DIR/.git" ]; then
     echo "ERROR: Repository not found at $WORK_DIR. Run ./setup.sh first."
     exit 1
 fi

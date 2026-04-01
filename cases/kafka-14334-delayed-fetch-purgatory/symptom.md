@@ -8,7 +8,6 @@ When a follower replica appends messages received from the leader, the DelayedFe
 - A producer writes records to the leader, which replicates them to the follower.
 - A consumer in the same rack as the follower sends a fetch request to the follower with `fetch.max.wait.ms` set (e.g., 500 ms).
 - The consumer does NOT receive the newly replicated records until `fetch.max.wait.ms` elapses, even though the data is already present on the follower.
-- With the fix applied, the follower completes the delayed fetch immediately after appending replicated data and updating its high watermark, well before the timeout.
 
 ## Error messages
 
