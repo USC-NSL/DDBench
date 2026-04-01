@@ -277,6 +277,7 @@ parse_addons() {
     ADDON_NAMES=()
     AGENT_PROMPT=""
     AGENT_CMD=""
+    AGENT_CONFIG=""
     REMAINING_ARGS=()
 
     while [ $# -gt 0 ]; do
@@ -294,6 +295,11 @@ parse_addons() {
             --cmd)
                 [ -n "${2:-}" ] || die "--cmd requires a value"
                 AGENT_CMD="$2"
+                shift 2
+                ;;
+            --config)
+                [ -n "${2:-}" ] || die "--config requires a path"
+                AGENT_CONFIG="$2"
                 shift 2
                 ;;
             *)
@@ -684,7 +690,11 @@ cmd_agent() {
         case "$agent_cmd" in
             claude) final_cmd="claude --print \"$AGENT_PROMPT\"" ;;
             aider)  final_cmd="aider --message \"$AGENT_PROMPT\"" ;;
-            mini)   final_cmd="mini -y --exit-immediately -t \"$AGENT_PROMPT\"" ;;
+            mini)
+                local mini_args="-y --exit-immediately"
+                [ -n "$AGENT_CONFIG" ] && mini_args="$mini_args --config /configs/agent_config.yaml"
+                final_cmd="mini $mini_args -t \"$AGENT_PROMPT\""
+                ;;
             *)      final_cmd="$agent_cmd" ;;
         esac
     fi
@@ -707,6 +717,14 @@ cmd_agent() {
     # Start a new persistent container
     build_run_args "$yaml"
     build_addon_args
+
+    # Mount agent config file if provided
+    if [ -n "$AGENT_CONFIG" ]; then
+        local config_abs
+        config_abs=$(cd "$(dirname "$AGENT_CONFIG")" && pwd)/$(basename "$AGENT_CONFIG")
+        [ -f "$config_abs" ] || die "Config file not found: $AGENT_CONFIG"
+        RUN_ARGS+=("-v" "${config_abs}:/configs/agent_config.yaml:ro")
+    fi
 
     docker run -d \
         --name "$cname" \
@@ -912,12 +930,13 @@ Addon Options (for shell and agent):
   --addon <name>       Install a tool addon (repeatable). See addons/README.md
   --prompt <text>      Pass a prompt to the agent (agent command only)
   --cmd <command>      Override the agent command to run (agent command only)
+  --config <path>      Agent config file (mounted into container, agent command only)
 
 Environment:
   BENCH_WORKSPACE         Override workspace path (default: \$HOME/bug-bench)
   ANTHROPIC_API_KEY       Forwarded to container for Claude Code
   OPENAI_API_KEY          Forwarded to container for Codex/Aider
-  MSWEA_MODEL_NAME        Forwarded to container for mini-swe-agent (optional)
+  MSWEA_MODEL_NAME        Forwarded to container for mini-swe-agent (required, no default)
 
 Examples:
   ./bench.sh setup dragonfly-6856-flushslots-oob
