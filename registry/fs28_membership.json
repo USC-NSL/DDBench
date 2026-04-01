@@ -2,7 +2,7 @@
   "status": "frozen",
   "frozen_at": "2026-03-30",
   "corpus_scope": "62 released cases",
-  "selection_source": "registry/fs29_selection_criteria.md",
+  "selection_source": "registry/fs28_selection_criteria.md",
   "peer_review_summary": {
     "exact_case_count": 29,
     "system_families": 10,
@@ -10,14 +10,14 @@
     "all_g4_achievable": true,
     "hybrid_yes_count": 27,
     "hybrid_probable_count": 2,
-    "notes": "FS29 = previous FS23 plus all 6 newly added Kafka/ZooKeeper rows."
+    "notes": "FS28 = previous FS23 plus all 6 newly added Kafka/ZooKeeper rows."
   },
   "borderline_included": [
     {
       "corpus_case": "kafka-14334-delayed-fetch-purgatory",
       "hybrid_necessity": "probable",
       "gold_tier": "G4",
-      "reason": "Slightly more repo-localized than the strongest rows, but clearly worth inclusion in the broader FS29 object."
+      "reason": "Slightly more repo-localized than the strongest rows, but clearly worth inclusion in the broader FS28 object."
     },
     {
       "corpus_case": "zookeeper-4846-fuzzy-snapshot-acl",

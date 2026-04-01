@@ -1,4 +1,4 @@
-# FS29 selection criteria
+# FS28 selection criteria
 
 Status: frozen
 Date: 2026-03-30
@@ -6,15 +6,15 @@ Corpus scope: 62 released cases under `cases/`
 
 ## Goal
 
-Freeze a **29-case headline-plus-expansion subset (`FS29`)** that preserves the original FS23 core while incorporating the six newly added Kafka/ZooKeeper rows as first-class benchmark members.
+Freeze a **29-case headline-plus-expansion subset (`FS28`)** that preserves the original FS23 core while incorporating the six newly added Kafka/ZooKeeper rows as first-class benchmark members.
 
-`FS29 = FS23 + 6 newly added Kafka/ZooKeeper rows`
+`FS28 = FS23 + 6 newly added Kafka/ZooKeeper rows`
 
 This object is meant to be broader than the old FS23 headline cut while still staying disciplined on replay quality, hybrid diagnosis value, and structured gold completeness.
 
 ## Selection policy
 
-A case is eligible for `FS29` only if all of the following hold.
+A case is eligible for `FS28` only if all of the following hold.
 
 1. **Historical bug/fix row**
    - real historical bug/fix provenance in the released corpus.
@@ -25,28 +25,28 @@ A case is eligible for `FS29` only if all of the following hold.
 
 3. **Hybrid diagnosis value**
    - Preferred: `hybrid_necessity = yes`.
-   - Allowed in `FS29`: `probable` rows **only when** they add clear system-family or failure-family value and still support strong structured gold.
-   - In the current frozen `FS29`, 27 rows are `yes` and 2 rows are `probable` (`kafka-14334-delayed-fetch-purgatory`, `zookeeper-4846-fuzzy-snapshot-acl`).
+   - Allowed in `FS28`: `probable` rows **only when** they add clear system-family or failure-family value and still support strong structured gold.
+   - In the current frozen `FS28`, 27 rows are `yes` and 2 rows are `probable` (`kafka-14334-delayed-fetch-purgatory`, `zookeeper-4846-fuzzy-snapshot-acl`).
 
 4. **Gold completeness**
    - target is `G4-achievable` across the set.
-   - every current `FS29` row is screened as `G4`.
+   - every current `FS28` row is screened as `G4`.
 
 5. **Diversity / value rule**
    - expansion is justified when it brings either:
      - a new system family with multiple strong rows, or
      - a materially new failure mode worth scoring separately.
 
-## Why FS29 instead of FS23
+## Why FS28 instead of FS23
 
 The six new Kafka/ZooKeeper rows are too valuable to leave as mere appendix notes:
 - they add **2 new system families**,
 - they add more depth in coordinator, rebalance, ZAB ordering, snapshot/restart, and DIFF-sync propagation failures,
-- and four of the six are strong `yes/G4` rows, while the remaining two still look valuable enough for inclusion under the broader FS29 bar.
+- and four of the six are strong `yes/G4` rows, while the remaining two still look valuable enough for inclusion under the broader FS28 bar.
 
-So the right move is not to churn the old 23, but to **promote the object to FS29**.
+So the right move is not to churn the old 23, but to **promote the object to FS28**.
 
-## Frozen FS29 composition rule
+## Frozen FS28 composition rule
 
 - existing `FS23`: **23** rows
 - Kafka additions: **3** rows
@@ -66,7 +66,7 @@ System-family composition:
 - `Kafka`: **3**
 - `ZooKeeper`: **3**
 
-## Frozen FS29 membership (exactly 29)
+## Frozen FS28 membership (exactly 29)
 
 | corpus_case | system | bug family | hybrid | gold | inclusion rationale |
 | --- | --- | --- | --- | --- | --- |
@@ -101,7 +101,7 @@ System-family composition:
 | `zookeeper-4925-diff-sync-committedlog-hole` | ZooKeeper | `replication-consistency` | `yes` | `G4` | Included as a strong ZooKeeper DIFF-sync propagation/data-loss row. |
 
 
-## Peer-review summary of the frozen FS29
+## Peer-review summary of the frozen FS28
 
 ### Pass conditions met
 - exactly **29** cases
@@ -115,4 +115,4 @@ System-family composition:
 - `kafka-14334-delayed-fetch-purgatory`
 - `zookeeper-4846-fuzzy-snapshot-acl`
 
-These two stay in FS29 because the object is intentionally broader than the old FS23 and their added benchmark value outweighs their slightly weaker hybrid purity.
+These two stay in FS28 because the object is intentionally broader than the old FS23 and their added benchmark value outweighs their slightly weaker hybrid purity.

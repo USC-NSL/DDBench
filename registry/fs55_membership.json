@@ -2,13 +2,22 @@
   "status": "frozen",
   "frozen_at": "2026-03-30",
   "corpus_scope": "62 released cases",
-  "selection_source": "registry/fs43_selection_criteria.md",
+  "selection_source": "registry/fs55_selection_criteria.md",
   "peer_review_summary": {
-    "exact_case_count": 43,
-    "inherits_fs29": true,
-    "added_structured_promotion_count": 14,
-    "notes": "FS43 = FS29 + the full S14 structured-promotion lane."
+    "exact_case_count": 56,
+    "inherits_fs42": true,
+    "added_core_only_count": 13,
+    "release_only_remainder_count": 6,
+    "notes": "FS55 = FS42 + the C13 core-only promotion lane."
   },
+  "release_only_remainder": [
+    "bookkeeper-4701-fencing-race",
+    "etcd-19179-watch-tombstone-compact",
+    "rabbitmq-12635-qq-snapshot-crash",
+    "ra-439-election-livelock",
+    "rocksdb-10751-stalled-writes-shutdown",
+    "seastar-2202-cross-shard-realloc"
+  ],
   "cases": [
     {
       "rank": 1,
@@ -386,6 +395,123 @@
       "bug_family": "recovery-reconfiguration-failover",
       "hybrid_necessity": "yes",
       "gold_tier": "G4",
+      "included": true
+    },
+    {
+      "rank": 44,
+      "corpus_case": "dragonfly-6614-monitor-multiexec",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 45,
+      "corpus_case": "dragonfly-6619-evalsha-empty",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 46,
+      "corpus_case": "dragonfly-6654-mc-reply-large",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 47,
+      "corpus_case": "dragonfly-6753-populate-sigfpe",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 48,
+      "corpus_case": "dragonfly-6761-mc-pipeline-crash",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 49,
+      "corpus_case": "dragonfly-6764-hincrbyfloat-nan",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 50,
+      "corpus_case": "dragonfly-6819-stale-expiry",
+      "system": "Dragonfly",
+      "bug_family": "storage-io-path",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 51,
+      "corpus_case": "dragonfly-6825-config-overflow",
+      "system": "Dragonfly",
+      "bug_family": "config-topology-deployment",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 52,
+      "corpus_case": "dragonfly-6856-flushslots-oob",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 53,
+      "corpus_case": "dragonfly-6907-ftsearch-vector-crash",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 54,
+      "corpus_case": "dragonfly-6909-search-nonfinite",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 55,
+      "corpus_case": "dragonfly-6912-rdb-encoding",
+      "system": "Dragonfly",
+      "bug_family": "storage-io-path",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 56,
+      "corpus_case": "kvrocks-3315-zdiff-crash",
+      "system": "Kvrocks",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
       "included": true
     }
   ]
