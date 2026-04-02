@@ -4,7 +4,7 @@
   "corpus_scope": "62 released cases",
   "selection_source": "registry/fs28_selection_criteria.md",
   "peer_review_summary": {
-    "exact_case_count": 29,
+    "exact_case_count": 28,
     "system_families": 10,
     "bug_families": 5,
     "all_g4_achievable": true,

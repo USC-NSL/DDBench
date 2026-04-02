@@ -4,7 +4,7 @@
   "corpus_scope": "62 released cases",
   "selection_source": "registry/fs55_selection_criteria.md",
   "peer_review_summary": {
-    "exact_case_count": 56,
+    "exact_case_count": 55,
     "inherits_fs42": true,
     "added_core_only_count": 13,
     "release_only_remainder_count": 6,

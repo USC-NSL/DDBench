@@ -52,7 +52,7 @@ So the right move is not to churn the old 23, but to **promote the object to FS2
 - Kafka additions: **3** rows
 - ZooKeeper additions: **3** rows
 
-Total = **29**
+Total = **28**
 
 System-family composition:
 - `etcd`: **4**
@@ -61,17 +61,15 @@ System-family composition:
 - `raft`: **5**
 - `Consul`: **2**
 - `BookKeeper`: **1**
-- `ClickHouse`: **1**
 - `Dragonfly`: **1**
 - `Kafka`: **3**
 - `ZooKeeper`: **3**
 
-## Frozen FS28 membership (exactly 29)
+## Frozen FS28 membership (exactly 28)
 
 | corpus_case | system | bug family | hybrid | gold | inclusion rationale |
 | --- | --- | --- | --- | --- | --- |
 | `bookkeeper-2614-recovery-fencing-gap` | BookKeeper | `recovery-reconfiguration-failover` | `yes` | `G4` | Preserves the BookKeeper bridge anchor with a strong replicated-recovery truncation bug. |
-| `clickhouse-98079-keeper-addwatch` | ClickHouse | `rpc-protocol-state-machine` | `yes` | `G4` | Preserves the ClickHouse protocol/state-machine bridge anchor. |
 | `consul-8377-snapshot-restore-index` | Consul | `recovery-reconfiguration-failover` | `yes` | `G4` | Retains a strong Consul restore/divergence row. |
 | `consul-9772-streaming-snapshot-cache` | Consul | `rpc-protocol-state-machine` | `yes` | `G4` | Retains a second Consul row with strong event-stream/state-machine value. |
 | `dragonfly-6687-replica-rdb-encoding` | Dragonfly | `storage-io-path` | `yes` | `G4` | Retains a storage/replication bridge anchor. |

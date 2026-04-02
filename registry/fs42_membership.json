@@ -4,7 +4,7 @@
   "corpus_scope": "62 released cases",
   "selection_source": "registry/fs42_selection_criteria.md",
   "peer_review_summary": {
-    "exact_case_count": 43,
+    "exact_case_count": 42,
     "inherits_fs28": true,
     "added_structured_promotion_count": 14,
     "notes": "FS42 = FS28 + the full S14 structured-promotion lane."
