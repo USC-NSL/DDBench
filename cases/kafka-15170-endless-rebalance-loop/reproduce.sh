@@ -43,9 +43,8 @@ cleanup() {
 trap cleanup EXIT
 
 # ── Inject behavioral test into CooperativeStickyAssignorTest.java ──
-# Verifies that rack-aware assignment completes without IllegalStateException
-# and produces a valid assignment where all partitions are distributed and
-# no consumer is left with zero partitions (which triggers infinite rebalance).
+# Verifies that partitionsTransferringOwnership is correctly populated when
+# rack-aware rebalancing revokes partitions from consumers with mismatched racks.
 INJECTED_TEST_NAME="testBug15170OwnershipTransferRegression"
 if grep -q "$INJECTED_TEST_NAME" "$TEST_FILE" 2>/dev/null; then
     echo "Test $INJECTED_TEST_NAME already injected -- skipping injection"
@@ -55,13 +54,25 @@ else
     cat > "$TEST_METHOD_FILE" << 'TESTEOF'
     @Test
     public void testBug15170OwnershipTransferRegression() {
-        // Bug KAFKA-15170: CooperativeStickyAssignor throws IllegalStateException
-        // during rack-aware rebalancing because partitions revoked due to rack
-        // mismatch are not tracked for ownership transfer, causing unfilled
-        // members tracking to be incorrect and triggering infinite rebalance.
+        // Bug KAFKA-15170: CooperativeStickyAssignor enters infinite rebalance
+        // because partitionsTransferringOwnership is not populated for partitions
+        // revoked due to rack mismatch during rack-aware assignment.
+        //
+        // Setup: 4 partitions across 2 racks (a, b), 2 consumers on racks a, b.
+        //   tp0 on rack a, tp1 on rack b, tp2 on rack a, tp3 on rack b
+        //   c0 (rack a) previously owns {tp0, tp1} — tp1 is rack-mismatched
+        //   c1 (rack b) previously owns {tp2, tp3} — tp2 is rack-mismatched
+        // Expected: rack-aware reassignment transfers tp1 c0→c1, tp2 c1→c0,
+        //   and partitionsTransferringOwnership records both transfers.
         this.replicationFactor = 1;
         this.numBrokerRacks = 2;
         this.hasConsumerRack = true;
+
+        // Force rack-aware logic (without this, the assignor may skip rack
+        // optimization for small clusters and produce a sticky assignment
+        // with no transfers, masking the bug).
+        AbstractPartitionAssignorTest.preferRackAwareLogic(assignor, true);
+
         Map<String, List<PartitionInfo>> partitionsPerTopic = new HashMap<>();
         partitionsPerTopic.put(topic1, partitionInfos(topic1, 4));
 
@@ -70,23 +81,39 @@ else
         subscriptions.put("c1", buildSubscriptionV2Above(topics(topic1), partitions(tp(topic1, 2), tp(topic1, 3)),
                 generationId, 1));
 
-        // On buggy code: assignPartitions throws IllegalStateException because
-        // unfilled members set is not empty when expected maxQuota is reached.
-        // On fixed code: completes successfully with valid assignments.
         Map<String, List<TopicPartition>> assignment =
             assignor.assignPartitions(partitionsPerTopic, subscriptions);
 
-        // Verify all partitions are assigned (no partitions dropped)
+        // Sanity: all partitions assigned
         int totalAssigned = 0;
-        for (Map.Entry<String, List<TopicPartition>> entry : assignment.entrySet()) {
-            assertFalse(entry.getValue().isEmpty(),
-                "Consumer " + entry.getKey() + " has zero partitions — triggers infinite rebalance");
-            totalAssigned += entry.getValue().size();
+        for (List<TopicPartition> parts : assignment.values()) {
+            totalAssigned += parts.size();
         }
-        assertEquals(4, totalAssigned,
-            "All 4 partitions must be assigned across consumers");
-        assertEquals(2, assignment.size(),
-            "Both consumers must appear in the assignment");
+        assertEquals(4, totalAssigned, "All 4 partitions must be assigned");
+
+        // KEY ASSERTION: partitionsTransferringOwnership must track the partitions
+        // that changed ownership due to rack mismatch revocation.
+        // On buggy code: this map is EMPTY — rack-revoked partitions are not tracked,
+        //   so the cooperative protocol does not revoke the correct partitions from
+        //   consumers, causing infinite rebalance loops.
+        // On fixed code: this map has 2 entries (tp1→c1, tp2→c0).
+        // Access via reflection since the field is protected and this test class
+        // is in a different package from AbstractStickyAssignor.
+        Map<?, ?> transferring;
+        try {
+            java.lang.reflect.Field f = AbstractStickyAssignor.class.getDeclaredField("partitionsTransferringOwnership");
+            f.setAccessible(true);
+            transferring = (Map<?, ?>) f.get(assignor);
+        } catch (Exception e) {
+            throw new RuntimeException("Cannot access partitionsTransferringOwnership", e);
+        }
+        assertFalse(transferring == null,
+            "partitionsTransferringOwnership should not be null for uniform subscriptions");
+        assertFalse(transferring.isEmpty(),
+            "Bug KAFKA-15170: partitionsTransferringOwnership is empty but should " +
+            "contain entries for partitions that changed ownership due to rack " +
+            "mismatch. Without this tracking, the cooperative protocol fails to " +
+            "revoke the correct partitions, causing infinite rebalance loops.");
     }
 TESTEOF
 

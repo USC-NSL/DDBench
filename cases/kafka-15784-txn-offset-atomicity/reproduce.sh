@@ -49,7 +49,6 @@ trap cleanup EXIT
 cat > "$TEST_FILE" << 'SCALAEOF'
 package kafka.coordinator.group
 
-import java.util.concurrent.locks.ReentrantLock
 import kafka.common.OffsetAndMetadata
 import kafka.server.{KafkaConfig, ReplicaManager, RequestLocal}
 import kafka.utils.TestUtils
@@ -66,7 +65,7 @@ import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 
-import scala.collection.{immutable, Map}
+import scala.collection.immutable
 
 class TxnOffsetAtomicityTest {
 
@@ -136,7 +135,7 @@ class TxnOffsetAtomicityTest {
     val offsets = immutable.Map(topicIdPartition -> offsetAndMetadata)
 
     var commitErrors: Option[immutable.Map[TopicIdPartition, Errors]] = None
-    def callback(errors: immutable.Map[TopicIdPartition, Errors]): Unit = {
+    val callback: immutable.Map[TopicIdPartition, Errors] => Unit = { errors =>
       commitErrors = Some(errors)
     }
 

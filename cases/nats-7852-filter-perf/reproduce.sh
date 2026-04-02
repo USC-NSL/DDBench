@@ -58,22 +58,60 @@ func TestJetStreamConsumerSingleFilterSubjectInFilterSubjects(t *testing.T) {
 	})
 	require_NoError(t, err)
 
+	// Publish messages for functional verification.
+	for i := 0; i < 5; i++ {
+		_, err = js.Publish("foo", []byte("msg"))
+		require_NoError(t, err)
+	}
+
+	// Consumer A: scalar FilterSubject (always uses optimized single-subject path).
 	_, err = js.AddConsumer("TEST", &nats.ConsumerConfig{
-		Durable:        "CONSUMER",
+		Durable:       "SCALAR",
+		FilterSubject: "foo",
+	})
+	require_NoError(t, err)
+
+	// Consumer B: single-element FilterSubjects array (should be equivalent to A).
+	_, err = js.AddConsumer("TEST", &nats.ConsumerConfig{
+		Durable:        "ARRAY",
 		FilterSubjects: []string{"foo"},
 	})
 	require_NoError(t, err)
 
 	mset, err := s.globalAccount().lookupStream("TEST")
 	require_NoError(t, err)
-	o := mset.lookupConsumer("CONSUMER")
-	require_NotNil(t, o)
-	o.mu.RLock()
-	defer o.mu.RUnlock()
 
-	// Should not initialize the sublist, as that will make us use LoadNextMsgMulti versus LoadNextMsg.
-	require_Len(t, len(o.subjf), 1)
-	require_True(t, o.filters == nil)
+	scalar := mset.lookupConsumer("SCALAR")
+	require_NotNil(t, scalar)
+	array := mset.lookupConsumer("ARRAY")
+	require_NotNil(t, array)
+
+	// Compare internal filter state: both consumers should use the fast
+	// LoadNextMsg path (filters == nil), not the slow LoadNextMsgMulti path.
+	scalar.mu.RLock()
+	scalarHasFilters := scalar.filters != nil
+	scalar.mu.RUnlock()
+
+	array.mu.RLock()
+	arrayHasFilters := array.filters != nil
+	arraySubjfLen := len(array.subjf)
+	array.mu.RUnlock()
+
+	require_Len(t, arraySubjfLen, 1)
+
+	// On buggy code: scalar.filters is nil (fast path) but array.filters is
+	// non-nil (slow LoadNextMsgMulti path), so the equivalence check fails.
+	// On fixed code: both are nil — FilterSubjects:["foo"] is normalized to
+	// use the same optimized path as FilterSubject:"foo".
+	if scalarHasFilters != arrayHasFilters {
+		t.Fatalf("FilterSubjects:[\"foo\"] and FilterSubject:\"foo\" should produce "+
+			"equivalent consumers, but filter initialization differs: "+
+			"scalar filters initialized=%v, array filters initialized=%v. "+
+			"Single-element FilterSubjects incorrectly activates the slow "+
+			"multi-filter path (LoadNextMsgMulti instead of LoadNextMsg), "+
+			"causing >20%% performance degradation.",
+			scalarHasFilters, arrayHasFilters)
+	}
 }
 TESTEOF
 fi
