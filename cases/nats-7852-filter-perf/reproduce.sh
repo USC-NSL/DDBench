@@ -11,7 +11,6 @@ fi
 set -uo pipefail
 
 WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/nats-7852-filter-perf"
-FIX_COMMIT="66e9bbc7f8684dd1b31c54ef686924e0841f9846"
 TEST_FILE="server/jetstream_consumer_test.go"
 TEST_NAME="TestJetStreamConsumerSingleFilterSubjectInFilterSubjects"
 
@@ -38,9 +37,46 @@ trap cleanup EXIT
 # Back up the original test file
 cp "$TEST_FILE" "${TEST_FILE}.bak"
 
-# Extract the test function from the fix commit and append it
-echo "Extracting test $TEST_NAME from fix commit $FIX_COMMIT..."
-git show "${FIX_COMMIT}:${TEST_FILE}" | sed -n "/^func ${TEST_NAME}(/,/^func /{ /^func ${TEST_NAME}(/p; /^func ${TEST_NAME}(/!{ /^func /!p; } }" >> "$TEST_FILE"
+# Inline the behavioral test function.
+# Verifies that a consumer with a single FilterSubjects entry does not
+# initialize the sublist/filters (which would activate the slow per-message
+# filtering path). On buggy code: filters is non-nil → test FAILS
+# On fixed code: filters is nil, subjf has 1 entry → test PASSES
+if ! grep -q "func ${TEST_NAME}" "$TEST_FILE"; then
+cat >> "$TEST_FILE" << 'TESTEOF'
+
+func TestJetStreamConsumerSingleFilterSubjectInFilterSubjects(t *testing.T) {
+	s := RunBasicJetStreamServer(t)
+	defer s.Shutdown()
+
+	nc, js := jsClientConnect(t, s)
+	defer nc.Close()
+
+	_, err := js.AddStream(&nats.StreamConfig{
+		Name:     "TEST",
+		Subjects: []string{"foo"},
+	})
+	require_NoError(t, err)
+
+	_, err = js.AddConsumer("TEST", &nats.ConsumerConfig{
+		Durable:        "CONSUMER",
+		FilterSubjects: []string{"foo"},
+	})
+	require_NoError(t, err)
+
+	mset, err := s.globalAccount().lookupStream("TEST")
+	require_NoError(t, err)
+	o := mset.lookupConsumer("CONSUMER")
+	require_NotNil(t, o)
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+
+	// Should not initialize the sublist, as that will make us use LoadNextMsgMulti versus LoadNextMsg.
+	require_Len(t, len(o.subjf), 1)
+	require_True(t, o.filters == nil)
+}
+TESTEOF
+fi
 
 # Run the test
 echo "Running test $TEST_NAME..."

@@ -38,6 +38,38 @@ Record:
 - `buggy_output`: last 10 lines of output
 - `buggy_verdict`: FAIL (correct) or PASS (oracle unsound — false positive)
 
+### Step 2.5: Oracle quality scan
+
+Before running Direction 2, scan `reproduce.sh` for anti-patterns that make the oracle **fix-specific** (it will FAIL on buggy and PASS on the upstream fix, but FAIL on valid alternative fixes). These are fragile oracles that pass the soundness check but reject correct work from agents/humans.
+
+Check for these anti-patterns:
+
+| Anti-pattern | Detection | Severity |
+|---|---|---|
+| **FIX_COMMIT dependency** | `grep 'FIX_COMMIT='` | HIGH — test code pulled from specific commit |
+| **`git show` from fix** | `grep 'git show.*FIX_COMMIT'` | HIGH — test extracted at runtime from fix |
+| **`git checkout` from fix** | `grep 'git checkout.*FIX_COMMIT'` | HIGH — files pulled from fix commit tree |
+| **Reflection as oracle** | `getDeclaredField`/`getDeclaredMethod` used in PASS/FAIL assertion (not test setup) | HIGH — checks code structure, not behavior |
+| **Source grep branching** | `grep -q` on production source to branch test logic | MEDIUM — detects fix text, not fix effect |
+| **`sed -i` on production** | `sed -i` targeting `src/main` paths | MEDIUM — injects accessors to read internal state |
+
+If any HIGH-severity anti-pattern is found, emit a warning:
+
+```
+WARNING: Oracle is fix-specific (fragile)
+  Anti-pattern: FIX_COMMIT dependency (line 14)
+  Risk: Oracle will reject valid alternative fixes
+  Remediation: Inline test as heredoc or ship as inject_test/ files
+```
+
+The oracle can still be SOUND (passes both directions with the upstream fix) but should be flagged as **SOUND-BUT-FRAGILE** in the report. This means it works as a regression test for the specific upstream fix but NOT as a general correctness oracle for evaluating agent-generated patches.
+
+**Remediation patterns (proven):**
+- **NATS cases**: Replace `git show FIX_COMMIT` with inline heredoc test function (`cat >> "$TEST_FILE" << 'TESTEOF'`)
+- **Kafka cases**: Replace reflection field checks with behavioral Mockito `verify()` or `mockingDetails`; use cross-version `Answer` mocks for API compatibility; use reflection only for method invocation (API compat), not detection
+- **BookKeeper cases**: Ship test infrastructure as static `inject_test/` files in the case directory instead of `git checkout FIX_COMMIT`
+- **General**: Tests should verify *observable behavior* (method calls, return values, exception presence/absence, state after operations) not *code structure* (field existence, method override presence, source text patterns)
+
 ### Step 3: Direction 2 — PASS on fix commit
 
 This requires applying the fix inside the container and rebuilding:
@@ -86,6 +118,17 @@ Direction 2 (fix commit → expect PASS):
 Oracle verdict: SOUND
 ```
 
+If the oracle passes both directions but has quality anti-patterns (Step 2.5):
+
+```
+Oracle verdict: SOUND-BUT-FRAGILE
+
+Quality issues found:
+  - FIX_COMMIT dependency (line 14): test extracted from fix commit
+  Recommendation: Inline test as heredoc or ship as inject_test/ files
+  Impact: Oracle will reject valid alternative fixes from agents/humans
+```
+
 If either direction fails:
 
 ```
@@ -107,10 +150,12 @@ Issue: False negative — fixed code fails the oracle.
 When multiple cases are specified, output a summary table after individual reports:
 
 ```
-| Case | Buggy → FAIL? | Fixed → PASS? | Oracle |
-|------|---------------|---------------|--------|
-| dragonfly-6614-monitor-multiexec | FAIL (correct) | PASS (correct) | SOUND |
-| etcd-19172-embed-data-race | FAIL (correct) | FAIL (wrong!) | UNSOUND |
+| Case | Buggy → FAIL? | Fixed → PASS? | Quality | Oracle |
+|------|---------------|---------------|---------|--------|
+| dragonfly-6614-monitor-multiexec | FAIL (correct) | PASS (correct) | clean | SOUND |
+| nats-7718-subscription-leak | FAIL (correct) | PASS (correct) | clean | SOUND |
+| kafka-14334-delayed-fetch-purgatory | FAIL (correct) | PASS (correct) | FIX_COMMIT dep | SOUND-BUT-FRAGILE |
+| etcd-19172-embed-data-race | FAIL (correct) | FAIL (wrong!) | clean | UNSOUND |
 ```
 
 ### Notes
@@ -119,3 +164,4 @@ When multiple cases are specified, output a summary table after individual repor
 - Oracle soundness is a mandatory selection criterion (see mining-protocol/selection-criteria.md #4).
 - For race/flaky cases, Direction 2 may require multiple runs to confirm PASS is reliable. Run at least 3 times.
 - If Direction 2 fails because the fix commit doesn't build, the issue is likely the build command or missing submodule updates — not the oracle itself.
+- **SOUND vs SOUND-BUT-FRAGILE**: Both pass the two-direction check, but SOUND-BUT-FRAGILE oracles use fix-specific detection (FIX_COMMIT deps, reflection field checks, source grep). They work as regression tests but will reject valid alternative fixes. For benchmark evaluation of agents, only SOUND oracles are reliable. Remediate fragile oracles before using them for agent evaluation.

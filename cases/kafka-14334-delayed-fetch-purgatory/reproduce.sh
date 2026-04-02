@@ -42,37 +42,97 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Check if the test already exists in source (fix commit already includes it)
-if grep -q "testBug14334DelayedFetchPurgatoryOnFollower" "$TEST_FILE" 2>/dev/null; then
-    echo "Test testBug14334DelayedFetchPurgatoryOnFollower already exists in source (fix commit) -- skipping injection"
+# Check if the fix commit's own test already exists
+if grep -q "testLocalFetchCompletionIfHighWatermarkUpdated" "$TEST_FILE" 2>/dev/null; then
+    echo "Fix commit test already exists in source -- skipping injection"
 else
     INJECTED=true
 
-    # Write test method to temp file — uses reflection to detect fix APIs
-    # so the test compiles on both buggy and fixed code
+    # Write behavioral test method that verifies doWork() calls
+    # completeDelayedFetchRequests after processing partition data with a
+    # high watermark update. Uses a cross-version mock Answer for the UnifiedLog
+    # to handle both updateHighWatermark (buggy) and maybeUpdateHighWatermark (fix).
+    # Verification uses Mockito mockingDetails to check invocations by method name
+    # string, avoiding compile-time references to completeDelayedFetchRequests
+    # (which only exists on the fix commit's ReplicaManager).
     cat > "$TEST_METHOD_FILE" << 'TESTEOF'
   @Test
   def testBug14334DelayedFetchPurgatoryOnFollower(): Unit = {
-    // Bug KAFKA-14334: ReplicaFetcherThread never completes DelayedFetchPurgatory
-    // after appending replicated data from the leader, causing consumers fetching
-    // from followers to always wait the full fetch.max.wait.ms timeout.
-    //
-    // The fix adds a `partitionsWithNewHighWatermark` tracking buffer and overrides
-    // doWork() to complete delayed fetch requests. We verify the fix is present
-    // by checking for this field via reflection (compiles on both buggy & fixed code).
+    import org.mockito.invocation.InvocationOnMock
 
-    val hasPartitionsBuffer = try {
-      classOf[ReplicaFetcherThread].getDeclaredField("partitionsWithNewHighWatermark")
-      true
-    } catch {
-      case _: java.lang.NoSuchFieldException => false
+    val tp0 = new TopicPartition("test-topic", 0)
+    val tp1 = new TopicPartition("test-topic", 1)
+
+    // Mock ReplicaManager
+    val mockReplicaMgr = mock(classOf[ReplicaManager])
+
+    // Mock UnifiedLog with Answer to handle both buggy and fix API:
+    // buggy: log.updateHighWatermark(Long) -> Long
+    // fix:   log.maybeUpdateHighWatermark(Long) -> Option[Long]
+    val mockLog = mock(classOf[kafka.log.UnifiedLog],
+      withSettings().defaultAnswer(new org.mockito.stubbing.Answer[AnyRef] {
+        override def answer(inv: InvocationOnMock): AnyRef = inv.getMethod.getName match {
+          case "maybeUpdateHighWatermark" => Some(100L).asInstanceOf[AnyRef]
+          case "updateHighWatermark"      => java.lang.Long.valueOf(100L)
+          case "highWatermark"            => java.lang.Long.valueOf(100L)
+          case "logEndOffset"             => java.lang.Long.valueOf(100L)
+          case "logStartOffset"           => java.lang.Long.valueOf(0L)
+          case _ => org.mockito.Mockito.RETURNS_DEFAULTS.answer(inv)
+        }
+      }))
+
+    val mockPartition = mock(classOf[kafka.cluster.Partition])
+    when(mockPartition.localLogOrException).thenReturn(mockLog)
+
+    when(mockReplicaMgr.getPartitionOrException(any[TopicPartition]())).thenReturn(mockPartition)
+    when(mockReplicaMgr.brokerTopicStats).thenReturn(mock(classOf[BrokerTopicStats]))
+
+    // Create config with 0 fetch backoff so doWork returns immediately
+    val props = kafka.utils.TestUtils.createBrokerConfig(0, "")
+    props.put("replica.fetch.backoff.ms", "0")
+    val config = KafkaConfig.fromProps(props)
+
+    val leader = mock(classOf[LeaderEndPoint])
+    val failedPartitions = new FailedPartitions
+    val quota = mock(classOf[ReplicaQuota])
+
+    val thread = new ReplicaFetcherThread(
+      "test-fetcher", leader, config, failedPartitions,
+      mockReplicaMgr, quota, "", () => org.apache.kafka.server.common.MetadataVersion.latest)
+
+    // Process partition data to simulate follower receiving replicated data
+    // with a high watermark update. On fixed code this populates the
+    // partitionsWithNewHighWatermark buffer; on buggy code it's a no-op.
+    val pd = new org.apache.kafka.common.message.FetchResponseData.PartitionData()
+      .setPartitionIndex(0)
+      .setHighWatermark(100L)
+      .setLogStartOffset(0L)
+      .setRecords(org.apache.kafka.common.record.MemoryRecords.EMPTY)
+
+    thread.processPartitionData(tp0, 0L, pd)
+    thread.processPartitionData(tp1, 0L, pd.setPartitionIndex(1))
+
+    // Trigger the post-fetch completion path.
+    // On fixed code: doWork() drains the buffer and calls
+    //   replicaMgr.completeDelayedFetchRequests(Seq(tp0, tp1))
+    // On buggy code: doWork() is inherited from AbstractFetcherThread
+    //   and never calls completeDelayedFetchRequests
+    thread.doWork()
+
+    // Verify completeDelayedFetchRequests was called using mockingDetails
+    // (avoids compile-time reference to the method, which only exists on fix commit)
+    var wasCompleted = false
+    val iter = org.mockito.Mockito.mockingDetails(mockReplicaMgr).getInvocations.iterator()
+    while (iter.hasNext) {
+      if (iter.next().getMethod.getName == "completeDelayedFetchRequests")
+        wasCompleted = true
     }
 
-    if (!hasPartitionsBuffer) {
-      fail("Bug KAFKA-14334: ReplicaFetcherThread.partitionsWithNewHighWatermark missing. " +
-        "The delayed fetch purgatory is never completed after follower replication, " +
-        "causing consumers to always wait fetch.max.wait.ms timeout.")
-    }
+    assertTrue(wasCompleted,
+      "Bug KAFKA-14334: ReplicaFetcherThread.doWork() does not call " +
+      "completeDelayedFetchRequests after follower replication. " +
+      "Consumers fetching from followers will always wait the full " +
+      "fetch.max.wait.ms timeout instead of receiving data promptly.")
   }
 TESTEOF
 
@@ -83,7 +143,7 @@ TESTEOF
     echo "}" >> "$TEST_FILE.tmp"
     mv "$TEST_FILE.tmp" "$TEST_FILE"
 
-    echo "Injected regression test into $TEST_FILE"
+    echo "Injected behavioral regression test into $TEST_FILE"
 fi
 
 echo "Running Gradle test..."
@@ -95,11 +155,10 @@ echo "$OUTPUT"
 
 echo ""
 if [ "$TEST_EXIT" -ne 0 ]; then
-    echo "FAIL: Bug is present -- ReplicaFetcherThread lacks partitionsWithNewHighWatermark field"
-    echo "The delayed fetch purgatory is never completed after follower replication,"
-    echo "causing consumers to always wait fetch.max.wait.ms timeout."
+    echo "FAIL: Bug is present -- ReplicaFetcherThread does not complete delayed"
+    echo "      fetch requests after follower replication (KAFKA-14334)"
     exit 1
 else
-    echo "PASS: Bug is fixed -- ReplicaFetcherThread has partitionsWithNewHighWatermark and completes delayed fetch purgatory"
+    echo "PASS: Bug is fixed -- delayed fetch purgatory is completed after follower HW update"
     exit 0
 fi

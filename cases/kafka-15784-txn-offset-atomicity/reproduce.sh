@@ -30,56 +30,23 @@ fi
 
 echo "=== Reproducing kafka-15784-txn-offset-atomicity ==="
 
-GMM_FILE="$WORK_DIR/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala"
 TEST_FILE="$WORK_DIR/core/src/test/scala/unit/kafka/coordinator/group/TxnOffsetAtomicityTest.scala"
 
-# Always remove stale injected test to ensure correct API version is used
+# Always remove stale injected test
 rm -f "$TEST_FILE"
 
-# Detect API version by checking for verificationGuard in GroupMetadataManager
-# The fix commit refactored storeOffsets to accept verificationGuard instead of transactionalId
-if grep -q "verificationGuard" "$GMM_FILE" 2>/dev/null; then
-    API_VERSION="fix"
-    echo "Detected fix commit API (verificationGuard present)"
-else
-    API_VERSION="buggy"
-    echo "Detected buggy commit API (no verificationGuard)"
-fi
+INJECTED=true
+cleanup() {
+    [ "$INJECTED" = true ] && rm -f "$TEST_FILE"
+}
+trap cleanup EXIT
 
-if [ "$API_VERSION" = "fix" ]; then
-    # On the fix commit, the mock-based approach can't properly verify the fix
-    # because mocking appendForGroup to throw bypasses its exception handling.
-    # Instead, run the fix commit's own verification tests for txn offset atomicity.
-    echo ""
-    echo "Running fix commit's upstream txn offset atomicity tests..."
-
-    cd "$WORK_DIR"
-    OUTPUT=$(./gradlew :core:test \
-        --tests "kafka.coordinator.group.GroupCoordinatorTest.testVerificationErrorsForTxnOffsetCommits" \
-        --tests "kafka.coordinator.group.GroupCoordinatorTest.testFetchPendingTxnOffsetsWithAbort" \
-        --tests "kafka.coordinator.group.GroupCoordinatorTest.testFetchPendingTxnOffsetsWithCommit" \
-        -x spotlessCheck -x checkstyleMain -x checkstyleTest \
-        --no-daemon 2>&1)
-    TEST_EXIT=$?
-    echo "$OUTPUT"
-
-    echo ""
-    if [ "$TEST_EXIT" -ne 0 ]; then
-        echo "FAIL: Fix commit tests failed"
-        exit 1
-    else
-        echo "PASS: Bug is fixed -- upstream txn offset atomicity tests pass"
-        exit 0
-    fi
-else
-    # Buggy commit: inject a mock-based test that detects the atomicity violation
-    INJECTED=true
-    cleanup() {
-        [ "$INJECTED" = true ] && rm -f "$TEST_FILE"
-    }
-    trap cleanup EXIT
-
-    cat > "$TEST_FILE" << 'SCALAEOF'
+# Inject a behavioral test that detects the atomicity violation.
+# Uses reflection to call storeOffsets so it compiles on both
+# the buggy API (transactionalId param) and the fix API (verificationGuard param).
+# Also uses a custom Mockito Answer to intercept any append* method call,
+# handling both appendRecords (buggy) and appendForGroup (fix).
+cat > "$TEST_FILE" << 'SCALAEOF'
 package kafka.coordinator.group
 
 import java.util.concurrent.locks.ReentrantLock
@@ -88,16 +55,16 @@ import kafka.server.{KafkaConfig, ReplicaManager, RequestLocal}
 import kafka.utils.TestUtils
 import org.apache.kafka.common.{TopicIdPartition, TopicPartition, Uuid}
 import org.apache.kafka.common.metrics.Metrics
-import org.apache.kafka.common.record.{MemoryRecords, RecordBatch}
+import org.apache.kafka.common.record.RecordBatch
 import org.apache.kafka.common.protocol.Errors
 import org.apache.kafka.server.common.MetadataVersion
 import org.apache.kafka.server.util.MockTime
-import org.apache.kafka.storage.internals.log.AppendOrigin
 import org.junit.jupiter.api.Assertions._
-import org.junit.jupiter.api.{BeforeEach, Test}
-import org.mockito.ArgumentMatchers
+import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
 
 import scala.collection.{immutable, Map}
 
@@ -131,7 +98,7 @@ class TxnOffsetAtomicityTest {
       offsetCommitRequiredAcks = config.offsetCommitRequiredAcks)
   }
 
-  @org.junit.jupiter.api.AfterEach
+  @AfterEach
   def tearDown(): Unit = {
     if (groupMetadataManager != null)
       groupMetadataManager.shutdown()
@@ -142,13 +109,20 @@ class TxnOffsetAtomicityTest {
   @BeforeEach
   def setUp(): Unit = {
     metrics = new Metrics()
-    replicaManager = mock(classOf[ReplicaManager])
+    // Use a custom default answer that throws on any append* method,
+    // handling both appendRecords (buggy API) and appendForGroup (fix API)
+    replicaManager = mock(classOf[ReplicaManager], withSettings().defaultAnswer(new Answer[AnyRef] {
+      override def answer(invocation: InvocationOnMock): AnyRef = {
+        if (invocation.getMethod.getName.startsWith("append"))
+          throw new RuntimeException("Simulated log append failure")
+        org.mockito.Mockito.RETURNS_DEFAULTS.answer(invocation)
+      }
+    }))
+    when(replicaManager.getMagic(any[TopicPartition]())).thenReturn(Some(RecordBatch.CURRENT_MAGIC_VALUE))
+
     groupMetadataManager = new GroupMetadataManager(0, MetadataVersion.latest, offsetConfig, replicaManager,
       time, metrics)
     groupMetadataManager.startup(() => numOffsetsPartitions, false)
-
-    when(replicaManager.getMagic(any[TopicPartition]())).thenReturn(Some(RecordBatch.CURRENT_MAGIC_VALUE))
-
     groupMetadataManager.addOwnedPartition(groupPartitionId)
 
     group = new GroupMetadata(groupId, Empty, time)
@@ -166,29 +140,43 @@ class TxnOffsetAtomicityTest {
       commitErrors = Some(errors)
     }
 
-    // Buggy commit uses appendRecords - mock it to throw
-    when(replicaManager.appendRecords(anyLong(),
-      anyShort(),
-      ArgumentMatchers.eq(true),
-      ArgumentMatchers.eq(AppendOrigin.COORDINATOR),
-      any[Map[TopicPartition, MemoryRecords]](),
-      any(),
-      any[Option[ReentrantLock]](),
-      any(),
-      any[RequestLocal](),
-      anyString(),
-      any()
-    )).thenThrow(new RuntimeException("Simulated log append failure"))
-
     assertFalse(group.hasOffsets, "Group should have no offsets before commit")
 
+    // Call storeOffsets via reflection to handle both buggy and fix API signatures.
+    // Buggy API: storeOffsets(group, consumerId, offsets, callback, txnId, prodId, prodEpoch, requestLocal)
+    // Fix API may add/change parameters (e.g., verificationGuard instead of txnId).
+    val storeMethod = groupMetadataManager.getClass.getMethods
+      .filter(_.getName == "storeOffsets")
+      .filter(_.getParameterCount >= 7)
+      .sortBy(-_.getParameterCount)
+      .head
+
+    val paramTypes = storeMethod.getParameterTypes
+    val args = new Array[AnyRef](paramTypes.length)
+    // First 4 args are always: group, consumerId, offsets, callback
+    args(0) = group
+    args(1) = ""
+    args(2) = offsets
+    args(3) = callback.asInstanceOf[AnyRef]
+    // Remaining args: fill based on type
+    for (i <- 4 until paramTypes.length) {
+      val pt = paramTypes(i)
+      args(i) = {
+        if (pt == classOf[String]) transactionalId
+        else if (pt == java.lang.Long.TYPE || pt == classOf[java.lang.Long]) java.lang.Long.valueOf(producerId)
+        else if (pt == java.lang.Short.TYPE || pt == classOf[java.lang.Short]) java.lang.Short.valueOf(producerEpoch)
+        else if (pt.getSimpleName.contains("RequestLocal")) RequestLocal.NoCaching
+        else if (pt.getSimpleName.contains("Optional")) java.util.Optional.empty()
+        else null
+      }
+    }
+
     try {
-      groupMetadataManager.storeOffsets(
-        group, "", offsets, callback,
-        transactionalId, producerId, producerEpoch,
-        RequestLocal.NoCaching
-      )
+      storeMethod.invoke(groupMetadataManager, args: _*)
     } catch {
+      case e: java.lang.reflect.InvocationTargetException =>
+        val cause = e.getCause
+        if (cause == null || !cause.getMessage.contains("Simulated log append failure")) throw e
       case e: RuntimeException =>
         if (!e.getMessage.contains("Simulated log append failure")) throw e
     }
@@ -211,27 +199,26 @@ class TxnOffsetAtomicityTest {
   }
 }
 SCALAEOF
-    echo "Injected regression test: $TEST_FILE"
+echo "Injected regression test: $TEST_FILE"
 
-    echo ""
-    echo "Running injected test..."
+echo ""
+echo "Running injected test..."
 
-    cd "$WORK_DIR"
-    OUTPUT=$(./gradlew :core:test --tests "kafka.coordinator.group.TxnOffsetAtomicityTest" \
-        -x spotlessCheck -x checkstyleMain -x checkstyleTest \
-        --no-daemon --info 2>&1)
-    TEST_EXIT=$?
-    echo "$OUTPUT"
+cd "$WORK_DIR"
+OUTPUT=$(./gradlew :core:test --tests "kafka.coordinator.group.TxnOffsetAtomicityTest" \
+    -x spotlessCheck -x checkstyleMain -x checkstyleTest \
+    --no-daemon --info 2>&1)
+TEST_EXIT=$?
+echo "$OUTPUT"
 
-    echo ""
-    if [ "$TEST_EXIT" -ne 0 ]; then
-        echo "FAIL: Bug is present -- GroupMetadataManager mutates in-memory state before log append."
-        echo "      When appendRecords throws, the failure callback is never invoked and"
-        echo "      the group retains stale pending offsets (KAFKA-15784)."
-        exit 1
-    else
-        echo "PASS: Bug is fixed -- in-memory state is only updated in the append callback,"
-        echo "      ensuring atomicity of transactional offset commits."
-        exit 0
-    fi
+echo ""
+if [ "$TEST_EXIT" -ne 0 ]; then
+    echo "FAIL: Bug is present -- GroupMetadataManager mutates in-memory state before log append."
+    echo "      When appendRecords throws, the failure callback is never invoked and"
+    echo "      the group retains stale pending offsets (KAFKA-15784)."
+    exit 1
+else
+    echo "PASS: Bug is fixed -- in-memory state is only updated in the append callback,"
+    echo "      ensuring atomicity of transactional offset commits."
+    exit 0
 fi

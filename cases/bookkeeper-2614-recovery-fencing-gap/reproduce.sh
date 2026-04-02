@@ -12,7 +12,7 @@ fi
 set -euo pipefail
 
 WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/bookkeeper-2614-recovery-fencing-gap"
-FIX_COMMIT="017307bc67431a7616861ad09927c4e3327633d1"
+CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESULT_LOG="/tmp/bk_2614_test_output.txt"
 
 echo "=== Reproducing bookkeeper-2614-recovery-fencing-gap ==="
@@ -28,19 +28,27 @@ M2_REPO="/workspace/.m2"
 # Reset to buggy state (production code must be at buggy commit)
 git checkout -- bookkeeper-server/src/main/java/org/apache/bookkeeper/client/PendingReadOp.java 2>/dev/null || true
 
-# Inject test infrastructure from the fix commit.
-# These are test-only files: MockBookies.java (new), MockLedgerData.java (new),
-# updated MockBookieClient.java, updated MockClientContext.java, and
-# LedgerRecovery2Test.java (new test added). The production code stays at the
-# buggy commit so PendingReadOp still lacks FLAG_DO_FENCING in recovery reads.
-git checkout "$FIX_COMMIT" -- \
-    bookkeeper-server/src/test/java/org/apache/bookkeeper/proto/MockBookies.java \
-    bookkeeper-server/src/test/java/org/apache/bookkeeper/proto/MockLedgerData.java \
-    bookkeeper-server/src/test/java/org/apache/bookkeeper/proto/MockBookieClient.java \
-    bookkeeper-server/src/test/java/org/apache/bookkeeper/client/MockClientContext.java \
+# Inject test infrastructure from static inject_test files shipped with
+# this case. These are test-only files that compile against the buggy
+# commit's production code. The production code stays at the buggy commit
+# so PendingReadOp still lacks FLAG_DO_FENCING in recovery reads.
+INJECT_DIR="${CASE_DIR}/inject_test"
+if [ -d "/bench/inject_test" ]; then
+    INJECT_DIR="/bench/inject_test"
+fi
+
+cp "$INJECT_DIR/MockBookies.java" \
+    bookkeeper-server/src/test/java/org/apache/bookkeeper/proto/MockBookies.java
+cp "$INJECT_DIR/MockLedgerData.java" \
+    bookkeeper-server/src/test/java/org/apache/bookkeeper/proto/MockLedgerData.java
+cp "$INJECT_DIR/MockBookieClient.java" \
+    bookkeeper-server/src/test/java/org/apache/bookkeeper/proto/MockBookieClient.java
+cp "$INJECT_DIR/MockClientContext.java" \
+    bookkeeper-server/src/test/java/org/apache/bookkeeper/client/MockClientContext.java
+cp "$INJECT_DIR/LedgerRecovery2Test.java" \
     bookkeeper-server/src/test/java/org/apache/bookkeeper/client/LedgerRecovery2Test.java
 
-echo "Test infrastructure injected. Production code remains at buggy commit."
+echo "Test infrastructure injected from case directory. Production code remains at buggy commit."
 
 # Run the specific test
 echo "Running testFirstWriterCannotCommitWriteAfter2ndWriterCloses..."

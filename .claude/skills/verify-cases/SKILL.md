@@ -20,6 +20,31 @@ Run `bench.sh setup` and `bench.sh reproduce` across all (or specified) cases an
 
 Validate each case directory exists and contains `case.yaml`.
 
+### Step 1.5: Static oracle quality scan (pre-flight)
+
+Before running any cases, scan each `reproduce.sh` for anti-patterns that make the oracle fragile or fix-specific. Flag (but don't block) cases that match:
+
+| Anti-pattern | Grep pattern | Why it's bad |
+|---|---|---|
+| FIX_COMMIT dependency | `FIX_COMMIT=` | Test code extracted from a specific fix commit won't work with alternative fixes |
+| `git show` from fix | `git show.*FIX_COMMIT\|git show.*:.*test` | Same: test is coupled to upstream fix |
+| `git checkout` from fix | `git checkout.*FIX_COMMIT\|git checkout "\$FIX` | Pulls fix-commit files into working tree |
+| Reflection field check | `getDeclaredField\|getDeclaredMethod` used as the PASS/FAIL assertion | Checks code structure, not behavior |
+| Source grep as oracle | `grep -q.*"\(source file\)"` used to branch PASS/FAIL | Detects fix text, not fix effect |
+| `sed -i` on production code | `sed -i.*src/main` | Injects accessors into production code to expose internal state |
+
+Output a pre-flight warning table before the main verification:
+
+```
+=== Pre-flight Oracle Quality Scan ===
+| Case | Anti-pattern | Line | Recommendation |
+|------|-------------|------|----------------|
+| kafka-14334-... | Reflection field check | 65 | Replace with behavioral Mockito verify |
+| nats-7718-... | FIX_COMMIT dependency | 14 | Inline test as heredoc |
+```
+
+Cases with anti-patterns may still VERIFY correctly (FAIL on buggy commit) but are **fragile oracles** — they will reject valid alternative fixes. After the main run, include a "Fragile Oracles" section in the report listing these cases and recommended remediation.
+
 ### Step 2: Run verification (sequentially to avoid resource contention)
 
 For each case, run the following and capture output + exit code:
@@ -88,3 +113,4 @@ For each non-VERIFIED case, output:
 - A VERIFIED result means the oracle fires correctly on the buggy commit. It does NOT confirm oracle soundness in the other direction (PASS on fix). Use `/verify-oracle` for that.
 - If many cases from the same project fail setup, the project Dockerfile likely needs updating.
 - Resource contention (parallel Docker builds sharing CPU/memory) was a major friction source in past sessions — always run sequentially.
+- **Fragile oracles**: A case can be VERIFIED yet still fragile. FIX_COMMIT dependencies, reflection field checks, and source-grep branching all produce oracles that reject valid alternative fixes. The pre-flight scan (Step 1.5) catches these. Remediation patterns: inline tests as heredocs (NATS pattern), use Mockito behavioral verify (Kafka pattern), ship test files as inject_test/ assets (BookKeeper pattern).
