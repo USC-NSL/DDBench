@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for raft-358-negative-log-range
-# Writes a Go test that creates an InmemStore with entries 100-200,
-# then checks if compactLogs would produce an invalid range when
-# snapIdx < minLog.
+# Writes a Go test that actually calls compactLogs with a spy LogStore
+# and detects if DeleteRange is called with an invalid (min > max) range.
 # ── Docker mode (preferred) ──
 CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -34,56 +33,77 @@ trap cleanup EXIT
 
 cd "$WORK_DIR"
 
-# Write test file
+# Write behavioral test that actually calls compactLogs via a spy.
+# The old approach only checked arithmetic (minLog/maxLog values) without
+# invoking the implementation, so it always failed even with a correct fix.
+# This test uses a spy LogStore to detect if DeleteRange is called with
+# an invalid range (min > max) at runtime.
 cat > negative_range_test.go <<'GOEOF'
 package raft
 
 import (
 	"testing"
+
+	"github.com/hashicorp/go-hclog"
 )
 
-func TestCompactLogsNegativeRange(t *testing.T) {
-	// Create an InmemStore and populate with log entries 100-200
-	store := NewInmemStore()
-	for i := uint64(100); i <= 200; i++ {
-		store.StoreLog(&Log{Index: i, Term: 1})
-	}
+// spyLogStore wraps InmemStore and records if DeleteRange is ever called
+// with an invalid range where min > max.
+type spyLogStore struct {
+	*InmemStore
+	invalidRangeCalled bool
+	invalidMin         uint64
+	invalidMax         uint64
+}
 
-	// Verify the store has the expected range
-	first, err := store.FirstIndex()
-	if err != nil {
-		t.Fatal(err)
+func (s *spyLogStore) DeleteRange(mn, mx uint64) error {
+	if mn > mx {
+		s.invalidRangeCalled = true
+		s.invalidMin = mn
+		s.invalidMax = mx
 	}
-	last, err := store.LastIndex()
-	if err != nil {
-		t.Fatal(err)
+	return s.InmemStore.DeleteRange(mn, mx)
+}
+
+// TestCompactLogsNegativeRange exercises compactLogs with snapIdx=50, which is
+// below the log store's first index (100). On buggy code this causes
+// DeleteRange(100, 50) — an invalid call. A correct fix must prevent it.
+func TestCompactLogsNegativeRange(t *testing.T) {
+	// Populate in-memory log store with entries at indices 100-200.
+	inner := NewInmemStore()
+	for i := uint64(100); i <= 200; i++ {
+		inner.StoreLog(&Log{Index: i, Term: 1})
 	}
+	first, _ := inner.FirstIndex()
+	last, _ := inner.LastIndex()
 	t.Logf("Log store range: %d to %d", first, last)
 
-	// Simulate: snapshot was taken at index 50 (before our log range)
-	// trailingLogs = 0
-	// compactLogs should compute:
-	//   minLog = first index of store (100)
-	//   maxLog = snapIdx - trailingLogs = 50 - 0 = 50
-	// This means maxLog (50) < minLog (100) => invalid range for DeleteRange
+	spy := &spyLogStore{InmemStore: inner}
 
-	snapIdx := uint64(50)
-	trailingLogs := uint64(0)
-
-	// Compute what compactLogs would do
-	minLog := first
-	maxLog := snapIdx - trailingLogs
-
-	t.Logf("compactLogs would call DeleteRange(%d, %d)", minLog, maxLog)
-
-	if maxLog < minLog {
-		t.Errorf("FAIL: Bug is present — DeleteRange would be called with from=%d > to=%d (invalid negative range)", minLog, maxLog)
-	} else {
-		t.Logf("PASS: Range is valid (%d to %d)", minLog, maxLog)
+	// Build the minimal Raft needed by compactLogs:
+	//   r.logs, r.conf.TrailingLogs, r.getLastLog(), r.logger
+	r := &Raft{
+		conf:   Config{TrailingLogs: 0},
+		logs:   spy,
+		logger: hclog.NewNullLogger(),
 	}
+	// setLastLog is promoted from the embedded raftState.
+	// Set lastLogIndex=200 so snapIdx=50 is not clamped away.
+	r.setLastLog(200, 1)
 
-	// Also check whether the source code has a bounds check
-	// The fix adds: if minLog > maxLog { return nil }
+	// compactLogs(50) computes: maxLog = min(50, 200-0) = 50, minLog = 100.
+	// Buggy code: DeleteRange(100, 50) — invalid. Fix: early return prevents it.
+	snapIdx := uint64(50)
+	t.Logf("Calling compactLogs(%d); log store first index is %d", snapIdx, first)
+
+	_ = r.compactLogs(snapIdx)
+
+	if spy.invalidRangeCalled {
+		t.Errorf("FAIL: Bug is present — DeleteRange called with from=%d > to=%d (invalid negative range)",
+			spy.invalidMin, spy.invalidMax)
+	} else {
+		t.Logf("PASS: Range is valid (compactLogs did not call DeleteRange with invalid args)")
+	}
 }
 GOEOF
 
@@ -96,7 +116,12 @@ echo "$OUTPUT"
 rm -f negative_range_test.go
 
 echo ""
-if echo "$OUTPUT" | grep -q "FAIL.*Bug is present"; then
+# Build/compile failure: agent left conflicting files or broke the package.
+# Treat as FAIL — a broken build means the bug is definitely not fixed.
+if echo "$OUTPUT" | grep -qE "^(found packages|cannot find|build failed|# .*\[build failed\]|vet: )"; then
+    echo "FAIL: Build error — agent left the codebase in a non-compilable state"
+    exit 1
+elif echo "$OUTPUT" | grep -q "FAIL.*Bug is present"; then
     echo "FAIL: Bug is present — compactLogs computes invalid range (maxLog < minLog)"
     exit 1
 elif echo "$OUTPUT" | grep -q "PASS.*Range is valid"; then

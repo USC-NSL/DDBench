@@ -278,6 +278,7 @@ parse_addons() {
     AGENT_PROMPT=""
     AGENT_CMD=""
     AGENT_CONFIG=""
+    AGENT_OUTPUT_DIR=""
     REMAINING_ARGS=()
 
     while [ $# -gt 0 ]; do
@@ -300,6 +301,11 @@ parse_addons() {
             --config)
                 [ -n "${2:-}" ] || die "--config requires a path"
                 AGENT_CONFIG="$2"
+                shift 2
+                ;;
+            --output-dir)
+                [ -n "${2:-}" ] || die "--output-dir requires a path"
+                AGENT_OUTPUT_DIR="$2"
                 shift 2
                 ;;
             *)
@@ -340,7 +346,10 @@ build_addon_args() {
     RUN_ARGS+=("-e" "ADDON_TOOL_DIR=/opt/tools")
 
     # Forward common API keys if set on host
-    for key in ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY MSWEA_MODEL_NAME MSWEA_MINI_CONFIG_PATH; do
+    for key in \
+        ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY \
+        DEEPSEEK_API_KEY TOGETHER_API_KEY FIREWORKS_API_KEY OPENROUTER_API_KEY \
+        MSWEA_MODEL_NAME MSWEA_MINI_CONFIG_PATH MSWEA_CONFIGURED; do
         [ -n "${!key:-}" ] && RUN_ARGS+=("-e" "$key")
     done
 
@@ -366,6 +375,10 @@ addon_entrypoint() {
     local setup_lines=""
 
     setup_lines+='export PATH="/opt/tools/bin:$PATH"'$'\n'
+    # Allow git operations on any directory inside the container.
+    # Worktrees are created by different UID across docker run sessions, triggering
+    # git's "dubious ownership" check. Safe to disable inside the isolated container.
+    setup_lines+='git config --system --add safe.directory "*" 2>/dev/null || git config --global --add safe.directory "*" 2>/dev/null || true'$'\n'
 
     # Run addon install scripts as root
     for name in "${ADDON_NAMES[@]}"; do
@@ -383,9 +396,19 @@ addon_entrypoint() {
         setup_lines+="bash \"$container_path\" || echo \"WARNING: addon $name failed\""$'\n'
     done
 
+    # Write mini-swe-agent global config for root (who runs mini via docker exec).
+    # Without MSWEA_CONFIGURED=true, mini launches an interactive setup wizard and
+    # aborts when stdin is not a TTY. MSWEA_MODEL_NAME is forwarded via docker run -e.
+    setup_lines+='if [ -n "${MSWEA_MODEL_NAME:-}" ]; then'$'\n'
+    setup_lines+='  mkdir -p /root/.config/mini-swe-agent'$'\n'
+    setup_lines+='  { printf "MSWEA_MODEL_NAME='"'"'%s'"'"'\n" "$MSWEA_MODEL_NAME"; echo "MSWEA_CONFIGURED=true"; echo "MSWEA_COST_TRACKING=ignore_errors"; } > /root/.config/mini-swe-agent/.env'$'\n'
+    setup_lines+='  echo "[mini-swe-agent] wrote config for root: model=$MSWEA_MODEL_NAME"'$'\n'
+    setup_lines+='fi'$'\n'
+
     # Create non-root user and switch to it (agents like Claude Code refuse root)
     setup_lines+='useradd -m -s /bin/bash bench 2>/dev/null || true'$'\n'
     setup_lines+='chown -R bench:bench /workspace/worktrees/"$CASE_NAME"'$'\n'
+    setup_lines+='[ -d /output ] && chown -R bench:bench /output 2>/dev/null || true'$'\n'
     setup_lines+='chmod -R a+rX /opt/tools 2>/dev/null || true'$'\n'
     # Copy agent configs to bench user home
     setup_lines+='for d in .claude .aider; do'$'\n'
@@ -394,7 +417,7 @@ addon_entrypoint() {
     # Symlink workspace into bench home
     setup_lines+='mkdir -p /home/bench/bug-bench && ln -sfn /workspace/worktrees/"$CASE_NAME" /home/bench/bug-bench/"$CASE_NAME" 2>/dev/null || true'$'\n'
     setup_lines+='chown -R bench:bench /home/bench 2>/dev/null || true'$'\n'
-    # Switch to bench user with correct env
+    # Switch to bench user with correct env (safe.directory already set system-wide above)
     setup_lines+="exec runuser -u bench -- bash -c 'export PATH=\"/opt/tools/bin:\$PATH\" && export HOME=/home/bench && cd /workspace/worktrees/\"\$CASE_NAME\" && exec $final_cmd'"$'\n'
 
     echo "$setup_lines"
@@ -451,7 +474,7 @@ cmd_setup() {
             -w "$wt_path" \
             -e "BUILD_CMD=${build_cmd}" \
             "$image" \
-            bash -c 'eval "$BUILD_CMD"'
+            bash -c 'git config --global safe.directory "*" 2>/dev/null || true; eval "$BUILD_CMD"'
     fi
 
     # Step 5: Copy benchmark files into the worktree so agents can access
@@ -504,6 +527,33 @@ cd "\$(dirname "\${BASH_SOURCE[0]}")"
 $REBUILD
 REBUILDEOF
                 chmod +x "$CASE_WT_PATH/REBUILD.sh"
+            else
+                # No explicit build command — generate a language-specific compile check.
+                # This ensures agents have a build contract even for interpreted/scripted projects.
+                cd "$CASE_WT_PATH"
+                REBUILD_CHECK=""
+                if [ -f go.mod ]; then
+                    REBUILD_CHECK="go build ./..."
+                elif [ -f Cargo.toml ]; then
+                    REBUILD_CHECK="cargo build"
+                elif [ -f pom.xml ]; then
+                    REBUILD_CHECK="mvn compile -q -DskipTests"
+                elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+                    REBUILD_CHECK="./gradlew compileJava -x test --quiet"
+                elif [ -f Makefile ]; then
+                    REBUILD_CHECK="make"
+                fi
+                if [ -n "$REBUILD_CHECK" ]; then
+                    {
+                        printf "#!/usr/bin/env bash\n"
+                        printf "set -euo pipefail\n"
+                        printf "echo \"Checking build ...\"\n"
+                        printf "export PATH=\"\$PATH:/usr/local/go/bin\"\n"
+                        printf "cd \"\$(dirname \"\${BASH_SOURCE[0]}\")\"\n"
+                        printf "%s\n" "$REBUILD_CHECK"
+                    } > "$CASE_WT_PATH/REBUILD.sh"
+                    chmod +x "$CASE_WT_PATH/REBUILD.sh"
+                fi
             fi
         '
 
@@ -543,7 +593,7 @@ cmd_reproduce() {
             -w "$wt_path" \
             -e "BUILD_CMD=${build_cmd}" \
             "$image" \
-            bash -c 'eval "$BUILD_CMD"'
+            bash -c 'git config --global safe.directory "*" 2>/dev/null || true; eval "$BUILD_CMD"'
     fi
 
     # Kill any leftover container RIGHT BEFORE starting the named one
@@ -560,7 +610,7 @@ cmd_reproduce() {
         -w "$wt_path" \
         -e "BENCH_WORKSPACE=/workspace/worktrees" \
         "$image" \
-        bash /bench/reproduce.sh
+        bash -c 'git config --global safe.directory "*" 2>/dev/null || true; exec bash /bench/reproduce.sh'
 }
 
 cmd_shell() {
@@ -692,7 +742,18 @@ cmd_agent() {
             aider)  final_cmd="aider --message \"$AGENT_PROMPT\"" ;;
             mini)
                 local mini_args="-y --exit-immediately"
-                [ -n "$AGENT_CONFIG" ] && mini_args="$mini_args --config /configs/agent_config.yaml"
+                if [ -n "$AGENT_CONFIG" ]; then
+                    # Include mini.yaml FIRST so its model/defaults are preserved;
+                    # our config merges on top. Without mini.yaml, -c replaces the
+                    # default entirely and the model is unset → silent crash.
+                    mini_args="$mini_args --config mini.yaml --config /configs/agent_config.yaml"
+                fi
+                # Also pass model explicitly in case env isn't picked up
+                [ -n "${MSWEA_MODEL_NAME:-}" ] && mini_args="$mini_args -m \"${MSWEA_MODEL_NAME}\""
+                # Write trajectory to a mounted output directory for host-side monitoring
+                if [ -n "$AGENT_OUTPUT_DIR" ]; then
+                    mini_args="$mini_args -o /output/trajectory.traj.json"
+                fi
                 final_cmd="mini $mini_args -t \"$AGENT_PROMPT\""
                 ;;
             *)      final_cmd="$agent_cmd" ;;
@@ -702,13 +763,19 @@ cmd_agent() {
     echo "=== bench.sh agent: $case_name ==="
     echo "  Addons: ${ADDON_NAMES[*]}"
     [ -n "$AGENT_PROMPT" ] && echo "  Prompt: ${AGENT_PROMPT:0:80}..."
+    [ -n "$AGENT_OUTPUT_DIR" ] && echo "  Output: $AGENT_OUTPUT_DIR/trajectory.traj.json"
     echo ""
 
     # Reuse running container if available
     if container_running "$cname"; then
         echo "Attaching to running container ..."
-        docker exec -it -w "$wt_path" \
+        # Only allocate a TTY (-t) if stdout is a real terminal.
+        # Without this, `docker exec -it` exits silently when stdout is redirected.
+        local tty_flag=""
+        [ -t 1 ] && tty_flag="-t"
+        docker exec -i $tty_flag -w "$wt_path" \
             -e "CASE_NAME=${case_name}" \
+            -e "PYTHONUNBUFFERED=1" \
             "$cname" \
             bash -c "export PATH=/opt/tools/bin:\$PATH && exec $final_cmd"
         return
@@ -724,6 +791,13 @@ cmd_agent() {
         config_abs=$(cd "$(dirname "$AGENT_CONFIG")" && pwd)/$(basename "$AGENT_CONFIG")
         [ -f "$config_abs" ] || die "Config file not found: $AGENT_CONFIG"
         RUN_ARGS+=("-v" "${config_abs}:/configs/agent_config.yaml:ro")
+    fi
+
+    # Mount output directory for trajectory files (host-side monitoring)
+    if [ -n "$AGENT_OUTPUT_DIR" ]; then
+        local output_abs
+        output_abs=$(mkdir -p "$AGENT_OUTPUT_DIR" && cd "$AGENT_OUTPUT_DIR" && pwd)
+        RUN_ARGS+=("-v" "${output_abs}:/output")
     fi
 
     docker run -d \
@@ -743,8 +817,13 @@ cmd_agent() {
     docker exec "$cname" bash -c "$entrypoint"
 
     # Launch agent
-    docker exec -it -w "$wt_path" \
+    # Only allocate a TTY (-t) if stdout is a real terminal.
+    # Without this, `docker exec -it` exits silently when stdout is redirected (e.g., to a log file).
+    local tty_flag=""
+    [ -t 1 ] && tty_flag="-t"
+    docker exec -i $tty_flag -w "$wt_path" \
         -e "CASE_NAME=${case_name}" \
+        -e "PYTHONUNBUFFERED=1" \
         "$cname" \
         bash -c "export PATH=/opt/tools/bin:\$PATH && exec $final_cmd"
 }
@@ -766,6 +845,42 @@ cmd_stop() {
     else
         echo "No running container for $case_name."
     fi
+}
+
+cmd_rebuild() {
+    local case_name="$1"
+    local case_dir
+    case_dir=$(find_case_dir "$case_name")
+    local yaml
+    yaml=$(find_case_yaml "$case_dir")
+
+    local project
+    project=$(yaml_val "$yaml" "project")
+    local image="${IMAGE_PREFIX}/${project}"
+    local vol
+    vol=$(volume_name "$project")
+    local wt_path="/workspace/worktrees/${case_name}"
+
+    echo "=== bench.sh rebuild: $case_name ==="
+
+    build_run_args "$yaml"
+
+    docker run --rm \
+        "${RUN_ARGS[@]}" \
+        -v "${vol}:/workspace" \
+        -w "$wt_path" \
+        -e "CASE_WT_PATH=${wt_path}" \
+        "$image" \
+        bash -c '
+            git config --system --add safe.directory "*" 2>/dev/null || \
+                git config --global --add safe.directory "*" 2>/dev/null || true
+            export PATH="$PATH:/usr/local/go/bin"
+            if [ -f "$CASE_WT_PATH/REBUILD.sh" ]; then
+                bash "$CASE_WT_PATH/REBUILD.sh"
+            else
+                echo "No REBUILD.sh found in worktree (skipping)."
+            fi
+        '
 }
 
 cmd_reset() {
@@ -795,7 +910,10 @@ cmd_reset() {
         "$image" \
         bash -c '
             cd "$CASE_WT_PATH" || exit 1
-            git config --global --add safe.directory /workspace 2>/dev/null || true
+            # Mark all directories safe: worktrees were chowned to the bench user
+            # during agent execution, causing git dubious-ownership errors as root.
+            git config --system --add safe.directory "*" 2>/dev/null || \
+                git config --global --add safe.directory "*" 2>/dev/null || true
 
             # Preserve benchmark files across reset
             [ -f SYMPTOM.md ] && cp SYMPTOM.md /tmp/_symptom_backup.md
@@ -864,7 +982,7 @@ cmd_clean() {
         -v "${vol}:/workspace" \
         -e "CASE_WT_PATH=${wt_path}" \
         "$image" \
-        bash -c 'git config --global --add safe.directory /workspace 2>/dev/null; cd /workspace && git worktree remove "$CASE_WT_PATH" --force 2>/dev/null || rm -rf "$CASE_WT_PATH"' 2>/dev/null || true
+        bash -c 'git config --system --add safe.directory "*" 2>/dev/null || git config --global --add safe.directory "*" 2>/dev/null || true; cd /workspace && git worktree remove "$CASE_WT_PATH" --force 2>/dev/null || rm -rf "$CASE_WT_PATH"' 2>/dev/null || true
 
     echo "Cleaned $case_name."
 }
@@ -919,6 +1037,7 @@ Usage: bench.sh <command> [args]
 Commands:
   setup <case-name>                    Build Docker image, clone repo, checkout commit, build
   reproduce <case-name>                Run reproduce.sh inside container
+  rebuild <case-name>                  Run REBUILD.sh inside container (compile check after agent)
   shell <case-name> [--addon <name>]   Interactive shell (reuses running container)
   agent <case-name> --addon <name>     Launch an AI agent inside container
   stop <case-name>                     Stop the running container for a case
@@ -931,11 +1050,19 @@ Addon Options (for shell and agent):
   --prompt <text>      Pass a prompt to the agent (agent command only)
   --cmd <command>      Override the agent command to run (agent command only)
   --config <path>      Agent config file (mounted into container, agent command only)
+  --output-dir <path>  Host directory for agent trajectory output (agent command only).
+                       For mini-swe-agent, writes trajectory.traj.json to this directory.
+                       The directory is mounted at /output inside the container.
 
 Environment:
   BENCH_WORKSPACE         Override workspace path (default: \$HOME/bug-bench)
-  ANTHROPIC_API_KEY       Forwarded to container for Claude Code
-  OPENAI_API_KEY          Forwarded to container for Codex/Aider
+  ANTHROPIC_API_KEY       Forwarded to container for Claude / mini-swe-agent (Anthropic models)
+  OPENAI_API_KEY          Forwarded to container for Codex/Aider / mini-swe-agent (OpenAI models)
+  GEMINI_API_KEY          Forwarded to container for mini-swe-agent (Gemini models)
+  DEEPSEEK_API_KEY        Forwarded to container for mini-swe-agent (DeepSeek API)
+  TOGETHER_API_KEY        Forwarded to container for mini-swe-agent (Together AI — open-weight models)
+  FIREWORKS_API_KEY       Forwarded to container for mini-swe-agent (Fireworks AI — open-weight models)
+  OPENROUTER_API_KEY      Forwarded to container for mini-swe-agent (OpenRouter — all models)
   MSWEA_MODEL_NAME        Forwarded to container for mini-swe-agent (required, no default)
 
 Examples:
@@ -955,6 +1082,7 @@ docker info &>/dev/null || die "Docker daemon is not running or not accessible. 
 case "${1:-}" in
     setup)     [ -n "${2:-}" ] || die "Usage: bench.sh setup <case-name>"; cmd_setup "$2" ;;
     reproduce) [ -n "${2:-}" ] || die "Usage: bench.sh reproduce <case-name>"; cmd_reproduce "$2" ;;
+    rebuild)   [ -n "${2:-}" ] || die "Usage: bench.sh rebuild <case-name>"; cmd_rebuild "$2" ;;
     shell)     [ -n "${2:-}" ] || die "Usage: bench.sh shell <case-name> [--addon <name>]"; shift; cmd_shell "$@" ;;
     agent)     [ -n "${2:-}" ] || die "Usage: bench.sh agent <case-name> --addon <name>"; shift; cmd_agent "$@" ;;
     stop)      [ -n "${2:-}" ] || die "Usage: bench.sh stop <case-name>"; cmd_stop "$2" ;;
