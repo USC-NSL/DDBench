@@ -249,6 +249,13 @@ build_run_args() {
     if [ -n "$min_cpus" ] && [ "$min_cpus" -gt 1 ] 2>/dev/null; then
         RUN_ARGS+=("--cpus=$min_cpus")
     fi
+
+    # Disable seccomp filtering (needed for io_uring syscalls)
+    local seccomp_unconfined
+    seccomp_unconfined=$(yaml_nested "$yaml" "docker" "seccomp_unconfined")
+    if [ "$seccomp_unconfined" = "true" ]; then
+        RUN_ARGS+=("--security-opt" "seccomp=unconfined")
+    fi
 }
 
 # ── Addon Infrastructure ────────────────────────────────────────────────────
