@@ -800,6 +800,15 @@ cmd_agent() {
         RUN_ARGS+=("-v" "${output_abs}:/output")
     fi
 
+    # Host network mode: lets the container reach services on the host's
+    # localhost (e.g., SSH port-forwarded vLLM/inference servers).
+    if [ "${BENCH_HOST_NETWORK:-}" = "1" ]; then
+        RUN_ARGS+=("--network" "host")
+        # Ensure host.docker.internal resolves to 127.0.0.1 so configs using
+        # that hostname also work under --network host.
+        RUN_ARGS+=("--add-host=host.docker.internal:127.0.0.1")
+    fi
+
     docker run -d \
         --name "$cname" \
         "${RUN_ARGS[@]}" \
@@ -1056,6 +1065,7 @@ Addon Options (for shell and agent):
 
 Environment:
   BENCH_WORKSPACE         Override workspace path (default: \$HOME/bug-bench)
+  BENCH_HOST_NETWORK=1    Use --network host for agent containers (reach host localhost)
   ANTHROPIC_API_KEY       Forwarded to container for Claude / mini-swe-agent (Anthropic models)
   OPENAI_API_KEY          Forwarded to container for Codex/Aider / mini-swe-agent (OpenAI models)
   GEMINI_API_KEY          Forwarded to container for mini-swe-agent (Gemini models)
