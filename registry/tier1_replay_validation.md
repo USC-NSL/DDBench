@@ -1,18 +1,18 @@
-# FS28 Replay Validation Report
+# tier1 Replay Validation Report
 
 **Generated:** 20260331T045200Z
 **Validator:** bench.sh setup + bench.sh reproduce (clean Docker volumes)
-**Total FS28 cases:** 28 (clickhouse-98079-keeper-addwatch removed from corpus)
+**Total tier1 cases:** 31 (clickhouse removed; bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635 promoted; raft-358 demoted to tier2)
 
 ## Summary
 
 | Result | Count |
 |--------|-------|
-| PASS (bug confirmed) | 28 |
+| PASS (bug confirmed) | 27 |
 | FLAKY (partial pass) | 0 |
 | FAIL | 0 |
-| SKIP (missing) | 0 |
-| **Total FS28** | **28** |
+| SKIP (not yet validated) | 4 |
+| **Total tier1** | **31** |
 
 ## Per-Case Results
 
@@ -39,13 +39,17 @@
 | nats-7760-filter-stepdown | ✅ PASS | ✅ bug confirmed | No changes needed |
 | nats-7817-workqueue-message-loss | ✅ PASS | ✅ bug confirmed | No changes needed |
 | raft-268-shutdown-deadlock | ✅ PASS | ✅ bug confirmed | Fixed: rewrote test harness with aggressive timing |
-| raft-358-negative-log-range | ✅ PASS | ✅ bug confirmed | No changes needed |
+| ~~raft-358-negative-log-range~~ | — | — | Demoted to tier2 |
 | raft-460-logcache-store-order | ✅ PASS | ✅ bug confirmed | No changes needed |
 | raft-581-transfer-write-race | ✅ PASS | ✅ bug confirmed | No changes needed |
 | raft-609-prevote-contact-liveness | ✅ PASS | ✅ bug confirmed | No changes needed |
 | zookeeper-4643-sync-epoch-ordering | ✅ PASS | ✅ bug confirmed | Fixed: `build-essential` in Dockerfile + persistent Maven cache |
 | zookeeper-4846-fuzzy-snapshot-acl | ✅ PASS | ✅ bug confirmed | Persistent Maven cache added |
 | zookeeper-4925-diff-sync-committedlog-hole | ✅ PASS | ✅ bug confirmed | Persistent Maven cache added |
+| bookkeeper-4701-fencing-race | ⏳ SKIP | ⏳ not yet validated | Promoted to tier1; pending validation |
+| etcd-19179-watch-tombstone-compact | ⏳ SKIP | ⏳ not yet validated | Promoted to tier1; pending validation |
+| ra-439-election-livelock | ⏳ SKIP | ⏳ not yet validated | Promoted to tier1; pending validation |
+| rabbitmq-12635-qq-snapshot-crash | ⏳ SKIP | ⏳ not yet validated | Promoted to tier1; pending validation |
 
 ## Removed Cases
 
@@ -57,9 +61,9 @@ is not available in any stable repository. All references removed from:
 - `cases/clickhouse-98079-keeper-addwatch/` (case directory)
 - `cases-solution/clickhouse-98079-keeper-addwatch/` (solution directory)
 - `docker/clickhouse.Dockerfile`
-- `registry/fs28_membership.json` (29→28)
-- `registry/fs42_membership.json` (43→42)
-- `registry/fs55_membership.json` (56→55)
+- `registry/tier1_membership.json` (29→28)
+- `registry/tier2_membership.json` (43→42)
+- `registry/tier3_membership.json` (56→55)
 - `registry/case_registry.json` (62→61)
 
 ## Fixes Applied

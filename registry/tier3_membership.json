@@ -2,13 +2,15 @@
   "status": "frozen",
   "frozen_at": "2026-03-30",
   "corpus_scope": "62 released cases",
-  "selection_source": "registry/fs42_selection_criteria.md",
+  "selection_source": "registry/tier3_selection_criteria.md",
   "peer_review_summary": {
-    "exact_case_count": 42,
-    "inherits_fs28": true,
-    "added_structured_promotion_count": 14,
-    "notes": "FS42 = FS28 + the full S14 structured-promotion lane."
+    "exact_case_count": 61,
+    "inherits_tier2": true,
+    "added_core_only_count": 15,
+    "release_only_remainder_count": 0,
+    "notes": "tier3 = tier2 + C15 core-only promotion lane. All 61 corpus cases now covered (clickhouse removed)."
   },
+  "release_only_remainder": [],
   "cases": [
     {
       "rank": 1,
@@ -263,7 +265,47 @@
       "included": true
     },
     {
-      "rank": 30,
+      "corpus_case": "bookkeeper-4701-fencing-race",
+      "system": "BookKeeper",
+      "bug_family": "cross-node-concurrency-race",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Distributed fencing race \u2014 putIfAbsent monitor aliasing causes silent entry loss. Requires both runtime interleaving and code path reasoning.",
+      "rank": 30
+    },
+    {
+      "corpus_case": "etcd-19179-watch-tombstone-compact",
+      "system": "etcd",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Watch consistency violation after compaction+restart \u2014 restoreIntoIndex skips lone tombstones. Watch contract is a fundamental distributed guarantee.",
+      "rank": 31
+    },
+    {
+      "corpus_case": "ra-439-election-livelock",
+      "system": "ra",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Raft election livelock \u2014 handle_candidate silently drops pre_vote_rpc. Requires both multi-node interleaving and missing code clause.",
+      "rank": 32
+    },
+    {
+      "corpus_case": "rabbitmq-12635-qq-snapshot-crash",
+      "system": "RabbitMQ",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Quorum queue crash after Raft snapshot installation \u2014 delivery_effect missing length guard after checkpoint truncation. 3-node, 7-step trigger.",
+      "rank": 33
+    },
+    {
+      "rank": 34,
       "corpus_case": "etcd-20704-leasing-linearizability",
       "system": "etcd",
       "bug_family": "replication-consistency",
@@ -272,7 +314,7 @@
       "included": true
     },
     {
-      "rank": 31,
+      "rank": 35,
       "corpus_case": "etcd-19172-embed-data-race",
       "system": "etcd",
       "bug_family": "cross-node-concurrency-race",
@@ -281,7 +323,7 @@
       "included": true
     },
     {
-      "rank": 32,
+      "rank": 36,
       "corpus_case": "dragonfly-6738-pipeline-block",
       "system": "Dragonfly",
       "bug_family": "rpc-protocol-state-machine",
@@ -290,7 +332,7 @@
       "included": true
     },
     {
-      "rank": 33,
+      "rank": 37,
       "corpus_case": "kvrocks-2512-slaveof-deadlock",
       "system": "Kvrocks",
       "bug_family": "recovery-reconfiguration-failover",
@@ -299,7 +341,7 @@
       "included": true
     },
     {
-      "rank": 34,
+      "rank": 38,
       "corpus_case": "kvrocks-3148-namespace-delete",
       "system": "Kvrocks",
       "bug_family": "rpc-protocol-state-machine",
@@ -308,7 +350,7 @@
       "included": true
     },
     {
-      "rank": 35,
+      "rank": 39,
       "corpus_case": "kvrocks-3339-xreadgroup-double",
       "system": "Kvrocks",
       "bug_family": "rpc-protocol-state-machine",
@@ -317,7 +359,7 @@
       "included": true
     },
     {
-      "rank": 36,
+      "rank": 40,
       "corpus_case": "nats-6455-reserved-resource-leak",
       "system": "NATS",
       "bug_family": "performance-resource-interaction",
@@ -326,7 +368,7 @@
       "included": true
     },
     {
-      "rank": 37,
+      "rank": 41,
       "corpus_case": "nats-7707-wq-consumer-map-crash",
       "system": "NATS",
       "bug_family": "cross-node-concurrency-race",
@@ -335,7 +377,7 @@
       "included": true
     },
     {
-      "rank": 38,
+      "rank": 42,
       "corpus_case": "nats-7726-mixed-filter",
       "system": "NATS",
       "bug_family": "rpc-protocol-state-machine",
@@ -344,7 +386,7 @@
       "included": true
     },
     {
-      "rank": 39,
+      "rank": 43,
       "corpus_case": "nats-7852-filter-perf",
       "system": "NATS",
       "bug_family": "performance-resource-interaction",
@@ -353,7 +395,7 @@
       "included": true
     },
     {
-      "rank": 40,
+      "rank": 44,
       "corpus_case": "raft-517-candidate-appendentries-race",
       "system": "raft",
       "bug_family": "cross-node-concurrency-race",
@@ -362,7 +404,7 @@
       "included": true
     },
     {
-      "rank": 41,
+      "rank": 45,
       "corpus_case": "raft-rs-345-readindex-config-change",
       "system": "raft-rs",
       "bug_family": "rpc-protocol-state-machine",
@@ -371,7 +413,7 @@
       "included": true
     },
     {
-      "rank": 42,
+      "rank": 46,
       "corpus_case": "consul-12295-acl-replication-stall",
       "system": "Consul",
       "bug_family": "recovery-reconfiguration-failover",
@@ -380,13 +422,150 @@
       "included": true
     },
     {
-      "rank": 43,
+      "rank": 47,
       "corpus_case": "raft-rs-221-campaign-conf-change",
       "system": "raft-rs",
       "bug_family": "recovery-reconfiguration-failover",
       "hybrid_necessity": "yes",
       "gold_tier": "G4",
       "included": true
+    },
+    {
+      "rank": 48,
+      "corpus_case": "dragonfly-6614-monitor-multiexec",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 49,
+      "corpus_case": "dragonfly-6619-evalsha-empty",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 50,
+      "corpus_case": "dragonfly-6654-mc-reply-large",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 51,
+      "corpus_case": "dragonfly-6753-populate-sigfpe",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 52,
+      "corpus_case": "dragonfly-6761-mc-pipeline-crash",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 53,
+      "corpus_case": "dragonfly-6764-hincrbyfloat-nan",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 54,
+      "corpus_case": "dragonfly-6819-stale-expiry",
+      "system": "Dragonfly",
+      "bug_family": "storage-io-path",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 55,
+      "corpus_case": "dragonfly-6825-config-overflow",
+      "system": "Dragonfly",
+      "bug_family": "config-topology-deployment",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 56,
+      "corpus_case": "dragonfly-6856-flushslots-oob",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 57,
+      "corpus_case": "dragonfly-6907-ftsearch-vector-crash",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 58,
+      "corpus_case": "dragonfly-6909-search-nonfinite",
+      "system": "Dragonfly",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 59,
+      "corpus_case": "dragonfly-6912-rdb-encoding",
+      "system": "Dragonfly",
+      "bug_family": "storage-io-path",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "rank": 60,
+      "corpus_case": "kvrocks-3315-zdiff-crash",
+      "system": "Kvrocks",
+      "bug_family": "rpc-protocol-state-machine",
+      "hybrid_necessity": "no",
+      "gold_tier": "G2",
+      "included": true
+    },
+    {
+      "corpus_case": "rocksdb-10751-stalled-writes-shutdown",
+      "system": "RocksDB",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "no",
+      "gold_tier": "G3",
+      "included": true,
+      "rationale": "Single-node shutdown hang \u2014 stalled writers not woken during Close(). Linear causal chain, non-hybrid.",
+      "rank": 61
+    },
+    {
+      "corpus_case": "seastar-2202-cross-shard-realloc",
+      "system": "Seastar",
+      "bug_family": "performance-resource-interaction",
+      "hybrid_necessity": "no",
+      "gold_tier": "G3",
+      "included": true,
+      "rationale": "Single-node cross-shard realloc assertion. Assertion message reveals root cause directly. Minimal docs.",
+      "rank": 62
     }
   ]
 }

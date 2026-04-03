@@ -2,22 +2,22 @@
   "status": "frozen",
   "frozen_at": "2026-03-30",
   "corpus_scope": "62 released cases",
-  "selection_source": "registry/fs28_selection_criteria.md",
+  "selection_source": "registry/tier1_selection_criteria.md",
   "peer_review_summary": {
-    "exact_case_count": 28,
-    "system_families": 10,
+    "exact_case_count": 31,
+    "system_families": 11,
     "bug_families": 5,
     "all_g4_achievable": true,
-    "hybrid_yes_count": 27,
+    "hybrid_yes_count": 29,
     "hybrid_probable_count": 2,
-    "notes": "FS28 = previous FS23 plus all 6 newly added Kafka/ZooKeeper rows."
+    "notes": "tier1 = previous FS23 + 6 Kafka/ZooKeeper rows + 4 promoted cases (bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635). Clickhouse removed from corpus."
   },
   "borderline_included": [
     {
       "corpus_case": "kafka-14334-delayed-fetch-purgatory",
       "hybrid_necessity": "probable",
       "gold_tier": "G4",
-      "reason": "Slightly more repo-localized than the strongest rows, but clearly worth inclusion in the broader FS28 object."
+      "reason": "Slightly more repo-localized than the strongest rows, but clearly worth inclusion in the broader tier1 object."
     },
     {
       "corpus_case": "zookeeper-4846-fuzzy-snapshot-acl",
@@ -208,16 +208,6 @@
       "rationale": "Strong shutdown/recovery race row."
     },
     {
-      "rank": 20,
-      "corpus_case": "raft-358-negative-log-range",
-      "system": "raft",
-      "bug_family": "recovery-reconfiguration-failover",
-      "hybrid_necessity": "yes",
-      "gold_tier": "G4",
-      "included": true,
-      "rationale": "Strong snapshot-compaction failure row."
-    },
-    {
       "rank": 21,
       "corpus_case": "raft-460-logcache-store-order",
       "system": "raft",
@@ -306,6 +296,46 @@
       "gold_tier": "G4",
       "included": true,
       "rationale": "Included as a strong ZooKeeper DIFF-sync propagation/data-loss row."
+    },
+    {
+      "corpus_case": "bookkeeper-4701-fencing-race",
+      "system": "BookKeeper",
+      "bug_family": "cross-node-concurrency-race",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Distributed fencing race \u2014 putIfAbsent monitor aliasing causes silent entry loss. Requires both runtime interleaving and code path reasoning.",
+      "rank": 30
+    },
+    {
+      "corpus_case": "etcd-19179-watch-tombstone-compact",
+      "system": "etcd",
+      "bug_family": "replication-consistency",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Watch consistency violation after compaction+restart \u2014 restoreIntoIndex skips lone tombstones. Watch contract is a fundamental distributed guarantee.",
+      "rank": 31
+    },
+    {
+      "corpus_case": "ra-439-election-livelock",
+      "system": "ra",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Raft election livelock \u2014 handle_candidate silently drops pre_vote_rpc. Requires both multi-node interleaving and missing code clause.",
+      "rank": 32
+    },
+    {
+      "corpus_case": "rabbitmq-12635-qq-snapshot-crash",
+      "system": "RabbitMQ",
+      "bug_family": "recovery-reconfiguration-failover",
+      "hybrid_necessity": "yes",
+      "gold_tier": "G4",
+      "included": true,
+      "rationale": "Quorum queue crash after Raft snapshot installation \u2014 delivery_effect missing length guard after checkpoint truncation. 3-node, 7-step trigger.",
+      "rank": 33
     }
   ]
 }

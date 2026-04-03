@@ -22,11 +22,7 @@
         "min_cpus": 2
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -51,7 +47,7 @@
         "min_cpus": 2
       },
       "submodules": false,
-      "surface_membership": {},
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "race-condition",
       "gold_complete": false,
@@ -76,10 +72,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-med",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -104,11 +97,7 @@
         "min_cpus": 2
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -133,11 +122,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "rpc-protocol-state-machine",
       "gold_complete": false,
@@ -162,9 +147,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "crash-on-invalid-input",
       "gold_complete": false,
@@ -189,9 +172,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "crash-on-invalid-input",
       "gold_complete": false,
@@ -216,9 +197,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "input-validation-overflow",
       "gold_complete": false,
@@ -243,11 +222,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-low",
       "bug_family": "storage-io-path",
       "gold_complete": false,
@@ -272,10 +247,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-low",
       "bug_family": "notification-delivery-failure",
       "gold_complete": false,
@@ -300,9 +272,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "crash-on-invalid-input",
       "gold_complete": false,
@@ -327,9 +297,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "concurrency-crash",
       "gold_complete": false,
@@ -354,9 +322,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "crash-on-invalid-input",
       "gold_complete": false,
@@ -381,9 +347,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "silent-data-corruption",
       "gold_complete": false,
@@ -408,9 +372,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "input-validation-overflow",
       "gold_complete": false,
@@ -435,9 +397,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "input-validation-overflow",
       "gold_complete": false,
@@ -462,9 +422,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "crash-on-invalid-input",
       "gold_complete": false,
@@ -489,9 +447,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "crash-on-invalid-input",
       "gold_complete": false,
@@ -516,9 +472,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "storage-io-path",
       "gold_complete": false,
@@ -543,11 +497,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "replication-consistency",
       "gold_complete": false,
@@ -572,11 +522,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "replication-consistency",
       "gold_complete": false,
@@ -601,10 +547,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-high",
       "bug_family": "race-condition",
       "gold_complete": false,
@@ -629,7 +572,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {},
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "replication-consistency",
       "gold_complete": false,
@@ -654,11 +597,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "replication-consistency",
       "gold_complete": false,
@@ -683,10 +622,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-high",
       "bug_family": "replication-consistency",
       "gold_complete": false,
@@ -711,11 +647,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -740,11 +672,7 @@
         "min_cpus": 2
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "notification-delivery-failure",
       "gold_complete": false,
@@ -769,11 +697,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "rpc-protocol-state-machine",
       "gold_complete": false,
@@ -798,11 +722,7 @@
         "min_cpus": 2
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "replication-consistency",
       "gold_complete": false,
@@ -827,11 +747,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "replication-consistency",
       "gold_complete": false,
@@ -856,10 +772,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-med",
       "bug_family": "deadlock-livelock",
       "gold_complete": false,
@@ -884,11 +797,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -913,10 +822,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-med",
       "bug_family": "rpc-protocol-state-machine",
       "gold_complete": false,
@@ -941,11 +847,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "performance-resource-interaction",
       "gold_complete": false,
@@ -970,9 +872,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS55": true
-      },
+      "surface_membership": "tier3",
       "contamination_tier": "E-med",
       "bug_family": "crash-on-invalid-input",
       "gold_complete": false,
@@ -997,10 +897,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-med",
       "bug_family": "concurrency-crash",
       "gold_complete": false,
@@ -1027,11 +924,7 @@
         "min_cpus": 1
       },
       "submodules": true,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "performance-resource-interaction",
       "gold_complete": false,
@@ -1056,11 +949,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -1085,10 +974,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-med",
       "bug_family": "resource-leak",
       "gold_complete": false,
@@ -1113,11 +999,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "rpc-protocol-state-machine",
       "gold_complete": false,
@@ -1142,10 +1024,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-med",
       "bug_family": "concurrency-crash",
       "gold_complete": false,
@@ -1170,11 +1049,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "resource-leak",
       "gold_complete": false,
@@ -1199,10 +1074,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-med",
       "bug_family": "rpc-protocol-state-machine",
       "gold_complete": false,
@@ -1227,11 +1099,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -1256,11 +1124,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "replication-consistency",
       "gold_complete": false,
@@ -1285,10 +1149,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-med",
       "bug_family": "performance-resource-interaction",
       "gold_complete": false,
@@ -1313,7 +1174,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {},
+      "surface_membership": "tier1",
       "contamination_tier": "E-low",
       "bug_family": "deadlock-livelock",
       "gold_complete": false,
@@ -1338,7 +1199,7 @@
         "min_cpus": 2
       },
       "submodules": false,
-      "surface_membership": {},
+      "surface_membership": "tier1",
       "contamination_tier": "E-med",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -1363,11 +1224,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-low",
       "bug_family": "deadlock-livelock",
       "gold_complete": false,
@@ -1392,11 +1249,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-low",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -1421,11 +1274,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-low",
       "bug_family": "replication-consistency",
       "gold_complete": false,
@@ -1450,10 +1299,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-low",
       "bug_family": "race-condition",
       "gold_complete": false,
@@ -1478,11 +1324,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-low",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -1507,11 +1349,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-low",
       "bug_family": "rpc-protocol-state-machine",
       "gold_complete": false,
@@ -1536,10 +1374,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-low",
       "bug_family": "rpc-protocol-state-machine",
       "gold_complete": false,
@@ -1564,10 +1399,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier2",
       "contamination_tier": "E-low",
       "bug_family": "rpc-protocol-state-machine",
       "gold_complete": false,
@@ -1592,7 +1424,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {},
+      "surface_membership": "tier3",
       "contamination_tier": "E-high",
       "bug_family": "deadlock-livelock",
       "gold_complete": false,
@@ -1617,7 +1449,7 @@
         "min_cpus": 2
       },
       "submodules": true,
-      "surface_membership": {},
+      "surface_membership": "tier3",
       "contamination_tier": "E-low",
       "bug_family": "concurrency-crash",
       "gold_complete": false,
@@ -1642,11 +1474,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "recovery-reconfiguration-failover",
       "gold_complete": false,
@@ -1671,11 +1499,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "race-condition",
       "gold_complete": false,
@@ -1700,11 +1524,7 @@
         "min_cpus": 1
       },
       "submodules": false,
-      "surface_membership": {
-        "FS28": true,
-        "FS42": true,
-        "FS55": true
-      },
+      "surface_membership": "tier1",
       "contamination_tier": "E-high",
       "bug_family": "replication-consistency",
       "gold_complete": false,

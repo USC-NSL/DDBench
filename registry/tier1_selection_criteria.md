@@ -1,4 +1,4 @@
-# FS28 selection criteria
+# tier1 selection criteria
 
 Status: frozen
 Date: 2026-03-30
@@ -6,15 +6,15 @@ Corpus scope: 62 released cases under `cases/`
 
 ## Goal
 
-Freeze a **29-case headline-plus-expansion subset (`FS28`)** that preserves the original FS23 core while incorporating the six newly added Kafka/ZooKeeper rows as first-class benchmark members.
+Freeze a **31-case headline-plus-expansion subset (`tier1`)** that preserves the original FS23 core while incorporating the six newly added Kafka/ZooKeeper rows and four promoted cases as first-class benchmark members.
 
-`FS28 = FS23 + 6 newly added Kafka/ZooKeeper rows`
+`tier1 = FS23 + 6 Kafka/ZooKeeper rows + 4 promoted cases (bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635)`
 
 This object is meant to be broader than the old FS23 headline cut while still staying disciplined on replay quality, hybrid diagnosis value, and structured gold completeness.
 
 ## Selection policy
 
-A case is eligible for `FS28` only if all of the following hold.
+A case is eligible for `tier1` only if all of the following hold.
 
 1. **Historical bug/fix row**
    - real historical bug/fix provenance in the released corpus.
@@ -25,47 +25,51 @@ A case is eligible for `FS28` only if all of the following hold.
 
 3. **Hybrid diagnosis value**
    - Preferred: `hybrid_necessity = yes`.
-   - Allowed in `FS28`: `probable` rows **only when** they add clear system-family or failure-family value and still support strong structured gold.
-   - In the current frozen `FS28`, 27 rows are `yes` and 2 rows are `probable` (`kafka-14334-delayed-fetch-purgatory`, `zookeeper-4846-fuzzy-snapshot-acl`).
+   - Allowed in `tier1`: `probable` rows **only when** they add clear system-family or failure-family value and still support strong structured gold.
+   - In the current frozen `tier1`, 30 rows are `yes` and 2 rows are `probable` (`kafka-14334-delayed-fetch-purgatory`, `zookeeper-4846-fuzzy-snapshot-acl`).
 
 4. **Gold completeness**
    - target is `G4-achievable` across the set.
-   - every current `FS28` row is screened as `G4`.
+   - every current `tier1` row is screened as `G4`.
 
 5. **Diversity / value rule**
    - expansion is justified when it brings either:
      - a new system family with multiple strong rows, or
      - a materially new failure mode worth scoring separately.
 
-## Why FS28 instead of FS23
+## Why tier1 instead of FS23
 
 The six new Kafka/ZooKeeper rows are too valuable to leave as mere appendix notes:
 - they add **2 new system families**,
 - they add more depth in coordinator, rebalance, ZAB ordering, snapshot/restart, and DIFF-sync propagation failures,
-- and four of the six are strong `yes/G4` rows, while the remaining two still look valuable enough for inclusion under the broader FS28 bar.
+- and four of the six are strong `yes/G4` rows, while the remaining two still look valuable enough for inclusion under the broader tier1 bar.
 
-So the right move is not to churn the old 23, but to **promote the object to FS28**.
+So the right move is not to churn the old 23, but to **promote the object to tier1**.
 
-## Frozen FS28 composition rule
+## Frozen tier1 composition rule
 
 - existing `FS23`: **23** rows
 - Kafka additions: **3** rows
 - ZooKeeper additions: **3** rows
+- Promoted cases: **4** rows (bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635)
+- Removed: clickhouse-98079-keeper-addwatch (unbuildable Docker image)
 
-Total = **28**
+Total = **31**
 
 System-family composition:
-- `etcd`: **4**
+- `etcd`: **5**
 - `Kvrocks`: **4**
 - `NATS`: **5**
-- `raft`: **5**
+- `raft`: **4**
 - `Consul`: **2**
-- `BookKeeper`: **1**
+- `BookKeeper`: **2**
 - `Dragonfly`: **1**
 - `Kafka`: **3**
 - `ZooKeeper`: **3**
+- `ra`: **1**
+- `RabbitMQ`: **1**
 
-## Frozen FS28 membership (exactly 28)
+## Frozen tier1 membership (exactly 31)
 
 | corpus_case | system | bug family | hybrid | gold | inclusion rationale |
 | --- | --- | --- | --- | --- | --- |
@@ -87,7 +91,6 @@ System-family composition:
 | `nats-7760-filter-stepdown` | NATS | `recovery-reconfiguration-failover` | `yes` | `G4` | Strong leader-stepdown stale-state row. |
 | `nats-7817-workqueue-message-loss` | NATS | `replication-consistency` | `yes` | `G4` | Strong replication-consistency/message-loss row. |
 | `raft-268-shutdown-deadlock` | raft | `recovery-reconfiguration-failover` | `yes` | `G4` | Strong shutdown/recovery race row. |
-| `raft-358-negative-log-range` | raft | `recovery-reconfiguration-failover` | `yes` | `G4` | Strong snapshot-compaction failure row. |
 | `raft-460-logcache-store-order` | raft | `replication-consistency` | `yes` | `G4` | Strong replication-consistency/log-cache row. |
 | `raft-581-transfer-write-race` | raft | `recovery-reconfiguration-failover` | `yes` | `G4` | Strong failover/control-path transfer race row. |
 | `raft-609-prevote-contact-liveness` | raft | `recovery-reconfiguration-failover` | `yes` | `G4` | Strong election-liveness/control-plane row. |
@@ -97,20 +100,25 @@ System-family composition:
 | `zookeeper-4643-sync-epoch-ordering` | ZooKeeper | `recovery-reconfiguration-failover` | `yes` | `G4` | Included as a strong ZooKeeper ZAB ordering/data-loss row. |
 | `zookeeper-4846-fuzzy-snapshot-acl` | ZooKeeper | `rpc-protocol-state-machine` | `probable` | `G4` | Included because the restart/fuzzy-snapshot ACL corruption path adds distinct ZooKeeper failure value even if it is a bit more borderline on strict hybrid necessity. |
 | `zookeeper-4925-diff-sync-committedlog-hole` | ZooKeeper | `replication-consistency` | `yes` | `G4` | Included as a strong ZooKeeper DIFF-sync propagation/data-loss row. |
+| `bookkeeper-4701-fencing-race` | BookKeeper | `cross-node-concurrency-race` | `yes` | `G4` | Distributed fencing race — putIfAbsent monitor aliasing causes silent entry loss. |
+| `etcd-19179-watch-tombstone-compact` | etcd | `replication-consistency` | `yes` | `G4` | Watch consistency violation after compaction+restart — restoreIntoIndex skips lone tombstones. |
+| `ra-439-election-livelock` | ra | `recovery-reconfiguration-failover` | `yes` | `G4` | Raft election livelock — handle_candidate silently drops pre_vote_rpc. |
+| `rabbitmq-12635-qq-snapshot-crash` | RabbitMQ | `recovery-reconfiguration-failover` | `yes` | `G4` | Quorum queue crash after Raft snapshot installation — delivery_effect missing length guard. |
 
 
-## Peer-review summary of the frozen FS28
+## Peer-review summary of the frozen tier1
 
 ### Pass conditions met
-- exactly **29** cases
-- **10** system families represented
-- strong coverage of `recovery-reconfiguration-failover`, `replication-consistency`, `rpc-protocol-state-machine`, `performance-resource-interaction`, plus bridge `storage-io-path`
-- all 29 screened as **G4-achievable**
-- **27/29** screened as `hybrid=yes`
-- **2/29** screened as `hybrid=probable`, both retained deliberately for system/failure-family expansion value
+- exactly **31** cases
+- **11** system families represented
+- strong coverage of `recovery-reconfiguration-failover`, `replication-consistency`, `rpc-protocol-state-machine`, `performance-resource-interaction`, `cross-node-concurrency-race`, plus bridge `storage-io-path`
+- all 31 screened as **G4-achievable**
+- **29/31** screened as `hybrid=yes`
+- **2/31** screened as `hybrid=probable`, both retained deliberately for system/failure-family expansion value
+- `raft-358-negative-log-range` demoted to tier2: diagnosis too straightforward (single missing bounds check with self-revealing symptom)
 
 ### Borderline-but-included rows
 - `kafka-14334-delayed-fetch-purgatory`
 - `zookeeper-4846-fuzzy-snapshot-acl`
 
-These two stay in FS28 because the object is intentionally broader than the old FS23 and their added benchmark value outweighs their slightly weaker hybrid purity.
+These two stay in tier1 because the object is intentionally broader than the old FS23 and their added benchmark value outweighs their slightly weaker hybrid purity.

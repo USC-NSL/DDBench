@@ -1,4 +1,4 @@
-# FS42 selection criteria
+# tier2 selection criteria
 
 Status: frozen
 Date: 2026-03-30
@@ -6,9 +6,9 @@ Corpus scope: 62 released cases under `cases/`
 
 ## Goal
 
-Freeze a **43-case structured scored subset (`FS42`)** that extends the frozen `FS28` with all rows that should support full structured diagnosis scoring.
+Freeze a **46-case structured scored subset (`tier2`)** that extends the frozen `tier1` with all rows that should support full structured diagnosis scoring.
 
-`FS42 = FS28 + 14 structured-promotion rows`
+`tier2 = tier1 + 14 structured-promotion rows`
 
 This is the new middle tier:
 - broader than the headline package,
@@ -17,7 +17,7 @@ This is the new middle tier:
 
 ## Selection policy
 
-A case is eligible for `FS42` if it satisfies all of the following:
+A case is eligible for `tier2` if it satisfies all of the following:
 1. historical bug/fix provenance in the released corpus;
 2. acceptable replay/checker quality (`D1` or `D2`);
 3. scorer-facing value for structured diagnosis, meaning the row is useful for component/locus/family/causal-chain/validation scoring;
@@ -25,13 +25,14 @@ A case is eligible for `FS42` if it satisfies all of the following:
 
 ## Composition rule
 
-`FS42 = FS28 + S14 structured-promotion rows`
+`tier2 = tier1 + S15 structured-promotion rows`
 
-- `FS28`: **29** rows
-- `S14 structured-promotion`: **14** rows
-- Total: **43** rows
+- `tier1`: **31** rows
+- `S15 structured-promotion`: **15** rows (S14 original + raft-358 demoted from tier1)
+- Total: **46** rows
 
-The `S14` additions are:
+The `S15` additions are:
+- `raft-358-negative-log-range` *(demoted from tier1: diagnosis too straightforward)*
 - `etcd-20704-leasing-linearizability`
 - `etcd-19172-embed-data-race`
 - `dragonfly-6738-pipeline-block`
@@ -49,16 +50,16 @@ The `S14` additions are:
 
 ## Tier semantics
 
-- `FS28`: headline-plus-expansion package
-- `FS42`: full structured diagnosis package
-- `FS55`: full core scored package
+- `tier1`: headline-plus-expansion package
+- `tier2`: full structured diagnosis package
+- `tier3`: full core scored package
 
 ## Peer-review summary
 
 ### Pass conditions met
-- exactly **43** cases
-- includes all **29** FS28 rows
-- adds all **14** historical structured-promotion rows
+- exactly **46** cases
+- includes all **31** tier1 rows
+- adds all **15** structured-promotion rows (14 original + raft-358 demoted from tier1)
 - all rows remain scored-package worthy
 - overwhelming majority are `G4`; two inherited component-locus-soft rows remain visible as structured inclusions rather than headline rows
 - this tier is the right place for `probable` hybrid rows and non-headline structured rows
