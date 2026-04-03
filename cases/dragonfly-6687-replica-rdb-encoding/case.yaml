@@ -10,3 +10,4 @@ build:
 docker:
   caps: []
   min_cpus: 1
+  seccomp_unconfined: true
