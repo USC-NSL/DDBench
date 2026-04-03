@@ -43,7 +43,3 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
   ...
 ==91247==ABORTING
 ```
-
-## What this tells a developer
-
-ASAN confirms a heap-buffer-overflow: a 4-byte read past the end of an 8-byte heap allocation. The allocated 8-byte region corresponds to the 2-float vector value stored via HSET, while the search path attempts to read at the position of a third float. The allocation trace shows the data was stored through the normal HSET command path. The overflow originates during search result serialization, suggesting the code path that iterates over vector components does not cross-check the stored data length against the number of elements it attempts to read. Investigating how the search reply construction handles field values of unexpected sizes would be a useful direction.

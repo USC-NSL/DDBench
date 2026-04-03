@@ -79,7 +79,3 @@ $1 = 2
 (gdb) print this->size_
 $2 = 2
 ```
-
-## What this tells a developer
-
-The segfault occurs inside an `absl::Span<float const>` subscript access, trying to read index 2 from a span of size 2. The crash happens on the shard thread while converting search results to a reply. All other threads are idle in their event loops, so the issue is confined to the search result serialization path. The span size (2 floats = 8 bytes) corresponds to the data that was stored, while the index was configured for 4 dimensions. This suggests the code path that reads field values during search trusts the schema-declared dimensions rather than checking the actual stored data length. Investigating how document field data is accessed during search result construction would be a productive starting point.
