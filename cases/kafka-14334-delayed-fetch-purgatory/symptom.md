@@ -1,6 +1,6 @@
 # Symptom
 
-When a follower replica appends messages received from the leader, the DelayedFetch purgatory is never checked or completed. Consumers configured to fetch from follower replicas always wait the full `fetch.max.wait.ms` timeout before receiving data, even when new messages have already been replicated to the follower.
+Consumers configured to fetch from follower replicas always wait the full `fetch.max.wait.ms` timeout before receiving data, even when new messages have already been replicated to the follower.
 
 ## Observable behavior
 

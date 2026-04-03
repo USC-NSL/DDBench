@@ -3,7 +3,7 @@
 When replicating from a Dragonfly master that has tiered storage enabled, the replica fails to sync with the error:
 
 ```
-Unknown RDB string encoding 62
+Unknown RDB string encoding <N>
 ```
 
 ## Observable behavior

@@ -2,18 +2,14 @@
 
 A NATS JetStream server with clustered R3 streams progressively reports growing reserved disk usage until it claims the disk is full, even though no new streams are being created.
 
-Server logs show a tight loop of:
-```
-Error applying entries to '[STREAM_NAME]': last sequence mismatch
-Resetting stream cluster state for '[STREAM_NAME]'
-```
+Server logs show repeated errors about sequence mismatches followed by stream state resets in a tight loop.
 
-Each reset cycle causes the stream's `MaxBytes` to be double-counted in the server's reserved resource accounting. After enough reset iterations, the reserved bytes exceed actual capacity and the server refuses to create new streams, reporting disk full.
+After repeated reset cycles visible in the logs, the server eventually refuses to create new streams with resource-exceeded errors, even though the actual disk has ample free space.
 
-Setting the affected stream to R1, restarting the servers, and returning it to R3 temporarily resolves the issue because the R1 transition releases and re-reserves resources exactly once.
+Setting the affected stream to R1, restarting the servers, and returning it to R3 temporarily resolves the issue.
 
 ## Observable indicators
 
-- `JetStreamReservedResources()` returns `storeReserved` that is a multiple of the stream's `MaxBytes` (e.g., 2x, 3x, or more after repeated resets)
+- The server's reported reserved storage grows over time without any new streams being created
 - Server eventually refuses new stream creation with resource-exceeded errors
-- The leak accumulates on every call to `resetClusteredState()` triggered by `errLastSeqMismatch` or `errFirstSequenceMismatch`
+- The problem correlates with the frequency of stream state reset log entries

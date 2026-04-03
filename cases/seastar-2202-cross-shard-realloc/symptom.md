@@ -1,10 +1,10 @@
 # Symptom
 
-When a memory buffer is allocated on one shard (CPU core) and then `realloc`'d to a smaller size on a different shard, Seastar's memory allocator crashes with an assertion failure:
+When a memory buffer is allocated on one shard (CPU core) and then `realloc`'d on a different shard, Seastar crashes with an assertion failure:
 
 ```
-Assertion `object_cpu_id(ptr) == cpu_id' failed.
+Assertion failed: memory object does not belong to the current CPU shard.
 ```
 
 ## Observable behavior
-- The crash is deterministic and occurs every time a cross-shard realloc to a smaller size is performed.
+- The crash is deterministic and occurs every time a cross-shard `realloc` is performed.
