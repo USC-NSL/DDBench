@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_at": "2026-03-30T22:12:16Z",
-  "total_cases": 61,
+  "total_cases": 60,
   "cases": [
     {
       "case_id": "bookkeeper-2614-recovery-fencing-gap",

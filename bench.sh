@@ -286,6 +286,7 @@ parse_addons() {
     AGENT_CMD=""
     AGENT_CONFIG=""
     AGENT_OUTPUT_DIR=""
+    AGENT_EVIDENCE=false
     REMAINING_ARGS=()
 
     while [ $# -gt 0 ]; do
@@ -314,6 +315,10 @@ parse_addons() {
                 [ -n "${2:-}" ] || die "--output-dir requires a path"
                 AGENT_OUTPUT_DIR="$2"
                 shift 2
+                ;;
+            --evidence)
+                AGENT_EVIDENCE=true
+                shift
                 ;;
             *)
                 REMAINING_ARGS+=("$1")
@@ -683,6 +688,21 @@ cmd_shell() {
         build_addon_args
     fi
 
+    # Pick up evidence flag from environment (set by run_agent.sh)
+    if [ "${BENCH_EVIDENCE:-}" = "1" ]; then
+        AGENT_EVIDENCE=true
+    fi
+
+    # Mount evidence folder (read-only) into the worktree if --evidence is set
+    if [ "$AGENT_EVIDENCE" = true ]; then
+        local evidence_dir="${case_dir}/evidence"
+        if [ -d "$evidence_dir" ]; then
+            RUN_ARGS+=("-v" "${evidence_dir}:${wt_path}/evidence:ro")
+        else
+            echo "WARNING: --evidence set but no evidence/ folder found at $evidence_dir" >&2
+        fi
+    fi
+
     # Start container in background (persistent — no --rm)
     docker run -d \
         --name "$cname" \
@@ -715,6 +735,11 @@ cmd_agent() {
     parse_addons "$@"
 
     [ ${#ADDON_NAMES[@]} -gt 0 ] || die "agent command requires at least one --addon flag"
+
+    # Pick up evidence flag from environment (set by run_agent.sh)
+    if [ "${BENCH_EVIDENCE:-}" = "1" ]; then
+        AGENT_EVIDENCE=true
+    fi
 
     local case_dir
     case_dir=$(find_case_dir "$case_name")
@@ -805,6 +830,16 @@ cmd_agent() {
         local output_abs
         output_abs=$(mkdir -p "$AGENT_OUTPUT_DIR" && cd "$AGENT_OUTPUT_DIR" && pwd)
         RUN_ARGS+=("-v" "${output_abs}:/output")
+    fi
+
+    # Mount evidence folder (read-only) into the worktree if --evidence is set
+    if [ "$AGENT_EVIDENCE" = true ]; then
+        local evidence_dir="${case_dir}/evidence"
+        if [ -d "$evidence_dir" ]; then
+            RUN_ARGS+=("-v" "${evidence_dir}:${wt_path}/evidence:ro")
+        else
+            echo "WARNING: --evidence set but no evidence/ folder found at $evidence_dir" >&2
+        fi
     fi
 
     # Host network mode: lets the container reach services on the host's
