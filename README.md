@@ -142,7 +142,6 @@ All cases build from source on Ubuntu 24.04 and reliably reproduce the described
 | Raft (hashicorp) | Go | 2 | Shutdown deadlock, invalid log compaction range |
 | ClickHouse | C++ | 1 | Keeper disconnects client on addWatch |
 | RocksDB | C++ | 1 | DB::Close() hangs with stalled writes |
-| Seastar | C++ | 1 | Cross-shard realloc assertion crash |
 
 See [`index.md`](index.md) for the full list with links and descriptions.
 

@@ -1,7 +1,7 @@
 # Bug Cases Index
 ## Distributed Interactive Debugger Evaluation
 
-**Total verified cases: 62**
+**Total verified cases: 60**
 **Updated: 2026-03-30**
 
 Each case has `./setup.sh` and `./reproduce.sh` scripts that build from source on Ubuntu 24.04 and reliably reproduce the bug. Run `cd cases/<folder_name>/ && ./setup.sh && ./reproduce.sh`.
@@ -31,7 +31,6 @@ Each case has `./setup.sh` and `./reproduce.sh` scripts that build from source o
 | 19 | NATS Server | https://github.com/nats-io/nats-server/issues/7726 | Consumer with mixed wildcard/literal filter subjects fails delivery | `nats-7726-mixed-filter` |
 | 20 | etcd | https://github.com/etcd-io/etcd/issues/20704 | Multiple linearizability bugs in client/v3/leasing cache | `etcd-20704-leasing-linearizability` |
 | 21 | hashicorp/raft | https://github.com/hashicorp/raft/issues/358 | Snapshot log compaction attempts DeleteRange with max < min | `raft-358-negative-log-range` |
-| 22 | Seastar | https://github.com/scylladb/seastar/issues/2202 | Cross-shard realloc to smaller size crashes with assertion failure | `seastar-2202-cross-shard-realloc` |
 | 23 | Dragonfly | https://github.com/dragonflydb/dragonfly/issues/6738 | BRPOPLPUSH not woken when RPUSH happens inside Lua EVAL script | `dragonfly-6738-pipeline-block` |
 | 24 | Dragonfly | https://github.com/dragonflydb/dragonfly/issues/6687 | Replica sync fails with unknown RDB encoding 62 and retries in loop | `dragonfly-6687-replica-rdb-encoding` |
 | 25 | Kvrocks | https://github.com/apache/kvrocks/issues/3356 | Replication feed thread blocks on slow consumer causing WAL exhaustion | `kvrocks-3356-replication-wal` |

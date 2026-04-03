@@ -1431,31 +1431,6 @@
       "has_solution": true
     },
     {
-      "case_id": "seastar-2202-cross-shard-realloc",
-      "project": "seastar",
-      "repo": "https://github.com/scylladb/seastar.git",
-      "buggy_commit": "2bc4f22b~1",
-      "language": "C++",
-      "oracle_type": "CRASH",
-      "system_family": "framework",
-      "github_url": "https://github.com/scylladb/seastar/issues/2202",
-      "description": "Cross-shard realloc to smaller size crashes with assertion failure",
-      "build": {
-        "command": "./configure.py --mode=dev --cook fmt && ninja -C build/dev",
-        "binary": "build/dev/libseastar.a"
-      },
-      "docker": {
-        "caps": [],
-        "min_cpus": 2
-      },
-      "submodules": true,
-      "surface_membership": "tier3",
-      "contamination_tier": "E-low",
-      "bug_family": "concurrency-crash",
-      "gold_complete": false,
-      "has_solution": true
-    },
-    {
       "case_id": "zookeeper-4643-sync-epoch-ordering",
       "project": "zookeeper",
       "repo": "https://github.com/apache/zookeeper.git",

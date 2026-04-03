@@ -2,7 +2,7 @@
 
 Status: frozen
 Date: 2026-03-30
-Corpus scope: 62 released cases under `cases/`
+Corpus scope: 60 released cases under `cases/`
 
 ## Goal
 

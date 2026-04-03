@@ -1,7 +1,7 @@
 {
   "status": "frozen",
   "frozen_at": "2026-03-30",
-  "corpus_scope": "62 released cases",
+  "corpus_scope": "60 released cases",
   "selection_source": "registry/tier2_selection_criteria.md",
   "peer_review_summary": {
     "exact_case_count": 46,

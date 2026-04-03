@@ -1,7 +1,7 @@
 {
   "status": "frozen",
   "frozen_at": "2026-03-30",
-  "corpus_scope": "62 released cases",
+  "corpus_scope": "60 released cases",
   "selection_source": "registry/tier3_selection_criteria.md",
   "peer_review_summary": {
     "exact_case_count": 61,
@@ -556,16 +556,6 @@
       "included": true,
       "rationale": "Single-node shutdown hang \u2014 stalled writers not woken during Close(). Linear causal chain, non-hybrid.",
       "rank": 61
-    },
-    {
-      "corpus_case": "seastar-2202-cross-shard-realloc",
-      "system": "Seastar",
-      "bug_family": "performance-resource-interaction",
-      "hybrid_necessity": "no",
-      "gold_tier": "G3",
-      "included": true,
-      "rationale": "Single-node cross-shard realloc assertion. Assertion message reveals root cause directly. Minimal docs.",
-      "rank": 62
     }
   ]
 }

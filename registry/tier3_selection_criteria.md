@@ -2,7 +2,7 @@
 
 Status: frozen
 Date: 2026-03-30
-Corpus scope: 62 released cases under `cases/`
+Corpus scope: 60 released cases under `cases/`
 
 ## Goal
 
@@ -45,7 +45,6 @@ The `C15` additions are:
 - `dragonfly-6912-rdb-encoding`
 - `kvrocks-3315-zdiff-crash`
 - `rocksdb-10751-stalled-writes-shutdown`
-- `seastar-2202-cross-shard-realloc`
 
 ## Peer-review summary
 

@@ -23,7 +23,7 @@ A benchmark suite of 62 verified real-world bug cases from open-source distribut
   - `reproduce.md` — Step-by-step reproduction procedure
   - `verification.md` — Pass/fail verification criteria
 - `cases-solution/<project>-<issue#>-<slug>/solution.md` — Root cause + fix (do not consult during evaluation)
-- `index.md` — Master index of all 62 verified cases
+- `index.md` — Master index of all 60 verified cases
 
 ## Working with cases (Docker, recommended)
 
@@ -78,7 +78,7 @@ cd cases/<case-name>/
 - Workspace defaults to `$HOME/bug-bench/`, override with `BENCH_WORKSPACE=/path`
 - Requires Ubuntu 24.04, sudo access for apt-get
 
-## Covered projects (62 verified cases)
+## Covered projects (60 verified cases)
 
 | Project | Language | Cases |
 |---------|----------|-------|
@@ -94,7 +94,6 @@ cd cases/<case-name>/
 | raft-rs (TiKV) | Rust | 2 |
 | ClickHouse | C++ | 1 |
 | RocksDB | C++ | 1 |
-| Seastar | C++ | 1 |
 | RabbitMQ | Erlang | 1 |
 | Ra | Erlang | 1 |
 
