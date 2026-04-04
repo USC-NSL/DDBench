@@ -1,32 +1,64 @@
 # Test Output
 
-Obtained by running `go test -v -run TestJetStreamConsumerSwitchLeaderDuringInflightAck -count=1 -timeout 120s ./server/` and `go test -v -run TestJetStreamConsumerMessageDeletedDuringRedelivery -count=1 -timeout 120s ./server/` against the buggy build.
+Obtained by running `go test -v -run "TestJetStream.*Deliver|TestJetStream.*Redeliver" -timeout 120s ./server/` against the buggy build.
 
 ## Output
 
-### Test 1: Leader step-down with inflight ack
+```
+=== RUN   TestJetStreamClusterConsumerRedeliveredInfo
+--- PASS: TestJetStreamClusterConsumerRedeliveredInfo (0.74s)
+=== RUN   TestJetStreamClusterConsumerDeliveredSyncReporting
+--- PASS: TestJetStreamClusterConsumerDeliveredSyncReporting (1.47s)
+=== RUN   TestJetStreamClusterConsumerAckNoneInterestPolicyShouldNotRetainAfterDelivery
+--- PASS: TestJetStreamClusterConsumerAckNoneInterestPolicyShouldNotRetainAfterDelivery (3.21s)
+=== RUN   TestJetStreamClusterMaxDeliveriesOnInterestStreams
+--- PASS: TestJetStreamClusterMaxDeliveriesOnInterestStreams (0.81s)
+=== RUN   TestJetStreamClusterAckPendingWithMaxRedelivered
+--- PASS: TestJetStreamClusterAckPendingWithMaxRedelivered (1.81s)
+=== RUN   TestJetStreamClusterConsumerMaxDeliverUpdate
+--- PASS: TestJetStreamClusterConsumerMaxDeliverUpdate (3.44s)
+=== RUN   TestJetStreamClusterRedeliverBackoffs
+--- PASS: TestJetStreamClusterRedeliverBackoffs (2.55s)
+=== RUN   TestJetStreamClusterConsumerDeliverNewNotConsumingBeforeStepDownOrRestart
+--- PASS: TestJetStreamClusterConsumerDeliverNewNotConsumingBeforeStepDownOrRestart (6.23s)
+=== RUN   TestJetStreamClusterConsumerDeliverNewMaxRedeliveriesAndServerRestart
+--- PASS: TestJetStreamClusterConsumerDeliverNewMaxRedeliveriesAndServerRestart (6.80s)
+=== RUN   TestJetStreamClusterConsumerMaxDeliveryNumAckPendingBug
+--- PASS: TestJetStreamClusterConsumerMaxDeliveryNumAckPendingBug (7.71s)
+=== RUN   TestJetStreamClusterDoubleAckRedelivery
+    jetstream_cluster_4_test.go:1656: Error: B:31482 nats: timeout
+    jetstream_cluster_4_test.go:1656: Error: A:32929 nats: timeout
+--- PASS: TestJetStreamClusterDoubleAckRedelivery (56.63s)
+=== RUN   TestJetStreamConsumerBackoffNotRespectedWithMultipleInflightRedeliveries
+--- PASS: TestJetStreamConsumerBackoffNotRespectedWithMultipleInflightRedeliveries (8.01s)
+=== RUN   TestJetStreamConsumerBackoffWhenBackoffLengthIsEqualToMaxDeliverConfig
+--- PASS: TestJetStreamConsumerBackoffWhenBackoffLengthIsEqualToMaxDeliverConfig (3.01s)
+=== RUN   TestJetStreamSuperClusterConsumerDeliverNewBug
+--- PASS: TestJetStreamSuperClusterConsumerDeliverNewBug (12.50s)
+=== RUN   TestJetStreamConsumerMaxDeliveries
+--- PASS: TestJetStreamConsumerMaxDeliveries (0.16s)
+=== RUN   TestJetStreamBasicDeliverSubject
+--- PASS: TestJetStreamBasicDeliverSubject (0.12s)
+=== RUN   TestJetStreamAckAllRedelivery
+--- PASS: TestJetStreamAckAllRedelivery (0.45s)
+=== RUN   TestJetStreamWorkQueueAckWaitRedelivery
+--- PASS: TestJetStreamWorkQueueAckWaitRedelivery (0.24s)
+=== RUN   TestJetStreamWorkQueueNakRedelivery
+--- PASS: TestJetStreamWorkQueueNakRedelivery (0.01s)
+=== RUN   TestJetStreamWorkQueueTerminateDelivery
+--- PASS: TestJetStreamWorkQueueTerminateDelivery (0.21s)
+=== RUN   TestJetStreamConsumerMaxDeliveryAndServerRestart
+--- PASS: TestJetStreamConsumerMaxDeliveryAndServerRestart (0.56s)
+=== RUN   TestJetStreamRedeliveryAfterServerRestart
+--- PASS: TestJetStreamRedeliveryAfterServerRestart (0.07s)
+=== RUN   TestJetStreamActiveDelivery
+--- PASS: TestJetStreamActiveDelivery (0.12s)
+=== RUN   TestJetStreamRedeliverCount
+--- PASS: TestJetStreamRedeliverCount (0.01s)
+=== RUN   TestJetStreamRedeliverAndLateAck
+--- PASS: TestJetStreamRedeliverAndLateAck (0.17s)
+=== RUN   TestJetStreamStreamPurgeWithConsumerAndRedelivery
+--- PASS: TestJetStreamStreamPurgeWithConsumerAndRedelivery (0.11s)
+```
 
-```
-=== RUN   TestJetStreamConsumerSwitchLeaderDuringInflightAck
-    jetstream_consumer_test.go:2627: require no error, but got: nats: timeout
---- FAIL: TestJetStreamConsumerSwitchLeaderDuringInflightAck (5.18s)
-FAIL
-FAIL	github.com/nats-io/nats-server/v2/server	5.190s
-FAIL
-```
-
-### Test 2: Deleted message during redelivery
-
-```
-=== RUN   TestJetStreamConsumerMessageDeletedDuringRedelivery
-=== RUN   TestJetStreamConsumerMessageDeletedDuringRedelivery/Memory
-    jetstream_consumer_test.go:2687: Expected one of [stream store EOF], got 'no message found'
-=== RUN   TestJetStreamConsumerMessageDeletedDuringRedelivery/File
-    jetstream_consumer_test.go:2687: Expected one of [stream store EOF], got 'deleted message'
---- FAIL: TestJetStreamConsumerMessageDeletedDuringRedelivery (0.03s)
-    --- FAIL: TestJetStreamConsumerMessageDeletedDuringRedelivery/Memory (0.01s)
-    --- FAIL: TestJetStreamConsumerMessageDeletedDuringRedelivery/File (0.02s)
-FAIL
-FAIL	github.com/nats-io/nats-server/v2/server	0.037s
-FAIL
-```
+Note: Existing tests all pass. The bug scenarios (leader step-down with inflight acks, and redelivery of deleted messages) are not covered by the existing test suite. The `TestJetStreamClusterDoubleAckRedelivery` test shows timeout warnings during execution (56.63s), hinting at fragile timing in the redelivery/ack path.

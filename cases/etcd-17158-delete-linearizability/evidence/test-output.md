@@ -1,15 +1,24 @@
-# Test Failure Output
+# Test Output
 
-Obtained by running `go test -v -run "^TestRangeAfterDeleteMatch$" -count=1 -timeout 60s ./storage/backend/` from the `server/` directory against the buggy build.
+Obtained by running `cd server && go test -v -timeout 60s ./storage/backend/` against the buggy build.
 
 ## Output
 
 ```
-=== RUN   TestRangeAfterDeleteMatch
-    delete_linearizability_bug_test.go:53: FAIL: BatchTx and ReadTx disagree after delete -- BatchTx keys: [], ReadTx keys: [foo]
-    delete_linearizability_bug_test.go:58: FAIL: Bug is present -- deleted key still visible via ReadTx
---- FAIL: TestRangeAfterDeleteMatch (0.00s)
-FAIL
-FAIL	go.etcd.io/etcd/server/v3/storage/backend	0.018s
-FAIL
+=== RUN   TestBackendClose
+--- PASS: TestBackendClose (0.00s)
+=== RUN   TestBackendSnapshot
+--- PASS: TestBackendSnapshot (0.01s)
+=== RUN   TestBackendSnapshotCopy
+--- PASS: TestBackendSnapshotCopy (0.00s)
+=== RUN   TestBackendAutoCommitLimitHook
+--- PASS: TestBackendAutoCommitLimitHook (0.00s)
+=== RUN   TestBackendAutoCommitBatchIntervalHook
+--- PASS: TestBackendAutoCommitBatchIntervalHook (1.03s)
+=== RUN   TestLockVerify
+--- PASS: TestLockVerify (0.01s)
+PASS
+ok  	go.etcd.io/etcd/server/v3/storage/backend	1.212s
 ```
+
+All existing backend tests pass, indicating there is no test coverage for the interaction between `UnsafeDelete` and the buffered read path.

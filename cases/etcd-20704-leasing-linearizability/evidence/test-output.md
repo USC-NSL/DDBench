@@ -1,13 +1,11 @@
 # Test Output
 
-Obtained by running a linearizability test that performs concurrent `Delete` + `Put` operations through the leasing cache, then compares the cache result with a direct etcd `Get`, against a single-node etcd cluster.
+Obtained by running `cd client/v3 && go test -race -v -timeout 120s -count=1 ./leasing/...` against the buggy build.
 
 ## Output
 
 ```
-Starting single-node etcd...
-Running leasing linearizability test...
-BUG at iteration 7: leasing cache says 1 kvs, etcd says 0 kvs
-BUG_DETECTED
-exit status 1
+?   	go.etcd.io/etcd/client/v3/leasing	[no test files]
 ```
+
+The leasing package has no test files at all, so there is zero test coverage for the cache's concurrent access patterns.

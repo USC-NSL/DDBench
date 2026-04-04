@@ -1,2 +1,0 @@
-- The bug is a regression introduced by the ZOOKEEPER-4394 fix, which changed `processTxn` to use a variant that does not populate `committedLog` during the SYNCHRONIZATION phase
-- Only affects ZooKeeper version 3.9.3 and later

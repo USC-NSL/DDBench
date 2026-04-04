@@ -1,16 +1,16 @@
 # Test Output
 
-Obtained by running `go test -v -run TestSnapshotRestoreOverwritesCreateIndex -count=1 -timeout 60s ./agent/consul/state/` against the buggy build. The test creates catalog entries at raft index 10, snapshots, restores into a new store at raft index 100, and checks whether CreateIndex is preserved.
+Obtained by running `go test -v -timeout 60s -run "TestStateStore_EnsureNode" ./agent/consul/state/` against the buggy build.
 
 ## Output
 
 ```
-=== RUN   TestSnapshotRestoreOverwritesCreateIndex
-    snapshot_index_bug_test.go:24: Original nodeA.CreateIndex = 10
-    snapshot_index_bug_test.go:55: Restored nodeA.CreateIndex = 100 (original=10, restoreIdx=100)
-    snapshot_index_bug_test.go:58: BUG: CreateIndex overwritten by restore index: got 100, want 10
---- FAIL: TestSnapshotRestoreOverwritesCreateIndex (0.00s)
-FAIL
-FAIL	github.com/hashicorp/consul/agent/consul/state	0.008s
-FAIL
+# github.com/hashicorp/consul/agent/consul/state
+# [github.com/hashicorp/consul/agent/consul/state]
+agent/consul/state/catalog_test.go:530:15: conversion from uint64 to string yields a string of one rune, not a string of digits
+agent/consul/state/state_store_test.go:68:14: conversion from uint64 to string yields a string of one rune, not a string of digits
+agent/consul/state/state_store_test.go:95:21: conversion from uint64 to string yields a string of one rune, not a string of digits
+FAIL	github.com/hashicorp/consul/agent/consul/state [build failed]
 ```
+
+Tests fail to compile due to Go toolchain version incompatibility (`uint64` to `string` conversion). This is a toolchain issue unrelated to the bug. The test files have no coverage for snapshot restore index preservation regardless.
