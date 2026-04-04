@@ -287,6 +287,7 @@ parse_addons() {
     AGENT_CONFIG=""
     AGENT_OUTPUT_DIR=""
     AGENT_EVIDENCE=false
+    AGENT_FORCE=false
     REMAINING_ARGS=()
 
     while [ $# -gt 0 ]; do
@@ -318,6 +319,10 @@ parse_addons() {
                 ;;
             --evidence)
                 AGENT_EVIDENCE=true
+                shift
+                ;;
+            --force)
+                AGENT_FORCE=true
                 shift
                 ;;
             *)
@@ -696,11 +701,8 @@ cmd_shell() {
     # Mount evidence folder (read-only) into the worktree if --evidence is set
     if [ "$AGENT_EVIDENCE" = true ]; then
         local evidence_dir="${case_dir}/evidence"
-        if [ -d "$evidence_dir" ]; then
-            RUN_ARGS+=("-v" "${evidence_dir}:${wt_path}/evidence:ro")
-        else
-            echo "WARNING: --evidence set but no evidence/ folder found at $evidence_dir" >&2
-        fi
+        [ -d "$evidence_dir" ] || die "--evidence: no evidence/ folder found at $evidence_dir"
+        RUN_ARGS+=("-v" "${evidence_dir}:${wt_path}/evidence:ro")
     fi
 
     # Start container in background (persistent — no --rm)
@@ -800,17 +802,35 @@ cmd_agent() {
 
     # Reuse running container if available
     if container_running "$cname"; then
-        echo "Attaching to running container ..."
-        # Only allocate a TTY (-t) if stdout is a real terminal.
-        # Without this, `docker exec -it` exits silently when stdout is redirected.
-        local tty_flag=""
-        [ -t 1 ] && tty_flag="-t"
-        docker exec -i $tty_flag -w "$wt_path" \
-            -e "CASE_NAME=${case_name}" \
-            -e "PYTHONUNBUFFERED=1" \
-            "$cname" \
-            bash -c "export PATH=/opt/tools/bin:\$PATH && exec $final_cmd"
-        return
+        if [ "$AGENT_EVIDENCE" = true ]; then
+            if [ "$AGENT_FORCE" = true ]; then
+                # --force: stop and recreate the container for evidence mount
+                echo "Stopping running container (--force: recreating for evidence mount) ..."
+                docker stop "$cname" >/dev/null 2>&1 || true
+                docker rm "$cname" >/dev/null 2>&1 || true
+            else
+                echo "WARNING: Container for $case_name is already running." >&2
+                echo "  evidence/ cannot be mounted into an existing container." >&2
+                echo "  The agent will run WITHOUT evidence." >&2
+                echo "  To recreate the container with evidence, add --force:" >&2
+                echo "    bench.sh agent $case_name --evidence --force ..." >&2
+                echo "" >&2
+            fi
+        fi
+
+        if container_running "$cname"; then
+            echo "Attaching to running container ..."
+            # Only allocate a TTY (-t) if stdout is a real terminal.
+            # Without this, `docker exec -it` exits silently when stdout is redirected.
+            local tty_flag=""
+            [ -t 1 ] && tty_flag="-t"
+            docker exec -i $tty_flag -w "$wt_path" \
+                -e "CASE_NAME=${case_name}" \
+                -e "PYTHONUNBUFFERED=1" \
+                "$cname" \
+                bash -c "export PATH=/opt/tools/bin:\$PATH && exec $final_cmd"
+            return
+        fi
     fi
 
     # Start a new persistent container
@@ -835,11 +855,8 @@ cmd_agent() {
     # Mount evidence folder (read-only) into the worktree if --evidence is set
     if [ "$AGENT_EVIDENCE" = true ]; then
         local evidence_dir="${case_dir}/evidence"
-        if [ -d "$evidence_dir" ]; then
-            RUN_ARGS+=("-v" "${evidence_dir}:${wt_path}/evidence:ro")
-        else
-            echo "WARNING: --evidence set but no evidence/ folder found at $evidence_dir" >&2
-        fi
+        [ -d "$evidence_dir" ] || die "--evidence: no evidence/ folder found at $evidence_dir"
+        RUN_ARGS+=("-v" "${evidence_dir}:${wt_path}/evidence:ro")
     fi
 
     # Host network mode: lets the container reach services on the host's
