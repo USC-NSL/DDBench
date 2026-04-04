@@ -1,6 +1,6 @@
 # /evidence — Debugging Evidence Generator
 
-Generate realistic debugging evidence for bug cases by running actual debugging tools (GDB, race detectors, log capture, ASAN, jstack, etc.) against the buggy system. Evidence files contain raw tool output only — no analysis, no interpretation, no explanation of what the output means.
+Generate debugging evidence for bug cases by acting as a developer investigating the symptom inside the Docker container. You read `symptom.md`, enter the container at the buggy commit, and use standard debugging tools and source code investigation to gather clues — exactly as a real developer would. Evidence files contain raw tool output and/or structured code investigation notes.
 
 Use this skill when creating or enriching bug cases with Tier 2 evidence, when a case has no `evidence/` directory, or when the user asks to generate debugging clues for a case. Also use when the user mentions "evidence", "debugging clues", "diagnostic artifacts", or "add evidence to cases".
 
@@ -14,57 +14,65 @@ Use this skill when creating or enriching bug cases with Tier 2 evidence, when a
 
 ---
 
-## Core Principle: Raw Tool Output, Nothing Else
+## Core Principle: You Are a Developer Debugging From the Symptom
 
-Evidence is **raw output from debugging tools**. Period.
+You are not a test runner. You are a developer who has been told about a bug (via `symptom.md`) and is now investigating inside the container. You have the full built source at the buggy commit, standard debugging tools, and nothing else.
 
-An evidence file contains:
-1. One sentence saying how the output was obtained (which tool, which command)
-2. The raw tool output, verbatim
+Your job is to gather evidence that helps narrow down the bug — crash backtraces, suspicious log output, race detector reports, test failures, unexpected server behavior, and code investigation notes. The evidence should be useful debugging clues, not a proof that the bug exists.
 
-An evidence file does NOT contain:
-- Analysis of what the output means
-- Explanation of what it "tells a developer"
-- Decoded internal constants or annotated output
-- Reconstructed timelines or protocol breakdowns
-- Source code snippets or grep results
-- Any section titled "Analysis", "Interpretation", "What this tells a developer", or similar
-- Any modification to `symptom.md` — evidence and symptoms are completely separate; evidence is injected as system prompt at benchmark time, never referenced from symptom files
+There are two kinds of evidence, and a case can have both:
+
+### Runtime Evidence
+Raw output from running tools (GDB, race detector, test runner, server + CLI, etc.). This is always preferred when available. Runtime evidence does NOT contain analysis or interpretation — just the raw output with a provenance line.
+
+### Code Investigation Evidence
+A developer investigating a bug reads source code. Code investigation evidence captures this process: what the developer searched for (motivated by the symptom), what they found (raw grep/sed output), and what hypothesis they formed. This is how a developer naturally narrows a problem — they don't jump to the root cause, they follow leads.
+
+The critical constraint: code investigation must reflect **intermediate reasoning**, not the final diagnosis. Think of it as a developer's notes after 30 minutes of reading code — they've found something suspicious but haven't connected all the dots yet. The hypothesis should point **toward the problem area** without naming the exact fix or root cause.
 
 ```
-GOOD evidence file:              BAD evidence file:
-─────────────────                ────────────────
-One-sentence provenance          Multi-paragraph explanation
-Raw GDB backtrace                "The deadlock involves three threads..."
-Raw race detector output         "This tells a developer that..."
-Raw test failure output          Decoded flags: 0x06 (FLAG_DO_FENCING|...)
-Raw server logs                  Reconstructed timeline with analysis
+GOOD evidence:                           BAD evidence:
+──────────────                           ──────────────
+GDB backtrace from a crash               "The fix is to add FLAG_DO_FENCING..."
+Race detector output                     Output from an injected regression test
+Server logs showing anomaly              Decoded constants from reading the fix
+Code investigation with hypothesis       Code investigation that names the exact fix
+"This function doesn't check X..."       "Change line 47 to add the missing call"
+grep output showing a suspicious gap     Reconstructed timeline with full analysis
 ```
-
-### What developers actually get
-
-This benchmark tests how agents debug. The agent works **inside a Docker container** at `/workspace/worktrees/<case>/` with only the built source code. It has no reproduce scripts, no bench.sh, no host access. Evidence must reflect what a developer would obtain by running standard tools from inside that workspace:
-
-- Test output from running an existing test (`go test`, `mvn test`, `gradle test`, `rebar3 ct`)
-- Race detector output from `go test -race`
-- A goroutine dump from sending SIGQUIT to a hung Go process
-- GDB backtrace from attaching to a hung or crashed C++ process
-- jstack output from a hung Java process
-- ASAN/TSAN/Valgrind output from running under sanitizers
-- Server logs captured during the failure
-- Crash stderr from starting a process with bad input
-
-The provenance line in evidence files must show the command **as a developer would run it inside the workspace** — not `bench.sh` anything, not host paths.
-
-### No Fabrication
-
-Evidence must come from **actually running tools against the buggy system**. If you cannot reproduce the bug in the current environment, write a placeholder — never fabricate output. A placeholder that says "run GDB and capture the backtrace" is honest. A fabricated backtrace is fiction.
 
 ---
 
-## Evidence File Format
+## CRITICAL: Agent-Accessible Evidence Only
 
-Every evidence file follows this exact structure:
+The agent works **inside a Docker container** at `/workspace/worktrees/<case>/` with only the built source code at the buggy commit. It has:
+- The full project source and built binaries at the buggy commit
+- Standard development tools (GDB, Go toolchain, Maven, cargo, rebar3, etc.)
+- Network tools (redis-cli, etcdctl, nats CLI, curl, etc.)
+
+It does NOT have:
+- `reproduce.sh`, `bench.sh`, or any case scripts
+- Injected test files (regression tests cherry-picked from the fix commit)
+- Files from the `inject_test/` directory
+- The `cases/` or `cases-solution/` directories
+
+**Every piece of evidence must be obtainable by the agent using only what exists at the buggy commit.** This means:
+
+- **NEVER run `reproduce.sh`** as an evidence source — it often injects test files that don't exist at the buggy commit
+- **NEVER use output from injected tests** — if `reproduce.sh` writes `FooTest.java` or `bug_test.go` into the source tree, that test doesn't exist for the agent
+- **ALWAYS work from clean buggy commit state** — enter via `bench.sh shell` (which does NOT run reproduce.sh) or reset with `bench.sh reset`
+
+### How to verify: the container test
+
+Before writing any evidence file, ask: "Could an agent inside the container at `/workspace/worktrees/<case>/` — with only the buggy commit source, no case scripts, no injected files — actually run this command and get this output?"
+
+If the answer is no, the evidence is invalid.
+
+---
+
+## Evidence File Formats
+
+### Runtime Evidence Format
 
 ```markdown
 # <Evidence Type>
@@ -77,9 +85,51 @@ Obtained by running `<exact command>` against the buggy build.
 no decoded constants, no added context. Just the output.>
 ```
 
-That's it. No other sections. No "Analysis". No "What this tells a developer". No "Interpretation". No "Critical Window". Nothing.
+No other sections. No "Analysis". No "Interpretation". If the raw output is very long, trim to the relevant window (keep 10-30 lines of context). You may truncate with `[... N lines omitted ...]` but never add lines.
 
-If the raw output is very long, trim it to the relevant window (keep 10-30 lines of context around the interesting part so it doesn't look cherry-picked). You may truncate with `[... N lines omitted ...]` but never add lines.
+### Code Investigation Format
+
+Code investigation mimics a developer reading source code to form a debugging hypothesis. It captures the search process, not the conclusion. Think of it as a developer's notebook after their first pass through the codebase — they've spotted something that doesn't look right, but they haven't proven it's the bug yet.
+
+```markdown
+# Code Investigation
+
+## What was searched
+
+<1-2 sentences: what the developer looked for, motivated by the symptom.
+E.g., "Based on the symptom of watch events being lost after compaction,
+searched for how the watcher sync loop handles compaction notifications.">
+
+## What was found
+
+<Raw grep/sed/cat output showing the relevant code. This must be actual
+command output from inside the container — not hand-copied or paraphrased.
+Include enough surrounding context that it doesn't look cherry-picked.>
+
+## Developer hypothesis
+
+<1-2 sentences: what looks suspicious based on what was found. Frame as
+an observation or question, NOT as a diagnosis or fix.
+
+GOOD: "The sync loop appears to advance the watcher's revision even when
+the channel send fails — this could mean notifications are silently dropped
+under backpressure."
+
+BAD: "The fix is to check the return value of the channel send and only
+advance minRev on success."
+
+BAD: "The bug is in syncWatchers() at line 234 where minRev is set
+unconditionally."
+
+The hypothesis should make someone say "hmm, that's worth investigating
+further" — not "ah, I know exactly what to fix.">
+```
+
+**Key rules for code investigation:**
+- The `What was found` section must contain real command output (grep -n, sed -n, cat showing line numbers) run inside the container. Not hand-written code snippets.
+- The hypothesis must be **one step removed from the root cause**. It identifies a suspicious area or pattern, not the exact bug. Think "this looks wrong" not "this is the bug."
+- A case can have both runtime evidence AND code investigation. Runtime is always preferred; code investigation supplements it or covers cases where runtime evidence is hard to obtain.
+- Code investigation is especially useful for logic bugs, protocol errors, and ordering issues that are visible in source but hard to trigger at runtime without injected tests.
 
 ---
 
@@ -97,68 +147,143 @@ cases/<case-name>/case.yaml
 cases-solution/<case-name>/solution.md
 ```
 
-From these, determine: what kind of bug is this (crash, hang, data loss, race, etc.), what language/project, and what tools a developer would naturally reach for.
+From these, understand:
+- **What the developer observes** (symptom.md) — this is your starting point
+- **What kind of bug** this is (crash, hang, data loss, race, logic error)
+- **What language/project** and what tools are natural
+- **What reproduce.sh does** — specifically, does it inject test files? (If yes, you cannot use those tests)
 
 If `cases/<case-name>/evidence/` already exists and `--refresh` was not passed, report what's there and skip unless files look incomplete.
 
-### Step 2: Set up the case
+### Step 2: Plan your investigation
 
-```bash
-./bench.sh setup <case-name>
-```
+Think like a developer who just read the symptom description. What would you do first?
 
-If setup fails or Docker is unavailable, use placeholders (see below).
+**Read `reproduce.sh` as a guardrail** — not to run it, but to understand whether it injects files. If it does, those files are off-limits for evidence generation.
 
-### Step 3: Select evidence types
+Then plan your debugging approach based on the bug category:
 
-Pick 1-3 evidence types that are natural for this bug category:
-
-| Bug Category | Natural Evidence | Developer Tool |
+| Bug Category | Runtime Investigation | Code Investigation |
 |---|---|---|
-| **Crash** (segfault, SIGABRT) | Stack trace, ASAN output | GDB, ASAN, crash stderr |
-| **Hang / Deadlock** | Thread/goroutine dump | GDB `thread apply all bt`, SIGQUIT, jstack |
-| **Data loss / Corruption** | Test output, server logs | Test runner, log files |
-| **Race condition** | Race detector output | `go test -race`, TSAN |
-| **Memory error** | Sanitizer output | Valgrind, ASAN |
-| **Logic error** | Test output diff | Test runner |
-| **Resource leak** | Metrics over time | pprof, `/debug/vars`, `lsof` |
+| **Crash** (segfault, SIGABRT, panic) | Run binary with triggering input, GDB/ASAN backtrace | Read crash handler, trace the call path from the stack trace |
+| **Hang / Deadlock** | Thread/goroutine dump, jstack, GDB `thread apply all bt` | Search for lock ordering, channel operations, missing unlocks |
+| **Data loss / Corruption** | Server + CLI to reproduce scenario, check logs | Trace the write/read path, look for missing persistence steps |
+| **Race condition** | `go test -race`, TSAN, stress runs (`-count=10`) | Search for shared state accessed without synchronization |
+| **Stale read / Linearizability** | Server + concurrent read/write via CLI | Trace the caching/buffering layer for stale state |
+| **Logic error** | Run existing tests in the affected module, CLI/API | Read the logic in the area the symptom points to, note suspicious branches |
+| **Resource leak** | Monitor goroutine/fd/memory count over time | Search for acquire-without-release patterns |
+| **Election / Liveness** | Start cluster, trigger scenario, observe logs | Read state machine handlers, look for missing transitions |
 
-### Step 4: Run tools and capture output
-
-You (the skill operator) use `bench.sh` to set up and enter the container. But the **evidence provenance line** must show only the command as run inside the workspace — because that's what the agent will see.
+### Step 3: Enter the container at the clean buggy commit
 
 ```bash
-# YOU do this (not recorded in evidence):
 ./bench.sh setup <case-name>
 ./bench.sh shell <case-name>
-
-# INSIDE the container at /workspace/worktrees/<case>/, run the developer command:
-#   Go test:        go test -run TestFoo -count=1 -v ./pkg/...
-#   Go race:        go test -race -run TestFoo -count=5 ./pkg/...
-#   Go goroutines:  kill -SIGQUIT <pid>
-#   GDB:            gdb --batch -ex run -ex bt -ex "thread apply all bt" --args ./binary
-#   Maven test:     mvn -pl module test -Dtest="TestClass#method"
-#   Gradle test:    ./gradlew :module:test --tests "pkg.TestClass.method"
-#   ASAN:           ASAN_OPTIONS=detect_leaks=1 ./binary
-#   jstack:         jstack <pid>
-#   Erlang:         rebar3 ct --suite=test_SUITE
 ```
 
-Capture the output inside the container:
+`bench.sh shell` drops you into the container at `/workspace/worktrees/<case>/` with the source at the buggy commit. No files have been injected. This is exactly what the agent sees.
 
+If the workspace has been modified by a previous `reproduce.sh` run, reset first:
+
+```bash
+./bench.sh reset <case-name>
+```
+
+### Step 4: Investigate and capture evidence
+
+Now you are inside the container. Act as a developer investigating the symptom.
+
+**General approach:**
+1. Look at what's available — built binaries, existing tests, server configs
+2. Try to reproduce or observe the symptom using only what's there
+3. Run debugging tools to gather clues
+4. Capture raw output
+
+**Example investigation strategies by project type:**
+
+**C++ server (Dragonfly, Kvrocks, ClickHouse, RocksDB):**
+```bash
+# Start the server
+./build-dbg/dragonfly --port 6379 --logtostderr &
+# or
+./build/kvrocks -c kvrocks.conf &
+
+# Trigger the symptom via CLI
+redis-cli -p 6379 <commands from symptom description>
+
+# If it crashes, restart under GDB
+gdb --batch -ex run -ex bt -ex "thread apply all bt" --args ./build-dbg/dragonfly --port 6379
+
+# Or run with ASAN build if available
+ASAN_OPTIONS=detect_leaks=1 ./build-asan/dragonfly --port 6379
+```
+
+**Go server (etcd, NATS, Consul, Raft):**
+```bash
+# Run existing tests in the affected package
+go test -v -timeout 120s ./server/storage/mvcc/
+go test -race -count=5 ./server/...
+
+# Start the server and trigger via CLI
+./bin/etcd &
+etcdctl put key value
+etcdctl watch key
+
+# Goroutine dump of a hung process
+kill -SIGQUIT <pid>
+```
+
+**Java/Scala (Kafka, BookKeeper, ZooKeeper):**
+```bash
+# Run existing tests in the affected module
+mvn -pl bookkeeper-server test -Dtest="ExistingTestClass"
+./gradlew :core:test --tests "kafka.server.ExistingTest"
+
+# Start the server and trigger via CLI
+bin/zookeeper-server-start.sh config/zookeeper.properties &
+bin/zkCli.sh
+
+# Thread dump of running JVM
+jstack <pid>
+```
+
+**Erlang (RabbitMQ, Ra):**
+```bash
+# Run existing test suites
+rebar3 ct --suite=existing_SUITE
+make ct
+
+# Start the node and trigger via CLI
+rabbitmqctl <commands>
+```
+
+**Rust (raft-rs):**
+```bash
+# Run existing tests in the affected module
+cargo test --lib test_module_name
+cargo test -- --nocapture existing_test_name
+```
+
+**Capture everything to a raw file:**
 ```bash
 <command> 2>&1 | tee /tmp/evidence-raw-<case-name>.txt
 ```
 
-The evidence file provenance line should read like:
-- `Obtained by running go test -race -run TestEmbedEtcd -count=5 ./tests/integration/embed/`
-- `Obtained by running gdb --batch -ex run -ex bt --args ./build/dragonfly --port 6379`
-- `Obtained by running mvn -pl bookkeeper-server test -Dtest="FooTest#barMethod"`
+**What to capture (runtime):**
+- The output that shows the symptom or a clue toward it
+- If existing tests fail or behave unexpectedly — that's evidence
+- If the server crashes with a backtrace — that's evidence
+- If logs show anomalous behavior during the scenario — that's evidence
+- If the race detector fires on existing tests — that's evidence
+- If a thread/goroutine dump shows suspicious blocking — that's evidence
+- Even negative results can be evidence (e.g., "existing test passes but under `-race` it panics")
 
-NOT:
-- `./bench.sh reproduce ...`
-- `cd /home/user/projs/ddbench/... && ./bench.sh ...`
-- Any host path or bench.sh command
+**What to capture (code investigation):**
+- After runtime investigation, read the source code in the area the symptom points to
+- Use `grep -n`, `sed -n`, `cat -n` to capture relevant code sections with line numbers
+- Note suspicious patterns: missing error checks, unconditional overwrites, unsynchronized access, missing branches
+- Frame observations as hypotheses, not conclusions
+- A case can have BOTH runtime evidence files AND a code investigation file
 
 ### Step 5: Write evidence files
 
@@ -166,42 +291,64 @@ Create `cases/<case-name>/evidence/` and write files using ONLY content from the
 
 The file must follow the format in the "Evidence File Format" section above. Every line in the `## Output` section must come from the captured raw output. You may trim for length but never add content.
 
+The provenance line should read like:
+- `Obtained by running go test -race -count=5 -timeout 120s ./server/storage/mvcc/`
+- `Obtained by running gdb --batch -ex run -ex bt --args ./build/dragonfly --port 6379`
+- `Obtained by running redis-cli -p 6379 EVALSHA "" 0`
+- `Obtained by running mvn -pl bookkeeper-server test -Dtest="ExistingTestClass"`
+
+NOT:
+- `./bench.sh reproduce ...`
+- `bash /bench/reproduce.sh`
+- Any host path or bench.sh command
+- Any command referencing an injected test file
+
 **Verification gate:** After writing, re-read the evidence file. Every non-trivial line under `## Output` must appear in `/tmp/evidence-raw-*.txt`. If any line doesn't, the file is fabricated — delete it.
 
 ### Step 6: Anti-leak checks
 
 Before finalizing, verify evidence does not leak the fix:
 
-1. **Native output test**: Every line under `## Output` must be something the tool actually produced. No annotations, no decoded constants, no source-derived commentary.
+1. **Agent-reproducibility check**: Could an agent inside the container at `/workspace/worktrees/<case>/` (with only the buggy commit source, no injected files) actually run this exact command and get this output? If no, DELETE the evidence file.
 
-2. **Fix-from-evidence test**: Could someone read ONLY this file and know exactly which function/line to fix? If yes, it's too specific.
+2. **Injected-test check**: Is this output from a test/file that was injected by reproduce.sh? If yes, DELETE the evidence file.
 
-3. **Curation test**: Does it look cherry-picked by someone who knows the answer? Include realistic context (multiple threads in a dump, surrounding log lines), not just the smoking gun.
+3. **Native output test**: Every line under `## Output` must be something the tool actually produced. No annotations, no decoded constants, no source-derived commentary.
 
-4. **Term check**: Evidence must NOT contain function names that are the direct fix target, variable names from the fix diff, or internal constant names decoded from source.
+4. **Fix-from-evidence test**: Could someone read ONLY this file and know exactly which function/line to fix? If yes, it's too specific. For code investigation, the hypothesis must leave work for the reader — they should know *where* to look but not *what* to change.
 
-5. **Grep test**: Could someone grep the codebase for terms in this evidence and land directly on the buggy function? If so, redact unique identifiers.
+5. **Curation test**: Does it look cherry-picked by someone who knows the answer? For runtime evidence, include realistic context (multiple threads in a dump, surrounding log lines), not just the smoking gun. For code investigation, show enough surrounding code that the suspicious part isn't isolated artificially.
+
+6. **Term check**: Evidence must NOT contain variable names from the fix diff or internal constant names decoded from source. For code investigation, function names in the problem area are acceptable (the developer found them by searching), but the hypothesis must not name the exact missing call or flag that constitutes the fix.
+
+7. **Grep test**: Could someone grep the codebase for terms in this evidence and land directly on the buggy function? For runtime evidence, redact unique identifiers. For code investigation, pointing at the right area is expected — but the hypothesis must not narrow it to the exact line.
 
 ### Step 7: Report
 
 ```
 === Evidence: <case-name> ===
+Investigation approach: <what you did as a developer>
 Files created:
   - evidence/<filename>.md — <tool used>
 Leak checks: PASSED
+Agent-reproducibility: VERIFIED
 ```
 
 ---
 
-## Placeholders (when reproduction unavailable)
+## Placeholders (when investigation yields nothing)
+
+Use placeholders only when genuine investigation inside the container produced no useful evidence — NOT as a shortcut for skipping investigation.
 
 ```markdown
 # <Evidence Type>
 
-## Status: NOT YET CAPTURED — requires reproduction
+## Status: NOT YET CAPTURED — requires investigation
 
-**Tool:** <exact command to run>
+**Attempted:** <what you tried inside the container>
+**Tool:** <exact command to run for future attempt>
 **Expected output type:** <e.g., "ASAN heap-buffer-overflow report", "goroutine dump">
+**Why not captured:** <e.g., "Bug requires precise interleaving that could not be triggered manually; existing tests all pass cleanly">
 ```
 
 ---
@@ -210,12 +357,12 @@ Leak checks: PASSED
 
 1. List all case directories
 2. Skip cases that already have evidence (unless `--refresh`)
-3. Process remaining cases sequentially
+3. For each case, run the full procedure including investigation inside the container
 4. Print summary:
 
 ```
 === Batch Evidence Report ===
-Total: 62 | Already had evidence: N | Generated: M | Errors: K
+Total: 62 | Already had evidence: N | Generated: M | Placeholders: P | Errors: K
 ```
 
 ---
@@ -236,24 +383,29 @@ Total: 62 | Already had evidence: N | Generated: M | Errors: K
 | Hang/timeout | `hang-timeout.md` |
 | Metrics | `metrics.md` |
 | CT failure (Erlang) | `ct-failure.md` |
+| Code investigation | `code-investigation.md` |
 
 ---
 
 ## Common Mistakes to Avoid
 
-1. **Writing analysis**: Your job is to paste raw output. Not to explain it. Not one paragraph. Not one sentence of interpretation beyond the provenance line. If you catch yourself writing "this shows that..." or "the deadlock involves..." — stop and delete it.
+1. **Running `reproduce.sh` as evidence source**: This is the #1 mistake. `reproduce.sh` often injects test files from the fix commit that the agent doesn't have. NEVER run `reproduce.sh` to generate evidence. Always work from clean buggy commit state via `bench.sh shell`.
 
-2. **Using `bench.sh` or host commands in evidence**: The agent works inside a container with only workspace code. Evidence provenance must show commands a developer runs inside the workspace (`go test`, `gdb`, `mvn test`, etc.) — never `bench.sh`, never host paths.
+2. **Using output from injected tests**: If `reproduce.sh` injects `TestFoo.java` or `test_bar_test.go`, the agent doesn't have that file. Evidence from running that test is invalid. Always check what exists at the buggy commit first.
 
-3. **Source-code analysis as evidence**: `grep` over source, decoded flag constants, protocol breakdowns, code snippets — none of these are tool output. They are source analysis (Tier 3). Delete them.
+3. **Analysis in runtime evidence files**: Runtime evidence files must contain only raw tool output. No interpretation, no "this shows that..." — just the provenance line and the output. Analysis belongs in code investigation files only, and even there it must be framed as a hypothesis, not a conclusion.
 
-4. **Prose summaries instead of output**: "A GDB backtrace reveals the deadlock: one thread holds X while another waits on Y" is analysis. The actual GDB backtrace output is evidence.
+4. **Using `bench.sh` or host commands in evidence**: The agent works inside a container with only workspace code. Evidence provenance must show commands a developer runs inside the workspace (`go test`, `gdb`, `mvn test`, `grep -n`, etc.) — never `bench.sh`, never host paths.
 
-5. **Numbered multi-file sequences**: Don't create `01_foo.md`, `02_bar.md`, `03_analysis.md`. Create 1-3 files named by evidence type. If file 03 is "protocol flag inspection" or "recovery phase timeline", it's analysis — don't create it.
+5. **Code investigation that names the root cause**: Code investigation evidence must be one step removed from the fix. "This function doesn't seem to check error returns" is a good hypothesis. "The bug is that line 234 is missing a call to releaseFoo()" is a diagnosis — too specific. If the hypothesis would let someone write the fix without reading any more code, it's too direct.
 
-6. **Modifying symptom.md**: Never touch symptom.md. Evidence and symptoms are completely separate artifacts. Evidence is injected as system prompt at benchmark time — it is never referenced from symptom files. Do not add "Additional evidence" pointers or any other cross-references.
+6. **Hand-written code snippets in code investigation**: The "What was found" section must contain actual command output (`grep -n`, `sed -n`, `cat -n`) run inside the container, not hand-copied or paraphrased code. This ensures the evidence is reproducible by the agent.
 
-7. **Language mismatch**: Use the right tool for the language:
+7. **Modifying symptom.md**: Never touch symptom.md. Evidence and symptoms are completely separate artifacts. Evidence is injected as system prompt at benchmark time — it is never referenced from symptom files.
+
+8. **Skipping investigation for placeholders**: Placeholders are a last resort after genuine debugging inside the container. Don't skip investigation because it seems hard — a developer would try things. Even partial clues (a related test that's flaky under `-race`, suspicious log output during the scenario) are valuable.
+
+9. **Language mismatch**: Use the right tool for the language:
    - **C++**: GDB, ASAN/TSAN, Valgrind
    - **Go**: goroutine dumps (SIGQUIT), `-race`, pprof, delve
    - **Java/Scala**: jstack, test runner output
