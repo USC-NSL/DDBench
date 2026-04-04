@@ -420,7 +420,7 @@ addon_entrypoint() {
     # Create non-root user and switch to it (agents like Claude Code refuse root)
     setup_lines+='useradd -m -s /bin/bash bench 2>/dev/null || true'$'\n'
     setup_lines+='chown -R bench:bench /workspace/worktrees/"$CASE_NAME"'$'\n'
-    setup_lines+='[ -d /output ] && chown -R bench:bench /output 2>/dev/null || true'$'\n'
+    setup_lines+='[ -d /output ] && chmod -R a+rwX /output 2>/dev/null || true'$'\n'
     setup_lines+='chmod -R a+rX /opt/tools 2>/dev/null || true'$'\n'
     # Copy agent configs to bench user home
     setup_lines+='for d in .claude .aider; do'$'\n'
