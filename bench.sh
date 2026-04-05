@@ -364,7 +364,7 @@ build_addon_args() {
 
     # Forward common API keys if set on host
     for key in \
-        ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY \
+        ANTHROPIC_AUTH_TOKEN OPENAI_API_KEY GEMINI_API_KEY \
         DEEPSEEK_API_KEY TOGETHER_API_KEY FIREWORKS_API_KEY OPENROUTER_API_KEY \
         MSWEA_MODEL_NAME MSWEA_MINI_CONFIG_PATH MSWEA_CONFIGURED; do
         [ -n "${!key:-}" ] && RUN_ARGS+=("-e" "$key")
