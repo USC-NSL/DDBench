@@ -111,23 +111,61 @@ Include enough surrounding context that it doesn't look cherry-picked.>
 <1-2 sentences: what looks suspicious based on what was found. Frame as
 an observation or question, NOT as a diagnosis or fix.
 
-GOOD: "The sync loop appears to advance the watcher's revision even when
-the channel send fails — this could mean notifications are silently dropped
-under backpressure."
+GOOD: "The revision-advance logic in the sync loop and the channel
+send seem tightly coupled — worth checking whether all send outcomes
+are handled consistently."
 
-BAD: "The fix is to check the return value of the channel send and only
-advance minRev on success."
+GOOD: "The handle lifecycle in getHandle() under concurrent callers
+looks like it could produce duplicates — the interplay between the
+cache lookup and the creation path may not be fully synchronized."
+
+GOOD: "The flag construction in the recovery-read path differs from
+other read operations — the flag set may be incomplete for the
+fencing protocol."
+
+BAD: "The sync loop advances minRev even when the channel send fails,
+causing dropped notifications." (names exact defect mechanism)
+
+BAD: "The fix is to check the return value of the channel send and
+only advance minRev on success." (prescribes the fix)
 
 BAD: "The bug is in syncWatchers() at line 234 where minRev is set
-unconditionally."
+unconditionally." (pinpoints exact line and defect)
+
+BAD: "putIfAbsent return value is ignored, so the method uses a
+locally created handle instead of the existing one." (names exact
+root cause — someone can write the fix from this)
+
+BAD: "Path A sets FLAG_X but path B does not." (contrast with
+correct code makes the fix trivially derivable)
 
 The hypothesis should make someone say "hmm, that's worth investigating
-further" — not "ah, I know exactly what to fix.">
+further" — not "ah, I know exactly what to fix." A good test: could
+someone write the fix from ONLY the hypothesis, without reading any
+source code? If yes, it's too specific.
+
+Note: identifying that an ordering or interaction COULD cause a problem
+(deadlock, performance drop, data loss) is acceptable — as long as the
+evidence does NOT reveal the exact correct ordering or the exact reason
+WHY the current ordering is wrong. The reader still has to reason about
+which reordering is correct and why. For example:
+
+GOOD: "The three disk-write operations in this handler have ordering
+dependencies that could matter during crash recovery."
+(reader must figure out which order is safe and why)
+
+BAD: "Step A must happen before Step B because otherwise a crash
+between them leaves the epoch updated but transactions uncommitted."
+(reveals the exact crash window and the correct ordering)>
 ```
 
 **Key rules for code investigation:**
 - The `What was found` section must contain real command output (grep -n, sed -n, cat showing line numbers) run inside the container. Not hand-written code snippets.
-- The hypothesis must be **one step removed from the root cause**. It identifies a suspicious area or pattern, not the exact bug. Think "this looks wrong" not "this is the bug."
+- The hypothesis must be **one step removed from the root cause**. It identifies a suspicious area or pattern, not the exact bug. Think "this area looks relevant" not "this is the bug." Name the *subsystem* or *interaction*, not the *defect*.
+- **NEVER contrast buggy code with correct code.** Do not show "path A does X but path B doesn't" — this makes the fix trivially derivable. Show only the code in the area the symptom points to and let the reader discover what's missing or wrong by reading the surrounding codebase themselves.
+- **NEVER name the exact missing operation, flag, call, or field** in the hypothesis. Instead of "does not call `foo()` after `bar()`", write "the lifecycle of X in this function may be incomplete."
+- **NEVER trace the full causal chain** from trigger to symptom. Stop at "this code is in the path of the symptom" — don't explain exactly how it produces the bug step-by-step.
+- Include enough surrounding context in "What was found" that it doesn't look cherry-picked. Show 20-40 lines, not just the 3 lines around the defect.
 - A case can have both runtime evidence AND code investigation. Runtime is always preferred; code investigation supplements it or covers cases where runtime evidence is hard to obtain.
 - Code investigation is especially useful for logic bugs, protocol errors, and ordering issues that are visible in source but hard to trigger at runtime without injected tests.
 
@@ -135,7 +173,7 @@ further" — not "ah, I know exactly what to fix.">
 
 ## Procedure
 
-### Step 1: Read case materials
+### Step 1: Read case materials (symptom-only — NO solution)
 
 For the target case, read these files in parallel:
 
@@ -144,8 +182,9 @@ cases/<case-name>/symptom.md
 cases/<case-name>/reproduce.md
 cases/<case-name>/verification.md
 cases/<case-name>/case.yaml
-cases-solution/<case-name>/solution.md
 ```
+
+**DO NOT read `cases-solution/<case-name>/solution.md` at this stage.** The solution is read ONLY in Step 6 (anti-leak checks) AFTER evidence is already drafted. Reading the solution before investigating contaminates your reasoning — you will unconsciously reverse-engineer "evidence" from the known answer, producing files that name the exact root cause instead of pointing at the problem area.
 
 From these, understand:
 - **What the developer observes** (symptom.md) — this is your starting point
@@ -305,7 +344,9 @@ NOT:
 
 **Verification gate:** After writing, re-read the evidence file. Every non-trivial line under `## Output` must appear in `/tmp/evidence-raw-*.txt`. If any line doesn't, the file is fabricated — delete it.
 
-### Step 6: Anti-leak checks
+### Step 6: Anti-leak checks (NOW read solution.md)
+
+**This is the ONLY step where you read the solution.** Read `cases-solution/<case-name>/solution.md` now, then compare it against your drafted evidence to catch leaks. If you read the solution earlier, your evidence is likely contaminated — discard and re-investigate from the symptom.
 
 Before finalizing, verify evidence does not leak the fix:
 
@@ -315,13 +356,23 @@ Before finalizing, verify evidence does not leak the fix:
 
 3. **Native output test**: Every line under `## Output` must be something the tool actually produced. No annotations, no decoded constants, no source-derived commentary.
 
-4. **Fix-from-evidence test**: Could someone read ONLY this file and know exactly which function/line to fix? If yes, it's too specific. For code investigation, the hypothesis must leave work for the reader — they should know *where* to look but not *what* to change.
+4. **Fix-from-evidence test (CRITICAL)**: Could someone read ONLY this evidence file and know exactly which function/line to fix and what to change? If yes, the evidence is too specific — it has become a diagnosis, not a clue. Rewrite or DELETE.
+
+   Common leak patterns to catch:
+   - **Naming the exact defect**: "does NOT set `FLAG_X`", "return value is ignored", "field is never reset" → these are root cause statements, not hypotheses
+   - **Contrasting buggy code with correct code**: showing "path A does X but path B doesn't" makes the fix trivially derivable (add X to path A) → show only the buggy path; let the reader discover the contrast
+   - **Full causal chains**: explaining step-by-step how the bug manifests from trigger to symptom → stop at "this area is relevant to the symptom", don't explain exactly how it produces the bug
+   - **Hypothesis that names the missing operation**: "this function doesn't call `foo()` after doing `bar()`" → rephrase as "the lifecycle of X in this function seems incomplete"
+
+   For code investigation, apply this rewrite test: remove the hypothesis entirely and read only the "What was found" section. If the code snippets alone (without the hypothesis) already make the fix obvious, the evidence is cherry-picked — include more surrounding context or show a broader area.
 
 5. **Curation test**: Does it look cherry-picked by someone who knows the answer? For runtime evidence, include realistic context (multiple threads in a dump, surrounding log lines), not just the smoking gun. For code investigation, show enough surrounding code that the suspicious part isn't isolated artificially.
 
 6. **Term check**: Evidence must NOT contain variable names from the fix diff or internal constant names decoded from source. For code investigation, function names in the problem area are acceptable (the developer found them by searching), but the hypothesis must not name the exact missing call or flag that constitutes the fix.
 
 7. **Grep test**: Could someone grep the codebase for terms in this evidence and land directly on the buggy function? For runtime evidence, redact unique identifiers. For code investigation, pointing at the right area is expected — but the hypothesis must not narrow it to the exact line.
+
+8. **Solution comparison test**: Now that you have read solution.md, check: does your evidence file essentially restate the solution's root cause in different words? If someone who read the evidence would arrive at the same diagnosis as solution.md without further code reading, the evidence leaks. Rewrite the hypothesis to be one step more abstract — name the *area* or *pattern*, not the *defect*.
 
 ### Step 7: Report
 
@@ -397,7 +448,13 @@ Total: 62 | Already had evidence: N | Generated: M | Placeholders: P | Errors: K
 
 4. **Using `bench.sh` or host commands in evidence**: The agent works inside a container with only workspace code. Evidence provenance must show commands a developer runs inside the workspace (`go test`, `gdb`, `mvn test`, `grep -n`, etc.) — never `bench.sh`, never host paths.
 
-5. **Code investigation that names the root cause**: Code investigation evidence must be one step removed from the fix. "This function doesn't seem to check error returns" is a good hypothesis. "The bug is that line 234 is missing a call to releaseFoo()" is a diagnosis — too specific. If the hypothesis would let someone write the fix without reading any more code, it's too direct.
+5. **Code investigation that names the root cause**: This is the #2 most common mistake (after #1). 70% of code investigation files in audits were found to leak the root cause. The leaks take subtle forms:
+   - Naming the exact defect: "does NOT set `FLAG_X`", "return value is ignored", "`field` is never reset"
+   - Contrasting buggy path with correct path: "path A calls `foo()` but path B doesn't"
+   - Full causal chain: explaining step-by-step how the code leads from trigger to symptom
+   - Hypothesis that prescribes the fix: "this function doesn't call `cleanup()` after `init()`"
+   
+   Instead, name the *area* and *pattern*: "The flag construction in recovery reads differs from other read operations" or "The handle lifecycle under concurrent access may not be fully synchronized." If the hypothesis would let someone write the fix without reading more code, it's a diagnosis, not a clue — rewrite it.
 
 6. **Hand-written code snippets in code investigation**: The "What was found" section must contain actual command output (`grep -n`, `sed -n`, `cat -n`) run inside the container, not hand-copied or paraphrased code. This ensures the evidence is reproducible by the agent.
 
