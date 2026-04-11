@@ -364,7 +364,7 @@ build_addon_args() {
 
     # Forward common API keys if set on host
     for key in \
-        ANTHROPIC_AUTH_TOKEN OPENAI_API_KEY GEMINI_API_KEY \
+        ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL OPENAI_API_KEY GEMINI_API_KEY \
         DEEPSEEK_API_KEY TOGETHER_API_KEY FIREWORKS_API_KEY OPENROUTER_API_KEY \
         MSWEA_MODEL_NAME MSWEA_MINI_CONFIG_PATH MSWEA_CONFIGURED; do
         [ -n "${!key:-}" ] && RUN_ARGS+=("-e" "$key")
@@ -428,8 +428,8 @@ addon_entrypoint() {
     setup_lines+='[ -d /output ] && chmod -R a+rwX /output 2>/dev/null || true'$'\n'
     setup_lines+='chmod -R a+rX /opt/tools 2>/dev/null || true'$'\n'
     # Copy agent configs to bench user home
-    setup_lines+='for d in .claude .aider; do'$'\n'
-    setup_lines+='  if [ -d "/root/$d" ]; then cp -a "/root/$d" "/home/bench/$d" 2>/dev/null; chown -R bench:bench "/home/bench/$d" 2>/dev/null; fi'$'\n'
+    setup_lines+='for d in .claude .aider .config/mini-swe-agent; do'$'\n'
+    setup_lines+='  if [ -d "/root/$d" ]; then mkdir -p "/home/bench/$d" && cp -a "/root/$d/." "/home/bench/$d/" 2>/dev/null; chown -R bench:bench "/home/bench/$d" 2>/dev/null; fi'$'\n'
     setup_lines+='done'$'\n'
     # Symlink workspace into bench home
     setup_lines+='mkdir -p /home/bench/bug-bench && ln -sfn /workspace/worktrees/"$CASE_NAME" /home/bench/bug-bench/"$CASE_NAME" 2>/dev/null || true'$'\n'
