@@ -48,12 +48,3 @@ func (js *jetStream) releaseStreamResources(cfg *StreamConfig) {
 	...
 }
 ```
-
-The key issue: `resetClusteredState` sets `shouldDelete = (err == errFirstSequenceMismatch)`. For most reset-triggering errors (e.g., sequence mismatches from bad snapshots, catchup failures), `shouldDelete` is `false`. This calls `mset.stop(false, false)`.
-
-In `stop()`, `releaseStreamResources` is only called when `deleteFlag` is true. When `deleteFlag` is false, the stream is stopped (store.Stop()) but the reserved resource counters (`js.storeReserved` / `js.memReserved`) are NOT decremented.
-
-After `stop()`, `resetClusteredState` proceeds to re-add the stream assignment, which will reserve resources again — adding `MaxBytes` to the reserved counter a second time.
-
-## Developer hypothesis
-The `releaseStreamResources` call site in `stop()` and the `resetClusteredState` path that calls `stop()` and then re-adds the stream assignment.

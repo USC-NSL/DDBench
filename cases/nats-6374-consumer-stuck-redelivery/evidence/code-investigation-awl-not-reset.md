@@ -35,10 +35,3 @@ $ sed -n "1516,1545p" server/consumer.go   # setLeader(false) path
 		o.unsubscribe(o.fcSub)
 		o.ackSub, o.reqSub, o.fcSub = nil, nil, nil
 ```
-
-In the `setLeader(false)` path, `o.pending` is set to nil and subscriptions are cleaned up, but `o.awl` is never reset to 0.
-
-In the pending-check loop (`checkPending`, line 5085), when `len(o.pending) > 1024`, the loop checks `atomic.LoadInt64(&o.awl) > 0` and if true, resets the timer and returns early — effectively stalling all redelivery processing.
-
-## Developer hypothesis
-The `setLeader(false)` cleanup path and the per-leader state it resets, alongside the `o.awl` counter's role in `checkPending`.

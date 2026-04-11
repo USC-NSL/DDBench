@@ -60,9 +60,3 @@ The three message-loading paths in order of performance (fastest to slowest):
 2. **Single filter** (`filters == nil && len(subjf) > 0`): `LoadNextMsg(filter, wc, ...)` — targeted lookup
 3. **Multi filter** (`filters != nil`): `LoadNextMsgMulti(filters, ...)` — sublist intersection, most overhead
 
-The issue: `o.filters` is set whenever `len(o.cfg.FilterSubjects) > 0` (line 1224), even for a single entry. The code does NOT check whether the filter actually narrows the result set. So a consumer with `FilterSubjects: ["events.>"]` on a stream with subject `"events.>"` creates `o.filters`, forcing every message through `LoadNextMsgMulti` — the slowest path.
-
-Meanwhile, `isFiltered()` correctly detects that the filter matches all stream subjects and returns `false`. But this function is used elsewhere (e.g., `needAck`, `streamNumPending`) and NOT consulted in `getNextMsg` for path selection. The `getNextMsg` function only checks `filters != nil`.
-
-## Developer hypothesis
-The `o.filters` initialization in consumer creation and the message-loading path selection in `getNextMsg`, relative to where `isFiltered()` is consulted.

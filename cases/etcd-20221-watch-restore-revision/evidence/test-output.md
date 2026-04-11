@@ -6,7 +6,9 @@ Obtained by running `cd server && go test -v -timeout 60s -run "TestWatch.*Resto
 
 ```
 === RUN   TestWatchRestore
---- PASS: TestWatchRestore (0.11s)
+=== RUN   TestWatchRestore/Normal
+=== RUN   TestWatchRestore/RunSyncWatchLoopBeforeRestore
+--- PASS: TestWatchRestore (2.40s)
 === RUN   TestWatchRestoreSyncedWatcher
 --- PASS: TestWatchRestoreSyncedWatcher (2.01s)
 PASS

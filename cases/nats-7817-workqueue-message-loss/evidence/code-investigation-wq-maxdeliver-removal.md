@@ -46,15 +46,3 @@ func (o *consumer) hasMaxDeliveries(seq uint64) bool {
 			o.rdc = make(map[uint64]uint64)
 		}
 ```
-
-The chain of events for message loss:
-
-1. Consumer delivers a message up to `max-deliver` times without getting an ack
-2. `hasMaxDeliveries` removes the seq from `o.pending` (the message was delivered but never acked, it should stay in the stream)
-3. `checkStateForInterestStream` runs periodically. It iterates sequences from first to delivered floor
-4. For the max-deliver-exceeded seq: it's <= dflr and NOT in `state.Pending` (was removed in step 2), so `mset.ackMsg(o, seq)` is called
-5. In `ackMsg` for WorkQueue: `shouldRemove = mset.directs <= 0 || mset.noInterest(seq, o)`. For standard WQ streams, `mset.directs <= 0` is true, so `shouldRemove = true` unconditionally — the `noInterest` check (which would detect the `rdc` tracking) is short-circuited
-6. The message is removed from the stream, even though it was never successfully acked
-
-## Developer hypothesis
-The interaction between `hasMaxDeliveries`, `checkStateForInterestStream`, and the WorkQueue retention path in `ackMsg` for sequences that exceeded max delivery.
