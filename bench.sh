@@ -138,6 +138,14 @@ ensure_project_image() {
         ${IMAGE_PREFIX}/base-go)  ensure_base_image "base-go" ;;
     esac
 
+    # Also build base images referenced via COPY --from=
+    if grep -q "COPY --from=${IMAGE_PREFIX}/base-go" "$dockerfile"; then
+        ensure_base_image "base-go"
+    fi
+    if grep -q "COPY --from=${IMAGE_PREFIX}/base-cpp" "$dockerfile"; then
+        ensure_base_image "base-cpp"
+    fi
+
     if ! docker image inspect "$tag" &>/dev/null; then
         echo "Building project image: $tag ..."
         docker build -t "$tag" -f "$dockerfile" "$REPO_ROOT/docker"
