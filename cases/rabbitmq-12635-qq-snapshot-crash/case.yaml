@@ -8,4 +8,4 @@ build:
   binary: sbin/rabbitmq-server
 docker:
   caps: []
-  min_cpus: 2
+  num_cpus: 10

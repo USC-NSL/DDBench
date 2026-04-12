@@ -243,11 +243,11 @@ build_run_args() {
         [ -n "$cap" ] && RUN_ARGS+=("--cap-add=$cap")
     done
 
-    # Min CPUs
-    local min_cpus
-    min_cpus=$(yaml_nested "$yaml" "docker" "min_cpus")
-    if [ -n "$min_cpus" ] && [ "$min_cpus" -gt 1 ] 2>/dev/null; then
-        RUN_ARGS+=("--cpus=$min_cpus")
+    # CPU limit
+    local num_cpus
+    num_cpus=$(yaml_nested "$yaml" "docker" "num_cpus")
+    if [ -n "$num_cpus" ] && [ "$num_cpus" -ge 1 ] 2>/dev/null; then
+        RUN_ARGS+=("--cpus=$num_cpus")
     fi
 
     # Disable seccomp filtering (needed for io_uring syscalls)
