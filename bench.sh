@@ -16,6 +16,10 @@ IMAGE_PREFIX="bug-bench"
 # Global array populated by build_run_args, consumed by Docker commands.
 RUN_ARGS=()
 
+# Global array of -e flags for API keys, populated by build_addon_args,
+# used by both docker run (via RUN_ARGS) and docker exec calls.
+API_KEY_ENV_ARGS=()
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 die() { echo "ERROR: $*" >&2; exit 1; }
@@ -137,6 +141,14 @@ ensure_project_image() {
         ${IMAGE_PREFIX}/base-cpp) ensure_base_image "base-cpp" ;;
         ${IMAGE_PREFIX}/base-go)  ensure_base_image "base-go" ;;
     esac
+
+    # Also build base images referenced via COPY --from=
+    if grep -q "COPY --from=${IMAGE_PREFIX}/base-go" "$dockerfile"; then
+        ensure_base_image "base-go"
+    fi
+    if grep -q "COPY --from=${IMAGE_PREFIX}/base-cpp" "$dockerfile"; then
+        ensure_base_image "base-cpp"
+    fi
 
     if ! docker image inspect "$tag" &>/dev/null; then
         echo "Building project image: $tag ..."
@@ -362,13 +374,17 @@ build_addon_args() {
     # Tool directory env
     RUN_ARGS+=("-e" "ADDON_TOOL_DIR=/opt/tools")
 
-    # Forward common API keys if set on host
+    # Forward common API keys if set on host.
+    # Build API_KEY_ENV_ARGS so docker exec calls can reuse them (docker exec
+    # does NOT inherit env vars set via docker run -e).
+    API_KEY_ENV_ARGS=()
     for key in \
         ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL OPENAI_API_KEY GEMINI_API_KEY \
         DEEPSEEK_API_KEY TOGETHER_API_KEY FIREWORKS_API_KEY OPENROUTER_API_KEY \
         MSWEA_MODEL_NAME MSWEA_MINI_CONFIG_PATH MSWEA_CONFIGURED; do
-        [ -n "${!key:-}" ] && RUN_ARGS+=("-e" "$key")
+        [ -n "${!key:-}" ] && API_KEY_ENV_ARGS+=("-e" "${key}=${!key}")
     done
+    RUN_ARGS+=("${API_KEY_ENV_ARGS[@]+"${API_KEY_ENV_ARGS[@]}"}")
 
     # Mount agent config directories if they exist on host
     if [ -d "$HOME/.claude" ]; then
@@ -721,7 +737,7 @@ cmd_shell() {
     if [ ${#ADDON_NAMES[@]} -gt 0 ]; then
         local entrypoint
         entrypoint=$(addon_entrypoint "true")
-        docker exec "$cname" bash -c "$entrypoint"
+        docker exec ${API_KEY_ENV_ARGS[@]+"${API_KEY_ENV_ARGS[@]}"} "$cname" bash -c "$entrypoint"
     fi
 
     # Exec into the container
@@ -827,6 +843,7 @@ cmd_agent() {
             docker exec -i $tty_flag -w "$wt_path" \
                 -e "CASE_NAME=${case_name}" \
                 -e "PYTHONUNBUFFERED=1" \
+                ${API_KEY_ENV_ARGS[@]+"${API_KEY_ENV_ARGS[@]}"} \
                 "$cname" \
                 bash -c "export PATH=/opt/tools/bin:\$PATH && exec $final_cmd"
             return
@@ -882,7 +899,7 @@ cmd_agent() {
     # Run addon setup inside the container (as root)
     local entrypoint
     entrypoint=$(addon_entrypoint "true")
-    docker exec "$cname" bash -c "$entrypoint"
+    docker exec ${API_KEY_ENV_ARGS[@]+"${API_KEY_ENV_ARGS[@]}"} "$cname" bash -c "$entrypoint"
 
     # Launch agent
     # Only allocate a TTY (-t) if stdout is a real terminal.
@@ -892,6 +909,7 @@ cmd_agent() {
     docker exec -i $tty_flag -w "$wt_path" \
         -e "CASE_NAME=${case_name}" \
         -e "PYTHONUNBUFFERED=1" \
+        ${API_KEY_ENV_ARGS[@]+"${API_KEY_ENV_ARGS[@]}"} \
         "$cname" \
         bash -c "export PATH=/opt/tools/bin:\$PATH && exec $final_cmd"
 }
