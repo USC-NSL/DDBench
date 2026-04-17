@@ -44,20 +44,19 @@ echo "Adding PWCDoesntHideLiteral test..."
 cat >> "$TEST_FILE" << 'TESTEOF'
 
 func TestPWCDoesntHideLiteral(t *testing.T) {
-	sl := NewSublistWithCache()
-	sub1 := newSub("one.*.six")
-	sl.Insert(sub1)
-	sub2 := newSub("one.two.seven")
-	sl.Insert(sub2)
+	st := stree.NewSubjectTree[struct{}]()
+	st.Insert([]byte("one.two.six"), struct{}{})
+	st.Insert([]byte("one.two.seven"), struct{}{})
 
-	// Build stree from subjects
-	stree := NewSubjectTree[int]()
-	stree.Insert([]byte("one.two.six"), 1)
-	stree.Insert([]byte("one.two.seven"), 2)
-
-	r := sl.Intersect(stree)
-	if len(r) != 2 {
-		t.Fatalf("Expected 2 results, got %d (PWC hides literal)", len(r))
+	got := map[string]int{}
+	sl := NewSublist[int]()
+	require_NoError(t, sl.Insert("one.*.six", 11))
+	require_NoError(t, sl.Insert("one.two.seven", 22))
+	IntersectStree(st, sl, func(subj []byte, entry *struct{}) {
+		got[string(subj)]++
+	})
+	if len(got) != 2 {
+		t.Fatalf("Expected 2 results, got %d (PWC hides literal)", len(got))
 	}
 }
 TESTEOF
