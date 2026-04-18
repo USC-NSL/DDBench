@@ -255,11 +255,11 @@ build_run_args() {
         [ -n "$cap" ] && RUN_ARGS+=("--cap-add=$cap")
     done
 
-    # Min CPUs
-    local min_cpus
-    min_cpus=$(yaml_nested "$yaml" "docker" "min_cpus")
-    if [ -n "$min_cpus" ] && [ "$min_cpus" -gt 1 ] 2>/dev/null; then
-        RUN_ARGS+=("--cpus=$min_cpus")
+    # CPU limit
+    local num_cpus
+    num_cpus=$(yaml_nested "$yaml" "docker" "num_cpus")
+    if [ -n "$num_cpus" ] && [ "$num_cpus" -ge 1 ] 2>/dev/null; then
+        RUN_ARGS+=("--cpus=$num_cpus")
     fi
 
     # Disable seccomp filtering (needed for io_uring syscalls)
@@ -540,8 +540,14 @@ cmd_setup() {
                     REBUILD="ninja -C build/dev"
                 elif [ -d build ] && [ -f build/Makefile ]; then
                     # Make build (Kvrocks, RocksDB)
-                    TARGET=$(echo "$BUILD_CMD" | grep -oP "make\s+.*?(?=\s*$)" | sed "s/make//" | xargs || echo "")
-                    REBUILD="cd build && make -j\$(nproc) ${TARGET:-}"
+                    # Extract cmake invocation if present (e.g. "cmake .. -DCMAKE_BUILD_TYPE=Debug")
+                    CMAKE_PART=$(echo "$BUILD_CMD" | grep -oP "\bcmake\b\s+[^&]+" | xargs || echo "")
+                    TARGET=$(echo "$BUILD_CMD" | grep -oP "\bmake\b\s+.*?(?=\s*$)" | sed "s/\bmake\b//" | xargs || echo "")
+                    if [ -n "$CMAKE_PART" ]; then
+                        REBUILD="cd build && ${CMAKE_PART} && make -j\$(nproc) ${TARGET:-}"
+                    else
+                        REBUILD="cd build && make -j\$(nproc) ${TARGET:-}"
+                    fi
                 elif echo "$BUILD_CMD" | grep -q "go build"; then
                     # Go build (NATS)
                     REBUILD="$BUILD_CMD"

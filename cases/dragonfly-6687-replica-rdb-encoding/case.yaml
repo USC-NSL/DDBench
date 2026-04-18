@@ -9,5 +9,5 @@ build:
   binary: build-opt/dragonfly
 docker:
   caps: []
-  min_cpus: 1
+  num_cpus: 10
   seccomp_unconfined: true

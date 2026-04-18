@@ -8,4 +8,4 @@ build:
   binary: bookkeeper-server/target/bookkeeper-server-4.14.0-SNAPSHOT.jar
 docker:
   caps: []
-  min_cpus: 2
+  num_cpus: 10

@@ -9,4 +9,4 @@ build:
   binary: build/librocksdb.a
 docker:
   caps: []
-  min_cpus: 1
+  num_cpus: 10

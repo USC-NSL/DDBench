@@ -8,4 +8,4 @@ build:
   binary: build-dbg/dragonfly
 docker:
   caps: []
-  min_cpus: 1
+  num_cpus: 10

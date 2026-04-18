@@ -36,7 +36,15 @@ mkdir -p "$DATA_DIR"
 echo "=== Reproducing kvrocks-3339-xreadgroup-double ==="
 
 cleanup() {
-    [ -n "${SERVER_PID:-}" ] && kill "$SERVER_PID" 2>/dev/null && wait "$SERVER_PID" 2>/dev/null
+    if [ -n "${SERVER_PID:-}" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
+        kill "$SERVER_PID" 2>/dev/null
+        for _ in $(seq 1 20); do
+            kill -0 "$SERVER_PID" 2>/dev/null || break
+            sleep 0.25
+        done
+        kill -9 "$SERVER_PID" 2>/dev/null || true
+        wait "$SERVER_PID" 2>/dev/null || true
+    fi
     rm -rf "$DATA_DIR"
     rm -f "$DETECT_SCRIPT"
     rm -f "$WORK_DIR"/kvrocks-3339-consumer_*.out
@@ -189,10 +197,12 @@ echo "$DETECT_OUTPUT"
 echo ""
 echo "Running redis-cli consumer-based check..."
 CONSUMER_ERRORS=0
+CONSUMER_PIDS=()
 for i in $(seq 1 5); do
     (for j in $(seq 1 20); do
         redis-cli -p "$PORT" XREADGROUP GROUP mygroup "cli_consumer$i" BLOCK 1000 COUNT 1 STREAMS teststream '>' 2>&1
     done) > "$WORK_DIR/kvrocks-3339-consumer_$i.out" 2>&1 &
+    CONSUMER_PIDS+=($!)
 done
 
 sleep 0.5
@@ -202,9 +212,10 @@ for i in $(seq 1 100); do
     redis-cli -p "$PORT" XADD teststream '*' key "value_cli_$i" >/dev/null 2>&1
 done
 
-# Wait for consumers to finish
-sleep 5
-wait 2>/dev/null
+# Wait only for consumer subshells (not the kvrocks server child)
+for pid in "${CONSUMER_PIDS[@]}"; do
+    wait "$pid" 2>/dev/null || true
+done
 
 for i in $(seq 1 5); do
     if grep -qi "error\|ERR\|WRONGTYPE\|invalid" "$WORK_DIR/kvrocks-3339-consumer_$i.out" 2>/dev/null; then
@@ -213,11 +224,8 @@ for i in $(seq 1 5); do
 done
 
 # Cleanup
-kill "$SERVER_PID" 2>/dev/null
-wait "$SERVER_PID" 2>/dev/null
-rm -rf "$DATA_DIR"
-rm -f "$DETECT_SCRIPT"
-rm -f "$WORK_DIR/kvrocks-3339-consumer_*.out"
+cleanup
+trap - EXIT
 
 # Parse results from Python script
 DOUBLE_COUNT=$(echo "$DETECT_OUTPUT" | grep "DOUBLE_RESPONSE_ERRORS=" | head -1 | cut -d= -f2)
