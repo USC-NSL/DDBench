@@ -52,25 +52,48 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
 fi
 
 # Send pipeline: SET + PING + BLPOP (BLPOP on nonexistent list with 5s timeout)
-# With the bug, SET and PING replies are held back until BLPOP times out (~5s)
+# With the bug, SET and PING replies are held back until BLPOP times out (~5s).
+# We measure the arrival time of the FIRST reply bytes, not total pipeline time:
+# total time is gated by BLPOP's 5s timeout regardless of the bug, so it cannot
+# discriminate; but the arrival time of the SET reply is ~0s when fixed and ~5s
+# when buggy.
 echo "Sending pipeline: SET mykey myval | PING | BLPOP nolist 5"
-START=$(date +%s)
-printf "SET mykey myval\r\nPING\r\nBLPOP nolist 5\r\n" | redis-cli -p "$PORT" --pipe-timeout 10 >/dev/null 2>&1
-END=$(date +%s)
-ELAPSED=$((END - START))
+FIRST_REPLY_T=$(python3 - "$PORT" <<'PY'
+import socket, sys, time
+port = int(sys.argv[1])
+s = socket.socket()
+s.settimeout(10)
+s.connect(('127.0.0.1', port))
+msg = b"SET mykey myval\r\nPING\r\nBLPOP nolist 5\r\n"
+t0 = time.time()
+s.sendall(msg)
+chunk = s.recv(4096)  # blocks until the first reply bytes arrive
+t1 = time.time()
+if not chunk:
+    print("nan")
+else:
+    print(f"{t1 - t0:.3f}")
+PY
+)
 
 # Cleanup
 kill "$SERVER_PID" 2>/dev/null
 wait "$SERVER_PID" 2>/dev/null
 rm -rf "$DATA_DIR"
 
-# Report result
-if [ "$ELAPSED" -ge "4" ]; then
+# Report result: first reply should arrive in well under 2s when fixed; when
+# buggy it is held back until BLPOP's 5s timeout.
+if [ -z "$FIRST_REPLY_T" ] || [ "$FIRST_REPLY_T" = "nan" ]; then
     echo ""
-    echo "FAIL: Bug is present — pipeline replies delayed ${ELAPSED}s by BLPOP"
+    echo "FAIL: Could not read any reply from server"
+    exit 1
+fi
+if awk -v t="$FIRST_REPLY_T" 'BEGIN{ exit !(t+0 >= 2.0) }'; then
+    echo ""
+    echo "FAIL: Bug is present — first reply delayed ${FIRST_REPLY_T}s (held until BLPOP timeout)"
     exit 1
 else
     echo ""
-    echo "PASS: Bug is fixed — pipeline replies returned promptly (${ELAPSED}s)"
+    echo "PASS: Bug is fixed — first reply returned promptly (${FIRST_REPLY_T}s)"
     exit 0
 fi
