@@ -1,0 +1,1488 @@
+{
+  "summary": {
+    "n_cases": 60,
+    "total_bytes": 176631,
+    "total_files": 81,
+    "category_case_counts": {
+      "code-investigation": 33,
+      "test-output": 25,
+      "crash-output": 12,
+      "runtime-state": 3,
+      "race/sanitizer": 3,
+      "goroutine-dump": 1
+    },
+    "distributions": {
+      "n_files": {
+        "n": 60,
+        "min": 1,
+        "p25": 1,
+        "median": 1,
+        "p75": 2,
+        "max": 3,
+        "mean": 1.4
+      },
+      "total_bytes": {
+        "n": 60,
+        "min": 297,
+        "p25": 1618,
+        "median": 3056,
+        "p75": 3853,
+        "max": 10609,
+        "mean": 2943.8
+      },
+      "total_lines": {
+        "n": 60,
+        "min": 9,
+        "p25": 43,
+        "median": 61,
+        "p75": 78,
+        "max": 274,
+        "mean": 63.9
+      },
+      "total_words": {
+        "n": 60,
+        "min": 43,
+        "p25": 170,
+        "median": 247,
+        "p75": 378,
+        "max": 1079,
+        "mean": 285.5
+      },
+      "est_tokens_word_proxy": {
+        "n": 60,
+        "min": 56,
+        "p25": 221,
+        "median": 321,
+        "p75": 491,
+        "max": 1403,
+        "mean": 371.2
+      }
+    }
+  },
+  "per_case": [
+    {
+      "case": "bookkeeper-2614-recovery-fencing-gap",
+      "n_files": 1,
+      "total_bytes": 2586,
+      "total_lines": 55,
+      "total_words": 229,
+      "est_tokens_word_proxy": 298,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-recovery-read-missing-fencing.md",
+          "bytes": 2586,
+          "lines": 55,
+          "words": 229,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "bookkeeper-4701-fencing-race",
+      "n_files": 1,
+      "total_bytes": 2461,
+      "total_lines": 52,
+      "total_words": 241,
+      "est_tokens_word_proxy": 313,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-putifabsent-race.md",
+          "bytes": 2461,
+          "lines": 52,
+          "words": 241,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "consul-12295-acl-replication-stall",
+      "n_files": 2,
+      "total_bytes": 3863,
+      "total_lines": 100,
+      "total_words": 444,
+      "est_tokens_word_proxy": 577,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 2154,
+          "lines": 68,
+          "words": 278,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 1709,
+          "lines": 32,
+          "words": 166,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "consul-8377-snapshot-restore-index",
+      "n_files": 2,
+      "total_bytes": 3294,
+      "total_lines": 82,
+      "total_words": 402,
+      "est_tokens_word_proxy": 523,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 2342,
+          "lines": 66,
+          "words": 286,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 952,
+          "lines": 16,
+          "words": 116,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "consul-9772-streaming-snapshot-cache",
+      "n_files": 1,
+      "total_bytes": 3220,
+      "total_lines": 70,
+      "total_words": 369,
+      "est_tokens_word_proxy": 480,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 3220,
+          "lines": 70,
+          "words": 369,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6614-monitor-multiexec",
+      "n_files": 1,
+      "total_bytes": 4543,
+      "total_lines": 66,
+      "total_words": 256,
+      "est_tokens_word_proxy": 333,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 4543,
+          "lines": 66,
+          "words": 256,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6619-evalsha-empty",
+      "n_files": 1,
+      "total_bytes": 5057,
+      "total_lines": 79,
+      "total_words": 293,
+      "est_tokens_word_proxy": 381,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 5057,
+          "lines": 79,
+          "words": 293,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6654-mc-reply-large",
+      "n_files": 1,
+      "total_bytes": 5280,
+      "total_lines": 78,
+      "total_words": 312,
+      "est_tokens_word_proxy": 406,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 5280,
+          "lines": 78,
+          "words": 312,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6687-replica-rdb-encoding",
+      "n_files": 1,
+      "total_bytes": 5832,
+      "total_lines": 97,
+      "total_words": 649,
+      "est_tokens_word_proxy": 844,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "runtime-state": 1
+      },
+      "files": [
+        {
+          "name": "replica-sync-failure.md",
+          "bytes": 5832,
+          "lines": 97,
+          "words": 649,
+          "category": "runtime-state"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6738-pipeline-block",
+      "n_files": 1,
+      "total_bytes": 462,
+      "total_lines": 15,
+      "total_words": 66,
+      "est_tokens_word_proxy": 86,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "test-output.md",
+          "bytes": 462,
+          "lines": 15,
+          "words": 66,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6753-populate-sigfpe",
+      "n_files": 1,
+      "total_bytes": 1999,
+      "total_lines": 36,
+      "total_words": 149,
+      "est_tokens_word_proxy": 194,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 1999,
+          "lines": 36,
+          "words": 149,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6761-mc-pipeline-crash",
+      "n_files": 1,
+      "total_bytes": 3569,
+      "total_lines": 59,
+      "total_words": 229,
+      "est_tokens_word_proxy": 298,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 3569,
+          "lines": 59,
+          "words": 229,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6764-hincrbyfloat-nan",
+      "n_files": 1,
+      "total_bytes": 4515,
+      "total_lines": 71,
+      "total_words": 279,
+      "est_tokens_word_proxy": 363,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 4515,
+          "lines": 71,
+          "words": 279,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6819-stale-expiry",
+      "n_files": 1,
+      "total_bytes": 3998,
+      "total_lines": 67,
+      "total_words": 272,
+      "est_tokens_word_proxy": 354,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 3998,
+          "lines": 67,
+          "words": 272,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6825-config-overflow",
+      "n_files": 1,
+      "total_bytes": 3762,
+      "total_lines": 58,
+      "total_words": 247,
+      "est_tokens_word_proxy": 321,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 3762,
+          "lines": 58,
+          "words": 247,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6856-flushslots-oob",
+      "n_files": 1,
+      "total_bytes": 2390,
+      "total_lines": 41,
+      "total_words": 170,
+      "est_tokens_word_proxy": 221,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 2390,
+          "lines": 41,
+          "words": 170,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6907-ftsearch-vector-crash",
+      "n_files": 2,
+      "total_bytes": 8395,
+      "total_lines": 126,
+      "total_words": 708,
+      "est_tokens_word_proxy": 920,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "race/sanitizer": 2
+      },
+      "files": [
+        {
+          "name": "gdb-backtrace.md",
+          "bytes": 4780,
+          "lines": 81,
+          "words": 374,
+          "category": "race/sanitizer"
+        },
+        {
+          "name": "sanitizer-output.md",
+          "bytes": 3615,
+          "lines": 45,
+          "words": 334,
+          "category": "race/sanitizer"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6909-search-nonfinite",
+      "n_files": 1,
+      "total_bytes": 3715,
+      "total_lines": 61,
+      "total_words": 244,
+      "est_tokens_word_proxy": 317,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 3715,
+          "lines": 61,
+          "words": 244,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "dragonfly-6912-rdb-encoding",
+      "n_files": 1,
+      "total_bytes": 3763,
+      "total_lines": 62,
+      "total_words": 254,
+      "est_tokens_word_proxy": 330,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 3763,
+          "lines": 62,
+          "words": 254,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "etcd-17158-delete-linearizability",
+      "n_files": 2,
+      "total_bytes": 4596,
+      "total_lines": 114,
+      "total_words": 466,
+      "est_tokens_word_proxy": 606,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 2115,
+          "lines": 56,
+          "words": 250,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 2481,
+          "lines": 58,
+          "words": 216,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "etcd-17529-watch-compaction-loss",
+      "n_files": 2,
+      "total_bytes": 3949,
+      "total_lines": 114,
+      "total_words": 470,
+      "est_tokens_word_proxy": 611,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 2162,
+          "lines": 66,
+          "words": 287,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 1787,
+          "lines": 48,
+          "words": 183,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "etcd-19172-embed-data-race",
+      "n_files": 1,
+      "total_bytes": 1371,
+      "total_lines": 36,
+      "total_words": 82,
+      "est_tokens_word_proxy": 107,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "race/sanitizer": 1
+      },
+      "files": [
+        {
+          "name": "race-detector.md",
+          "bytes": 1371,
+          "lines": 36,
+          "words": 82,
+          "category": "race/sanitizer"
+        }
+      ]
+    },
+    {
+      "case": "etcd-19179-watch-tombstone-compact",
+      "n_files": 2,
+      "total_bytes": 10609,
+      "total_lines": 274,
+      "total_words": 1079,
+      "est_tokens_word_proxy": 1403,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 2346,
+          "lines": 53,
+          "words": 301,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 8263,
+          "lines": 221,
+          "words": 778,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "etcd-20221-watch-restore-revision",
+      "n_files": 2,
+      "total_bytes": 2754,
+      "total_lines": 87,
+      "total_words": 357,
+      "est_tokens_word_proxy": 464,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 2088,
+          "lines": 69,
+          "words": 278,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 666,
+          "lines": 18,
+          "words": 79,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "etcd-20704-leasing-linearizability",
+      "n_files": 2,
+      "total_bytes": 3231,
+      "total_lines": 101,
+      "total_words": 397,
+      "est_tokens_word_proxy": 516,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 2902,
+          "lines": 90,
+          "words": 346,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 329,
+          "lines": 11,
+          "words": 51,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "etcd-20893-force-new-cluster-learner",
+      "n_files": 1,
+      "total_bytes": 869,
+      "total_lines": 18,
+      "total_words": 75,
+      "est_tokens_word_proxy": 98,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "test-output.md",
+          "bytes": 869,
+          "lines": 18,
+          "words": 75,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "kafka-14334-delayed-fetch-purgatory",
+      "n_files": 2,
+      "total_bytes": 3775,
+      "total_lines": 72,
+      "total_words": 314,
+      "est_tokens_word_proxy": 408,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 2
+      },
+      "files": [
+        {
+          "name": "code-investigation-follower-hwm-path.md",
+          "bytes": 1431,
+          "lines": 29,
+          "words": 122,
+          "category": "code-investigation"
+        },
+        {
+          "name": "code-investigation-leader-path-contrast.md",
+          "bytes": 2344,
+          "lines": 43,
+          "words": 192,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "kafka-15170-endless-rebalance-loop",
+      "n_files": 2,
+      "total_bytes": 3853,
+      "total_lines": 52,
+      "total_words": 368,
+      "est_tokens_word_proxy": 478,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 2
+      },
+      "files": [
+        {
+          "name": "code-investigation-rack-mismatch-filter.md",
+          "bytes": 1612,
+          "lines": 23,
+          "words": 172,
+          "category": "code-investigation"
+        },
+        {
+          "name": "code-investigation-unfilled-members-counter.md",
+          "bytes": 2241,
+          "lines": 29,
+          "words": 196,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "kafka-15784-txn-offset-atomicity",
+      "n_files": 1,
+      "total_bytes": 2844,
+      "total_lines": 59,
+      "total_words": 241,
+      "est_tokens_word_proxy": 313,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-store-offsets-ordering.md",
+          "bytes": 2844,
+          "lines": 59,
+          "words": 241,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "kvrocks-2214-slave-sync-gap",
+      "n_files": 1,
+      "total_bytes": 1408,
+      "total_lines": 54,
+      "total_words": 234,
+      "est_tokens_word_proxy": 304,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "test-output.md",
+          "bytes": 1408,
+          "lines": 54,
+          "words": 234,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "kvrocks-2512-slaveof-deadlock",
+      "n_files": 1,
+      "total_bytes": 587,
+      "total_lines": 9,
+      "total_words": 95,
+      "est_tokens_word_proxy": 124,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "race/sanitizer": 1
+      },
+      "files": [
+        {
+          "name": "gdb-backtrace.md",
+          "bytes": 587,
+          "lines": 9,
+          "words": 95,
+          "category": "race/sanitizer"
+        }
+      ]
+    },
+    {
+      "case": "kvrocks-2520-namespace-fullsync",
+      "n_files": 1,
+      "total_bytes": 677,
+      "total_lines": 18,
+      "total_words": 47,
+      "est_tokens_word_proxy": 61,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "test-output.md",
+          "bytes": 677,
+          "lines": 18,
+          "words": 47,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "kvrocks-3148-namespace-delete",
+      "n_files": 1,
+      "total_bytes": 564,
+      "total_lines": 30,
+      "total_words": 85,
+      "est_tokens_word_proxy": 110,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "test-output.md",
+          "bytes": 564,
+          "lines": 30,
+          "words": 85,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "kvrocks-3208-replication-watermark",
+      "n_files": 1,
+      "total_bytes": 803,
+      "total_lines": 21,
+      "total_words": 121,
+      "est_tokens_word_proxy": 157,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "test-output.md",
+          "bytes": 803,
+          "lines": 21,
+          "words": 121,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "kvrocks-3315-zdiff-crash",
+      "n_files": 1,
+      "total_bytes": 297,
+      "total_lines": 12,
+      "total_words": 43,
+      "est_tokens_word_proxy": 56,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "crash-output": 1
+      },
+      "files": [
+        {
+          "name": "crash-output.md",
+          "bytes": 297,
+          "lines": 12,
+          "words": 43,
+          "category": "crash-output"
+        }
+      ]
+    },
+    {
+      "case": "kvrocks-3339-xreadgroup-double",
+      "n_files": 1,
+      "total_bytes": 704,
+      "total_lines": 17,
+      "total_words": 98,
+      "est_tokens_word_proxy": 127,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "test-output.md",
+          "bytes": 704,
+          "lines": 17,
+          "words": 98,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "kvrocks-3356-replication-wal",
+      "n_files": 1,
+      "total_bytes": 767,
+      "total_lines": 23,
+      "total_words": 109,
+      "est_tokens_word_proxy": 142,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "test-output.md",
+          "bytes": 767,
+          "lines": 23,
+          "words": 109,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "nats-6374-consumer-stuck-redelivery",
+      "n_files": 3,
+      "total_bytes": 6609,
+      "total_lines": 148,
+      "total_words": 653,
+      "est_tokens_word_proxy": 849,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 2,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-awl-not-reset.md",
+          "bytes": 1236,
+          "lines": 37,
+          "words": 171,
+          "category": "code-investigation"
+        },
+        {
+          "name": "code-investigation-deleted-msg-redelivery.md",
+          "bytes": 1552,
+          "lines": 47,
+          "words": 225,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 3821,
+          "lines": 64,
+          "words": 257,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "nats-6455-reserved-resource-leak",
+      "n_files": 2,
+      "total_bytes": 2653,
+      "total_lines": 74,
+      "total_words": 283,
+      "est_tokens_word_proxy": 368,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-resource-leak.md",
+          "bytes": 1385,
+          "lines": 50,
+          "words": 183,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 1268,
+          "lines": 24,
+          "words": 100,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "nats-7308-delete-nonexistent-reset",
+      "n_files": 2,
+      "total_bytes": 3056,
+      "total_lines": 78,
+      "total_words": 374,
+      "est_tokens_word_proxy": 486,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-delete-eof-fatal.md",
+          "bytes": 1977,
+          "lines": 55,
+          "words": 251,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 1079,
+          "lines": 23,
+          "words": 123,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "nats-7707-wq-consumer-map-crash",
+      "n_files": 2,
+      "total_bytes": 4321,
+      "total_lines": 86,
+      "total_words": 431,
+      "est_tokens_word_proxy": 560,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-map-race.md",
+          "bytes": 1963,
+          "lines": 50,
+          "words": 257,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 2358,
+          "lines": 36,
+          "words": 174,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "nats-7718-subscription-leak",
+      "n_files": 2,
+      "total_bytes": 3636,
+      "total_lines": 77,
+      "total_words": 424,
+      "est_tokens_word_proxy": 551,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-shadow-sub-route-leak.md",
+          "bytes": 2127,
+          "lines": 49,
+          "words": 295,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 1509,
+          "lines": 28,
+          "words": 129,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "nats-7726-mixed-filter",
+      "n_files": 2,
+      "total_bytes": 3387,
+      "total_lines": 88,
+      "total_words": 460,
+      "est_tokens_word_proxy": 598,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-intersect-early-return.md",
+          "bytes": 2358,
+          "lines": 64,
+          "words": 345,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 1029,
+          "lines": 24,
+          "words": 115,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "nats-7760-filter-stepdown",
+      "n_files": 1,
+      "total_bytes": 1102,
+      "total_lines": 30,
+      "total_words": 133,
+      "est_tokens_word_proxy": 173,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "test-output.md",
+          "bytes": 1102,
+          "lines": 30,
+          "words": 133,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "nats-7817-workqueue-message-loss",
+      "n_files": 2,
+      "total_bytes": 3118,
+      "total_lines": 73,
+      "total_words": 378,
+      "est_tokens_word_proxy": 491,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-wq-maxdeliver-removal.md",
+          "bytes": 1691,
+          "lines": 48,
+          "words": 256,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 1427,
+          "lines": 25,
+          "words": 122,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "nats-7852-filter-perf",
+      "n_files": 2,
+      "total_bytes": 3179,
+      "total_lines": 76,
+      "total_words": 452,
+      "est_tokens_word_proxy": 588,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-filter-fast-path.md",
+          "bytes": 2440,
+          "lines": 62,
+          "words": 346,
+          "category": "code-investigation"
+        },
+        {
+          "name": "test-output.md",
+          "bytes": 739,
+          "lines": 14,
+          "words": 106,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "ra-439-election-livelock",
+      "n_files": 1,
+      "total_bytes": 1618,
+      "total_lines": 43,
+      "total_words": 187,
+      "est_tokens_word_proxy": 243,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 1618,
+          "lines": 43,
+          "words": 187,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "rabbitmq-12635-qq-snapshot-crash",
+      "n_files": 1,
+      "total_bytes": 1680,
+      "total_lines": 43,
+      "total_words": 156,
+      "est_tokens_word_proxy": 203,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 1680,
+          "lines": 43,
+          "words": 156,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "raft-268-shutdown-deadlock",
+      "n_files": 1,
+      "total_bytes": 5092,
+      "total_lines": 81,
+      "total_words": 263,
+      "est_tokens_word_proxy": 342,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "goroutine-dump": 1
+      },
+      "files": [
+        {
+          "name": "goroutine-dump.md",
+          "bytes": 5092,
+          "lines": 81,
+          "words": 263,
+          "category": "goroutine-dump"
+        }
+      ]
+    },
+    {
+      "case": "raft-358-negative-log-range",
+      "n_files": 1,
+      "total_bytes": 1802,
+      "total_lines": 52,
+      "total_words": 244,
+      "est_tokens_word_proxy": 317,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 1802,
+          "lines": 52,
+          "words": 244,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "raft-460-logcache-store-order",
+      "n_files": 1,
+      "total_bytes": 1255,
+      "total_lines": 48,
+      "total_words": 161,
+      "est_tokens_word_proxy": 209,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 1255,
+          "lines": 48,
+          "words": 161,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "raft-517-candidate-appendentries-race",
+      "n_files": 1,
+      "total_bytes": 1355,
+      "total_lines": 30,
+      "total_words": 175,
+      "est_tokens_word_proxy": 228,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 1355,
+          "lines": 30,
+          "words": 175,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "raft-581-transfer-write-race",
+      "n_files": 1,
+      "total_bytes": 1715,
+      "total_lines": 62,
+      "total_words": 175,
+      "est_tokens_word_proxy": 228,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 1715,
+          "lines": 62,
+          "words": 175,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "raft-609-prevote-contact-liveness",
+      "n_files": 1,
+      "total_bytes": 1728,
+      "total_lines": 61,
+      "total_words": 220,
+      "est_tokens_word_proxy": 286,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 1728,
+          "lines": 61,
+          "words": 220,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "raft-rs-221-campaign-conf-change",
+      "n_files": 1,
+      "total_bytes": 1912,
+      "total_lines": 56,
+      "total_words": 223,
+      "est_tokens_word_proxy": 290,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 1912,
+          "lines": 56,
+          "words": 223,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "raft-rs-345-readindex-config-change",
+      "n_files": 1,
+      "total_bytes": 1782,
+      "total_lines": 58,
+      "total_words": 209,
+      "est_tokens_word_proxy": 272,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation.md",
+          "bytes": 1782,
+          "lines": 58,
+          "words": 209,
+          "category": "code-investigation"
+        }
+      ]
+    },
+    {
+      "case": "rocksdb-10751-stalled-writes-shutdown",
+      "n_files": 1,
+      "total_bytes": 594,
+      "total_lines": 15,
+      "total_words": 85,
+      "est_tokens_word_proxy": 110,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "test-output": 1
+      },
+      "files": [
+        {
+          "name": "test-output.md",
+          "bytes": 594,
+          "lines": 15,
+          "words": 85,
+          "category": "test-output"
+        }
+      ]
+    },
+    {
+      "case": "zookeeper-4643-sync-epoch-ordering",
+      "n_files": 2,
+      "total_bytes": 3336,
+      "total_lines": 59,
+      "total_words": 341,
+      "est_tokens_word_proxy": 443,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "runtime-state": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-newleader-handler-ordering.md",
+          "bytes": 2715,
+          "lines": 46,
+          "words": 260,
+          "category": "code-investigation"
+        },
+        {
+          "name": "runtime-learner-test.md",
+          "bytes": 621,
+          "lines": 13,
+          "words": 81,
+          "category": "runtime-state"
+        }
+      ]
+    },
+    {
+      "case": "zookeeper-4846-fuzzy-snapshot-acl",
+      "n_files": 2,
+      "total_bytes": 3345,
+      "total_lines": 61,
+      "total_words": 410,
+      "est_tokens_word_proxy": 533,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1,
+        "runtime-state": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-createnode-acl-handling.md",
+          "bytes": 2752,
+          "lines": 48,
+          "words": 331,
+          "category": "code-investigation"
+        },
+        {
+          "name": "runtime-datatree-test.md",
+          "bytes": 593,
+          "lines": 13,
+          "words": 79,
+          "category": "runtime-state"
+        }
+      ]
+    },
+    {
+      "case": "zookeeper-4925-diff-sync-committedlog-hole",
+      "n_files": 1,
+      "total_bytes": 1994,
+      "total_lines": 47,
+      "total_words": 199,
+      "est_tokens_word_proxy": 259,
+      "tt_tokens_cl100k": null,
+      "categories": {
+        "code-investigation": 1
+      },
+      "files": [
+        {
+          "name": "code-investigation-processtxn-committedlog-gap.md",
+          "bytes": 1994,
+          "lines": 47,
+          "words": 199,
+          "category": "code-investigation"
+        }
+      ]
+    }
+  ]
+}
