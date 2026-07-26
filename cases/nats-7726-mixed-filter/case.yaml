@@ -2,6 +2,10 @@ name: nats-7726-mixed-filter
 project: nats
 repo: https://github.com/nats-io/nats-server.git
 buggy_commit: "6aded805ec9625b20ee50ded3b63135d5fe3d0a8~1"
+resolve_time:
+  date: "2026-01-20"
+  source: confirmed_fix_commit_date
+  reference: "74c12317902f02e7cb8748364fb383852c99e4ce"
 submodules: false
 build:
   command: "go build -o nats-server ."

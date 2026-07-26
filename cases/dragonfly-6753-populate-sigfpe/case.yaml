@@ -2,6 +2,10 @@ name: dragonfly-6753-populate-sigfpe
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "5e31c9f84acfcfc2a7fb421cde7845ffcdf5536e~1"
+resolve_time:
+  date: "2026-02-27"
+  source: issue_close_date
+  reference: "https://github.com/dragonflydb/dragonfly/issues/6753"
 submodules: true
 build:
   command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"

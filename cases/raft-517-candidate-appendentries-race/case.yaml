@@ -2,6 +2,10 @@ name: raft-517-candidate-appendentries-race
 project: raft
 repo: https://github.com/hashicorp/raft.git
 buggy_commit: "49bd61b66666fa76cb23fa81897e350f6e9b75de~1"
+resolve_time:
+  date: "2023-09-28"
+  source: issue_close_date
+  reference: "https://github.com/hashicorp/raft/issues/517"
 submodules: false
 build:
   command: ""

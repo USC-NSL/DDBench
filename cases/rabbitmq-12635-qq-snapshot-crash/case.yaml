@@ -2,6 +2,10 @@ name: rabbitmq-12635-qq-snapshot-crash
 project: rabbitmq
 repo: https://github.com/rabbitmq/rabbitmq-server.git
 buggy_commit: "889fdc9163a43207f80a578769486bcce909f129"
+resolve_time:
+  date: "2024-11-01"
+  source: issue_close_date
+  reference: "https://github.com/rabbitmq/rabbitmq-server/issues/12635"
 submodules: false
 build:
   command: "make -j$(nproc) || make -j$(nproc); make -C deps/rabbit test-build -j$(nproc)"

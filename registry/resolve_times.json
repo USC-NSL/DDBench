@@ -1,0 +1,1167 @@
+{
+  "version": "1.0.0",
+  "selection_rule": "Later of confirmed fix-commit landing date and corresponding issue close date; ties prefer the confirmed fix commit; none if neither can be confirmed.",
+  "total_cases": 60,
+  "source_counts": {
+    "confirmed_fix_commit_date": 12,
+    "issue_close_date": 48,
+    "none": 0
+  },
+  "cases": [
+    {
+      "case_id": "bookkeeper-2614-recovery-fencing-gap",
+      "selected_date": "2021-03-12",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/apache/bookkeeper/issues/2614",
+      "fix_commit_sha": "017307bc67431a7616861ad09927c4e3327633d1",
+      "fix_commit_date": "2021-03-12",
+      "issue_url": "https://github.com/apache/bookkeeper/issues/2614",
+      "issue_closed_date": "2021-03-12",
+      "other_reference_url": "https://github.com/apache/bookkeeper/pull/2616",
+      "other_reference_closed_or_merged_date": "2021-03-12",
+      "evidence_urls": [
+        "https://api.github.com/repos/apache/bookkeeper/commits/017307bc67431a7616861ad09927c4e3327633d1",
+        "https://api.github.com/repos/apache/bookkeeper/issues/2614",
+        "https://api.github.com/repos/apache/bookkeeper/pulls/2616",
+        "https://github.com/apache/bookkeeper/commit/017307bc67431a7616861ad09927c4e3327633d1",
+        "https://github.com/apache/bookkeeper/issues/2614",
+        "https://github.com/apache/bookkeeper/pull/2616"
+      ],
+      "notes": "Confirmed fix commit from solution.md and authoritative GitHub commit/PR metadata. Commit 017307bc67431a7616861ad09927c4e3327633d1 changes PendingReadOp recovery reads to add FLAG_DO_FENCING, names issue #2614 in its message, has parent c11baba7dcedc227849021d0aee8303cfcc9765c (the case's buggy commit), and has Git committer timestamp 2021-03-12T07:20:31Z. PR #2616 identifies issue #2614 as its master issue and was merged/closed at 2021-03-12T07:20:31Z with this exact merge_commit_sha. The actual linked issue #2614 closed later, at 2021-03-12T10:10:43Z, so issue_close_date is selected even though both events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "bookkeeper-4701-fencing-race",
+      "selected_date": "2026-01-20",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "44607a0e31ee8f979211eb5a4ef424de2871b92e",
+      "fix_commit_sha": "44607a0e31ee8f979211eb5a4ef424de2871b92e",
+      "fix_commit_date": "2026-01-20",
+      "issue_url": null,
+      "issue_closed_date": null,
+      "other_reference_url": "https://github.com/apache/bookkeeper/pull/4701",
+      "other_reference_closed_or_merged_date": "2026-01-20",
+      "evidence_urls": [
+        "https://github.com/apache/bookkeeper/commit/44607a0e31ee8f979211eb5a4ef424de2871b92e",
+        "https://api.github.com/repos/apache/bookkeeper/commits/44607a0e31ee8f979211eb5a4ef424de2871b92e",
+        "https://github.com/apache/bookkeeper/pull/4701",
+        "https://api.github.com/repos/apache/bookkeeper/pulls/4701"
+      ],
+      "notes": "The local case metadata identifies PR #4701 and fix commit 44607a0e31ee8f979211eb5a4ef424de2871b92e. GitHub's authoritative commit record gives that commit a committer timestamp of 2026-01-20T09:40:26Z, and its message explicitly associates the fix with #4701. GitHub's PR record confirms PR #4701 was merged and closed at the same timestamp and that its merge_commit_sha is the identified fix SHA. The linked reference is a pull request, not a separately verified issue, so its date is retained only as other-reference metadata and is not labeled issue_close_date. No corresponding standalone issue was verified. The selected resolution date therefore comes from the confirmed fix commit."
+    },
+    {
+      "case_id": "consul-12295-acl-replication-stall",
+      "selected_date": "2022-04-05",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "24245edfcc9d56eb1033908c607f56b19f7d1360",
+      "fix_commit_sha": "24245edfcc9d56eb1033908c607f56b19f7d1360",
+      "fix_commit_date": "2022-04-05",
+      "issue_url": "https://github.com/hashicorp/consul/issues/12295",
+      "issue_closed_date": "2022-04-05",
+      "other_reference_url": "https://github.com/hashicorp/consul/pull/12565",
+      "other_reference_closed_or_merged_date": "2022-04-05",
+      "evidence_urls": [
+        "https://github.com/hashicorp/consul/commit/24245edfcc9d56eb1033908c607f56b19f7d1360",
+        "https://api.github.com/repos/hashicorp/consul/commits/24245edfcc9d56eb1033908c607f56b19f7d1360",
+        "https://github.com/hashicorp/consul/issues/12295",
+        "https://api.github.com/repos/hashicorp/consul/issues/12295",
+        "https://github.com/hashicorp/consul/pull/12565",
+        "https://api.github.com/repos/hashicorp/consul/pulls/12565"
+      ],
+      "notes": "The local gold solution names PR #12565 and commit 24245edfcc9d56eb1033908c607f56b19f7d1360. GitHub's authoritative commit record shows that SHA's committer timestamp as 2022-04-05T18:17:53Z and its message explicitly references both issue #12295 and PR #12565. The PR record confirms it was merged at 2022-04-05T18:17:53Z with this exact merge_commit_sha. Issue #12295 closed at the same timestamp. Because the confirmed fix commit date and issue close date tie on the same calendar day, the confirmed fix commit is used as the selected reference; no later date exists among the confirmed records."
+    },
+    {
+      "case_id": "consul-8377-snapshot-restore-index",
+      "selected_date": "2020-08-11",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "9bc9d3014d2d8f48c4c87926bfb98c8536364532",
+      "fix_commit_sha": "9bc9d3014d2d8f48c4c87926bfb98c8536364532",
+      "fix_commit_date": "2020-08-11",
+      "issue_url": "https://github.com/hashicorp/consul/issues/8377",
+      "issue_closed_date": "2020-08-11",
+      "other_reference_url": "https://github.com/hashicorp/consul/pull/8474",
+      "other_reference_closed_or_merged_date": "2020-08-11",
+      "evidence_urls": [
+        "https://github.com/hashicorp/consul/commit/9bc9d3014d2d8f48c4c87926bfb98c8536364532",
+        "https://api.github.com/repos/hashicorp/consul/commits/9bc9d3014d2d8f48c4c87926bfb98c8536364532",
+        "https://github.com/hashicorp/consul/issues/8377",
+        "https://api.github.com/repos/hashicorp/consul/issues/8377",
+        "https://github.com/hashicorp/consul/pull/8474",
+        "https://api.github.com/repos/hashicorp/consul/pulls/8474"
+      ],
+      "notes": "The local gold solution identifies PR #8474 and fix commit 9bc9d3014d2d8f48c4c87926bfb98c8536364532. GitHub's authoritative commit record shows that SHA is the merge of PR #8474, describes the snapshot index fix, and has Git committer timestamp 2020-08-11T19:35:08Z. The PR record confirms it was merged at 2020-08-11T19:35:08Z with this exact merge_commit_sha (and closed one second later). The actual corresponding issue #8377 closed at 2020-08-11T19:35:08Z. Because the confirmed fix commit and issue closure tie exactly, the confirmed fix commit is used as the selected reference; neither provides a later date."
+    },
+    {
+      "case_id": "consul-9772-streaming-snapshot-cache",
+      "selected_date": "2021-02-16",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "363d738fd2ee1ee25ad872a63894cffa8faf9df2",
+      "fix_commit_sha": "363d738fd2ee1ee25ad872a63894cffa8faf9df2",
+      "fix_commit_date": "2021-02-16",
+      "issue_url": null,
+      "issue_closed_date": null,
+      "other_reference_url": "https://github.com/hashicorp/consul/pull/9772",
+      "other_reference_closed_or_merged_date": "2021-02-16",
+      "evidence_urls": [
+        "https://github.com/hashicorp/consul/commit/363d738fd2ee1ee25ad872a63894cffa8faf9df2",
+        "https://api.github.com/repos/hashicorp/consul/commits/363d738fd2ee1ee25ad872a63894cffa8faf9df2",
+        "https://github.com/hashicorp/consul/pull/9772",
+        "https://api.github.com/repos/hashicorp/consul/pulls/9772"
+      ],
+      "notes": "The local case uses 363d738fd2ee1ee25ad872a63894cffa8faf9df2~1 as its buggy revision, and solution.md identifies 363d738fd2ee1ee25ad872a63894cffa8faf9df2 as the fix merge commit for PR #9772. GitHub's authoritative commit record confirms that SHA is a two-parent merge whose message names PR #9772 and the snapshot-cache fix; its Git committer timestamp is 2021-02-16T20:28:00Z. GitHub's PR record independently confirms PR #9772 was merged at 2021-02-16T20:28:01Z with that exact merge_commit_sha. The registry reference is a pull request, not a separately verified issue, and the PR body names no standalone issue, so its merge/close date is recorded only as other-reference metadata. The selected resolution date therefore comes from the confirmed fix commit."
+    },
+    {
+      "case_id": "dragonfly-6614-monitor-multiexec",
+      "selected_date": "2026-02-13",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6614",
+      "fix_commit_sha": "84034d0903e8409dd48adcce974e5250d357a7ce",
+      "fix_commit_date": "2026-02-13",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6614",
+      "issue_closed_date": "2026-02-13",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6615",
+      "other_reference_closed_or_merged_date": "2026-02-13",
+      "evidence_urls": [
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/84034d0903e8409dd48adcce974e5250d357a7ce",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6614",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6615",
+        "https://github.com/dragonflydb/dragonfly/commit/84034d0903e8409dd48adcce974e5250d357a7ce",
+        "https://github.com/dragonflydb/dragonfly/issues/6614",
+        "https://github.com/dragonflydb/dragonfly/pull/6615"
+      ],
+      "notes": "The local gold solution identifies PR #6615 and fix commit 84034d0903e8409dd48adcce974e5250d357a7ce. GitHub's authoritative commit record confirms that SHA changes ChangeMonitor to be idempotent for repeated MONITOR commands in MULTI/EXEC, names PR #6615 in its message, and has Git committer timestamp 2026-02-13T13:13:41Z. The PR record confirms it was merged and closed at 2026-02-13T13:13:41Z with this exact merge_commit_sha. The actual corresponding issue #6614 closed two seconds later at 2026-02-13T13:13:43Z, so issue_close_date is selected even though all events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "dragonfly-6619-evalsha-empty",
+      "selected_date": "2026-02-14",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6619",
+      "fix_commit_sha": "761387a51433a5becb06db2ac7bf7e9f18b832d2",
+      "fix_commit_date": "2026-02-14",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6619",
+      "issue_closed_date": "2026-02-14",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6620",
+      "other_reference_closed_or_merged_date": "2026-02-14",
+      "evidence_urls": [
+        "https://github.com/dragonflydb/dragonfly/commit/761387a51433a5becb06db2ac7bf7e9f18b832d2",
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/761387a51433a5becb06db2ac7bf7e9f18b832d2",
+        "https://github.com/dragonflydb/dragonfly/issues/6619",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6619",
+        "https://github.com/dragonflydb/dragonfly/pull/6620",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6620"
+      ],
+      "notes": "The local gold solution identifies PR #6620 and fix commit 761387a51433a5becb06db2ac7bf7e9f18b832d2. GitHub's authoritative commit record gives that commit a committer timestamp of 2026-02-14T07:16:43Z, names the EVALSHA empty-SHA crash and PR #6620, and shows parent 05ea2a313a946f758f94bd5d3e99b89ebc2dabca, matching the case's buggy revision (fix commit~1). The PR record states Fixes #6619 and confirms it merged at 2026-02-14T07:16:43Z with this exact merge_commit_sha. The actual issue #6619 closed at 2026-02-14T07:16:44Z, one second after the fix commit landed, so issue_close_date is selected as the later confirmed resolution event."
+    },
+    {
+      "case_id": "dragonfly-6654-mc-reply-large",
+      "selected_date": "2026-02-17",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6654",
+      "fix_commit_sha": "ff4ef508985cb91a7fdf418682af1534c24acf83",
+      "fix_commit_date": "2026-02-17",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6654",
+      "issue_closed_date": "2026-02-17",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6657",
+      "other_reference_closed_or_merged_date": "2026-02-17",
+      "evidence_urls": [
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/ff4ef508985cb91a7fdf418682af1534c24acf83",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6654",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6657",
+        "https://github.com/dragonflydb/dragonfly/commit/ff4ef508985cb91a7fdf418682af1534c24acf83",
+        "https://github.com/dragonflydb/dragonfly/issues/6654",
+        "https://github.com/dragonflydb/dragonfly/pull/6657"
+      ],
+      "notes": "The local gold solution identifies PR #6657 and fix commit ff4ef508985cb91a7fdf418682af1534c24acf83. GitHub's authoritative commit record confirms that SHA fixes the large-value meta-get response by using WriteRef, names PR #6657 in its message, and has Git committer timestamp 2026-02-17T15:28:31Z. The PR body explicitly says it fixes issue #6654, and its record confirms it was merged and closed at 2026-02-17T15:28:32Z with this exact merge_commit_sha. The actual corresponding issue #6654 closed one second after the PR and two seconds after the commit, at 2026-02-17T15:28:33Z, so issue_close_date is selected even though all events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "dragonfly-6687-replica-rdb-encoding",
+      "selected_date": "2026-03-10",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6687",
+      "fix_commit_sha": "8347cd80192a7be967a3983a6a55a10525915015",
+      "fix_commit_date": "2026-03-10",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6687",
+      "issue_closed_date": "2026-03-10",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6807",
+      "other_reference_closed_or_merged_date": "2026-03-10",
+      "evidence_urls": [
+        "https://github.com/dragonflydb/dragonfly/commit/8347cd80192a7be967a3983a6a55a10525915015",
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/8347cd80192a7be967a3983a6a55a10525915015",
+        "https://github.com/dragonflydb/dragonfly/issues/6687",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6687",
+        "https://github.com/dragonflydb/dragonfly/pull/6807",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6807"
+      ],
+      "notes": "The local case uses 8347cd80192a7be967a3983a6a55a10525915015~1 as its buggy revision, and solution.md identifies 8347cd80192a7be967a3983a6a55a10525915015 from PR #6807 as the fix. GitHub's authoritative commit record confirms that SHA's parent is the case's buggy revision, describes the tiered-serialization stream-corruption fix, explicitly says \"Closes #6816 #6687\", and gives a Git committer timestamp of 2026-03-10T20:24:42Z. GitHub's PR record confirms PR #6807 merged at 2026-03-10T20:24:43Z with the exact fix SHA and likewise closes #6687. The actual issue #6687 is a standalone issue and closed later at 2026-03-10T20:27:16Z. Therefore issue_close_date is selected; the two confirmed events fall on the same YYYY-MM-DD, but the issue closure is later at timestamp precision."
+    },
+    {
+      "case_id": "dragonfly-6738-pipeline-block",
+      "selected_date": "2026-02-27",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6738",
+      "fix_commit_sha": "c4849b4d008d1dd6fd950f251cdb9a9a2e264e00",
+      "fix_commit_date": "2026-02-27",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6738",
+      "issue_closed_date": "2026-02-27",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6743",
+      "other_reference_closed_or_merged_date": "2026-02-27",
+      "evidence_urls": [
+        "https://github.com/dragonflydb/dragonfly/commit/c4849b4d008d1dd6fd950f251cdb9a9a2e264e00",
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/c4849b4d008d1dd6fd950f251cdb9a9a2e264e00",
+        "https://github.com/dragonflydb/dragonfly/issues/6738",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6738",
+        "https://github.com/dragonflydb/dragonfly/pull/6743",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6743"
+      ],
+      "notes": "The local gold solution identifies PR #6743 and fix commit c4849b4d008d1dd6fd950f251cdb9a9a2e264e00. GitHub's authoritative commit record gives that commit a committer timestamp of 2026-02-27T10:31:02Z; its message describes flushing replies for blocking pipeline commands and explicitly links issue #6738. The PR record says it fixes issue #6738 and confirms it merged at 2026-02-27T10:31:03Z with this exact merge_commit_sha. The actual issue #6738 closed at 2026-02-27T10:31:04Z, two seconds after the fix commit landed and one second after the PR merge, so issue_close_date is selected as the latest confirmed resolution event."
+    },
+    {
+      "case_id": "dragonfly-6753-populate-sigfpe",
+      "selected_date": "2026-02-27",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6753",
+      "fix_commit_sha": "5e31c9f84acfcfc2a7fb421cde7845ffcdf5536e",
+      "fix_commit_date": "2026-02-27",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6753",
+      "issue_closed_date": "2026-02-27",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6754",
+      "other_reference_closed_or_merged_date": "2026-02-27",
+      "evidence_urls": [
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/5e31c9f84acfcfc2a7fb421cde7845ffcdf5536e",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6753",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6754",
+        "https://github.com/dragonflydb/dragonfly/commit/5e31c9f84acfcfc2a7fb421cde7845ffcdf5536e",
+        "https://github.com/dragonflydb/dragonfly/issues/6753",
+        "https://github.com/dragonflydb/dragonfly/pull/6754"
+      ],
+      "notes": "The local gold solution identifies PR #6754 and fix commit 5e31c9f84acfcfc2a7fb421cde7845ffcdf5536e. GitHub's authoritative commit record confirms that SHA prevents the DEBUG POPULATE val_size=0 SIGFPE, names PR #6754 in its message, and has Git committer timestamp 2026-02-27T18:43:54Z. The PR body explicitly says it fixes issue #6753, and its record confirms it was merged and closed at 2026-02-27T18:43:55Z with this exact merge_commit_sha. The actual corresponding issue #6753 closed one second after the PR and two seconds after the commit, at 2026-02-27T18:43:56Z, so issue_close_date is selected even though all events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "dragonfly-6761-mc-pipeline-crash",
+      "selected_date": "2026-03-01",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6761",
+      "fix_commit_sha": "5a78b758ff21f179963de4da9e7ad301459e23bb",
+      "fix_commit_date": "2026-03-01",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6761",
+      "issue_closed_date": "2026-03-01",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6762",
+      "other_reference_closed_or_merged_date": "2026-03-01",
+      "evidence_urls": [
+        "https://github.com/dragonflydb/dragonfly/commit/5a78b758ff21f179963de4da9e7ad301459e23bb",
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/5a78b758ff21f179963de4da9e7ad301459e23bb",
+        "https://github.com/dragonflydb/dragonfly/issues/6761",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6761",
+        "https://github.com/dragonflydb/dragonfly/pull/6762",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6762"
+      ],
+      "notes": "The local gold solution identifies PR #6762 and fix commit 5a78b758ff21f179963de4da9e7ad301459e23bb. GitHub's authoritative commit record gives that commit a committer timestamp of 2026-03-01T06:02:44Z and describes the WOULD_BLOCK fix for STATS/VERSION in the memcache pipeline. The PR record says Fixes #6761 and confirms it merged at 2026-03-01T06:02:44Z with this exact merge_commit_sha. The actual issue #6761 closed at 2026-03-01T06:02:45Z, one second after the fix commit landed, so issue_close_date is selected as the later confirmed resolution event."
+    },
+    {
+      "case_id": "dragonfly-6764-hincrbyfloat-nan",
+      "selected_date": "2026-03-01",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6764",
+      "fix_commit_sha": "01ce1ca9ea6c429e531d6177f72963b1fd29c26d",
+      "fix_commit_date": "2026-03-01",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6764",
+      "issue_closed_date": "2026-03-01",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6772",
+      "other_reference_closed_or_merged_date": "2026-03-01",
+      "evidence_urls": [
+        "https://github.com/dragonflydb/dragonfly/commit/01ce1ca9ea6c429e531d6177f72963b1fd29c26d",
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/01ce1ca9ea6c429e531d6177f72963b1fd29c26d",
+        "https://github.com/dragonflydb/dragonfly/issues/6764",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6764",
+        "https://github.com/dragonflydb/dragonfly/pull/6772",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6772"
+      ],
+      "notes": "The local case uses 01ce1ca9ea6c429e531d6177f72963b1fd29c26d~1 as its buggy revision, and solution.md identifies 01ce1ca9ea6c429e531d6177f72963b1fd29c26d from PR #6772 as the fix. GitHub's authoritative commit record confirms that SHA's parent is the case's buggy revision, its message describes preventing the HINCRBYFLOAT NaN/Inf empty-hash failure, and its Git committer timestamp is 2026-03-01T20:30:02Z. GitHub's PR record confirms PR #6772 merged at that same timestamp with the exact fix SHA; its title and body describe the same root cause, and the body explicitly states \"Fixes: #6764\". The corresponding standalone issue #6764 closed one second later at 2026-03-01T20:30:03Z. Therefore issue_close_date is selected; both confirmed events fall on 2026-03-01, but issue closure is later at timestamp precision."
+    },
+    {
+      "case_id": "dragonfly-6819-stale-expiry",
+      "selected_date": "2026-03-06",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6819",
+      "fix_commit_sha": "fa4d116313779182571f70a537ab31f09ec043a5",
+      "fix_commit_date": "2026-03-06",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6819",
+      "issue_closed_date": "2026-03-06",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6821",
+      "other_reference_closed_or_merged_date": "2026-03-06",
+      "evidence_urls": [
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/fa4d116313779182571f70a537ab31f09ec043a5",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6819",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6821",
+        "https://github.com/dragonflydb/dragonfly/commit/fa4d116313779182571f70a537ab31f09ec043a5",
+        "https://github.com/dragonflydb/dragonfly/issues/6819",
+        "https://github.com/dragonflydb/dragonfly/pull/6821"
+      ],
+      "notes": "The local gold solution identifies PR #6821 and fix commit fa4d116313779182571f70a537ab31f09ec043a5. GitHub's authoritative commit record confirms that SHA clears stale expiry state when overwriting a key without expiration, names PR #6821 in its message, and has Git committer timestamp 2026-03-06T16:51:23Z. The PR body explicitly says it fixes issue #6819, and its record confirms it was merged and closed at 2026-03-06T16:51:23Z with this exact merge_commit_sha. The actual corresponding issue #6819 closed two seconds later at 2026-03-06T16:51:25Z, so issue_close_date is selected even though all events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "dragonfly-6825-config-overflow",
+      "selected_date": "2026-03-10",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6825",
+      "fix_commit_sha": "4b16da4d2e80eafc57ecb5fef511a9d49afe5c54",
+      "fix_commit_date": "2026-03-10",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6825",
+      "issue_closed_date": "2026-03-10",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6853",
+      "other_reference_closed_or_merged_date": "2026-03-10",
+      "evidence_urls": [
+        "https://github.com/dragonflydb/dragonfly/commit/4b16da4d2e80eafc57ecb5fef511a9d49afe5c54",
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/4b16da4d2e80eafc57ecb5fef511a9d49afe5c54",
+        "https://github.com/dragonflydb/dragonfly/issues/6825",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6825",
+        "https://github.com/dragonflydb/dragonfly/pull/6853",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6853"
+      ],
+      "notes": "The local gold solution identifies PR #6853 and fix commit 4b16da4d2e80eafc57ecb5fef511a9d49afe5c54. GitHub's authoritative commit record gives that commit a committer timestamp of 2026-03-10T12:24:38Z and describes handling number overflow in DFLYCLUSTER CONFIG parsing. The PR record explicitly says it fixes issue #6825 and confirms it merged at 2026-03-10T12:24:39Z with this exact merge_commit_sha. The actual issue #6825 closed at 2026-03-10T12:24:40Z, two seconds after the fix commit landed and one second after the PR merge, so issue_close_date is selected as the latest confirmed resolution event."
+    },
+    {
+      "case_id": "dragonfly-6856-flushslots-oob",
+      "selected_date": "2026-03-10",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6856",
+      "fix_commit_sha": "c79bbe0c646c1bce47f76168dbe813951aecd8ce",
+      "fix_commit_date": "2026-03-10",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6856",
+      "issue_closed_date": "2026-03-10",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6861",
+      "other_reference_closed_or_merged_date": "2026-03-10",
+      "evidence_urls": [
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/c79bbe0c646c1bce47f76168dbe813951aecd8ce",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6856",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6861",
+        "https://github.com/dragonflydb/dragonfly/commit/c79bbe0c646c1bce47f76168dbe813951aecd8ce",
+        "https://github.com/dragonflydb/dragonfly/issues/6856",
+        "https://github.com/dragonflydb/dragonfly/pull/6861"
+      ],
+      "notes": "The local gold solution identifies PR #6861 and fix commit c79bbe0c646c1bce47f76168dbe813951aecd8ce. GitHub's authoritative commit record confirms that SHA validates DFLYCLUSTER FLUSHSLOTS slot IDs to prevent the out-of-bounds crash, names PR #6861 in its message, and has Git committer timestamp 2026-03-10T19:24:26Z. The PR body explicitly says it fixes issue #6856, and its record confirms it was merged and closed at 2026-03-10T19:24:27Z with this exact merge_commit_sha. The actual corresponding issue #6856 closed one second after the PR and two seconds after the commit, at 2026-03-10T19:24:28Z, so issue_close_date is selected even though all events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "dragonfly-6907-ftsearch-vector-crash",
+      "selected_date": "2026-03-17",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6907",
+      "fix_commit_sha": "c09a5a16bacc4b107435b0f144c1eb4a7553fd04",
+      "fix_commit_date": "2026-03-17",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6907",
+      "issue_closed_date": "2026-03-17",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6908",
+      "other_reference_closed_or_merged_date": "2026-03-17",
+      "evidence_urls": [
+        "https://github.com/dragonflydb/dragonfly/commit/c09a5a16bacc4b107435b0f144c1eb4a7553fd04",
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/c09a5a16bacc4b107435b0f144c1eb4a7553fd04",
+        "https://github.com/dragonflydb/dragonfly/issues/6907",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6907",
+        "https://github.com/dragonflydb/dragonfly/pull/6908",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6908"
+      ],
+      "notes": "The local case uses c09a5a16bacc4b107435b0f144c1eb4a7553fd04~1 as its buggy revision, and solution.md identifies c09a5a16bacc4b107435b0f144c1eb4a7553fd04 from PR #6908 as the fix. GitHub's authoritative commit record confirms that SHA's parent is the case's buggy revision, its message describes preventing FT.SEARCH crashes on wrong-sized vector/numeric fields, and its Git committer timestamp is 2026-03-17T15:04:21Z. GitHub's PR record confirms PR #6908 merged at the same timestamp with the exact fix SHA; its title and body describe the same malformed-field crash, and the body explicitly states \"Fixes #6907\". The corresponding standalone issue #6907 closed later at 2026-03-17T15:04:24Z. Therefore issue_close_date is selected; both confirmed events fall on 2026-03-17, but issue closure is later at timestamp precision."
+    },
+    {
+      "case_id": "dragonfly-6909-search-nonfinite",
+      "selected_date": "2026-03-17",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6909",
+      "fix_commit_sha": "1c38bb63d2824080430d6d25e5a6fe6d714a2882",
+      "fix_commit_date": "2026-03-17",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6909",
+      "issue_closed_date": "2026-03-17",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6911",
+      "other_reference_closed_or_merged_date": "2026-03-17",
+      "evidence_urls": [
+        "https://github.com/dragonflydb/dragonfly/commit/1c38bb63d2824080430d6d25e5a6fe6d714a2882",
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/1c38bb63d2824080430d6d25e5a6fe6d714a2882",
+        "https://github.com/dragonflydb/dragonfly/issues/6909",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6909",
+        "https://github.com/dragonflydb/dragonfly/pull/6911",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6911"
+      ],
+      "notes": "The local gold solution identifies PR #6911 and fix commit 1c38bb63d2824080430d6d25e5a6fe6d714a2882. GitHub's authoritative commit page gives that commit a committed timestamp of 2026-03-17T22:35:24+02:00 (2026-03-17T20:35:24Z), describes the two search crash fixes for non-finite NUMERIC values and KeepTopKSorted out-of-bounds access, and identifies parent 0c36c49e28899b3db750b37e0959a5ebfd792904, matching the case's buggy revision (fix commit~1). GitHub's PR page confirms PR #6911 merged and closed at 2026-03-17T20:35:24Z with commit 1c38bb63d2824080430d6d25e5a6fe6d714a2882 and says Fixes #6909. The authoritative issue page reports #6909 CLOSED/COMPLETED, linked and closed by PR #6911, with its resolution update at 2026-03-17T20:35:25Z, one second after the fix landed; issue_close_date is therefore selected as the later confirmed event."
+    },
+    {
+      "case_id": "dragonfly-6912-rdb-encoding",
+      "selected_date": "2026-03-20",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/dragonflydb/dragonfly/issues/6912",
+      "fix_commit_sha": "ef296f099b6e210ad28f043be9d0a8cec4dc4885",
+      "fix_commit_date": "2026-03-18",
+      "issue_url": "https://github.com/dragonflydb/dragonfly/issues/6912",
+      "issue_closed_date": "2026-03-20",
+      "other_reference_url": "https://github.com/dragonflydb/dragonfly/pull/6897",
+      "other_reference_closed_or_merged_date": "2026-03-18",
+      "evidence_urls": [
+        "https://api.github.com/repos/dragonflydb/dragonfly/commits/ef296f099b6e210ad28f043be9d0a8cec4dc4885",
+        "https://api.github.com/repos/dragonflydb/dragonfly/issues/6912",
+        "https://api.github.com/repos/dragonflydb/dragonfly/pulls/6897",
+        "https://github.com/dragonflydb/dragonfly/commit/ef296f099b6e210ad28f043be9d0a8cec4dc4885",
+        "https://github.com/dragonflydb/dragonfly/issues/6912",
+        "https://github.com/dragonflydb/dragonfly/pull/6897"
+      ],
+      "notes": "The local gold solution identifies fix commit ef296f099b6e210ad28f043be9d0a8cec4dc4885. The authoritative Git commit has author and committer timestamp 2026-03-18T08:28:03+02:00 (2026-03-18T06:28:03Z) and message 'chore: CMS serialization (#6897)'. GitHub's PR #6897 timeline confirms that exact SHA was merged into main at 2026-03-18T06:28:04Z. The issue itself has no linked or closing PR in GitHub metadata, but its 2026-03-20 timeline contains a maintainer comment pointing to this exact fix commit followed by a ClosedEvent at 2026-03-20T08:29:36Z. Thus the actual corresponding issue #6912 closed two days after the confirmed fix landed, so issue_close_date is selected."
+    },
+    {
+      "case_id": "etcd-17158-delete-linearizability",
+      "selected_date": "2024-11-10",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/etcd-io/etcd/issues/17158",
+      "fix_commit_sha": "b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d",
+      "fix_commit_date": "2024-01-11",
+      "issue_url": "https://github.com/etcd-io/etcd/issues/17158",
+      "issue_closed_date": "2024-11-10",
+      "other_reference_url": "https://github.com/etcd-io/etcd/pull/17195",
+      "other_reference_closed_or_merged_date": "2024-01-11",
+      "evidence_urls": [
+        "https://github.com/etcd-io/etcd/commit/b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d",
+        "https://api.github.com/repos/etcd-io/etcd/commits/b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d",
+        "https://github.com/etcd-io/etcd/issues/17158",
+        "https://api.github.com/repos/etcd-io/etcd/issues/17158",
+        "https://github.com/etcd-io/etcd/pull/17195",
+        "https://api.github.com/repos/etcd-io/etcd/pulls/17195"
+      ],
+      "notes": "The local case uses b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d~1 as its buggy revision, and solution.md identifies b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d from PR #17195 as the fix. GitHub's authoritative commit record confirms that SHA is the two-parent merge of PR #17195, that its first parent is the case's buggy revision, and that its Git committer timestamp is 2024-01-11T08:21:47Z. The commit changes the buffered batch transaction and tests described in the gold solution. GitHub's PR record confirms PR #17195 merged at the same timestamp with the exact merge_commit_sha, and its body explicitly says it fixes UnsafeDelete issue #17158. The corresponding standalone issue #17158 was not closed at merge time; GitHub records its later completed closure at 2024-11-10T09:09:30Z. Therefore issue_close_date, 2024-11-10, is selected over the confirmed 2024-01-11 fix-commit date."
+    },
+    {
+      "case_id": "etcd-17529-watch-compaction-loss",
+      "selected_date": "2024-03-16",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "fca3e8a9b5c5b52a65d4ac0fe2fd7fdc7577551a",
+      "fix_commit_sha": "fca3e8a9b5c5b52a65d4ac0fe2fd7fdc7577551a",
+      "fix_commit_date": "2024-03-16",
+      "issue_url": "https://github.com/etcd-io/etcd/issues/17529",
+      "issue_closed_date": null,
+      "other_reference_url": "https://github.com/etcd-io/etcd/pull/17555",
+      "other_reference_closed_or_merged_date": "2024-03-16",
+      "evidence_urls": [
+        "https://github.com/etcd-io/etcd/commit/fca3e8a9b5c5b52a65d4ac0fe2fd7fdc7577551a",
+        "https://github.com/etcd-io/etcd/issues/17529",
+        "https://github.com/etcd-io/etcd/pull/17555"
+      ],
+      "notes": "The local gold solution identifies PR #17555 and fix commit fca3e8a9b5c5b52a65d4ac0fe2fd7fdc7577551a. GitHub's authoritative commit page identifies that SHA as the merge of PR #17555, gives authored and committed timestamps of 2024-03-16T11:23:01Z, and shows first parent 63e394d090bb7821b6bf2c255d2a70e86e8fc693, matching the case's buggy revision (fix commit~1). GitHub's PR page confirms PR #17555, titled Fix watch event loss, merged and closed at 2024-03-16T11:23:01Z with merge commit fca3e8a9b5c5b52a65d4ac0fe2fd7fdc7577551a and explicitly references issue #17529. The issue page confirms #17529 is currently CLOSED/COMPLETED and links PR #17555 as its closing PR, but the examined authoritative HTML does not expose an exact final issue-closure timestamp. Its 2024-10-05 updatedAt value is not treated as a close date because an update can have other causes. Fidelity-first, issue_closed_date remains null and the confirmed fix commit date is selected."
+    },
+    {
+      "case_id": "etcd-19172-embed-data-race",
+      "selected_date": "2025-01-22",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/etcd-io/etcd/issues/19172",
+      "fix_commit_sha": "43431bd6f83b60d13a29ef9df53d7f04fe63fcfd",
+      "fix_commit_date": "2025-01-22",
+      "issue_url": "https://github.com/etcd-io/etcd/issues/19172",
+      "issue_closed_date": "2025-01-22",
+      "other_reference_url": "https://github.com/etcd-io/etcd/pull/19221",
+      "other_reference_closed_or_merged_date": "2025-01-22",
+      "evidence_urls": [
+        "https://api.github.com/repos/etcd-io/etcd/commits/43431bd6f83b60d13a29ef9df53d7f04fe63fcfd",
+        "https://api.github.com/repos/etcd-io/etcd/issues/19172",
+        "https://api.github.com/repos/etcd-io/etcd/pulls/19221",
+        "https://github.com/etcd-io/etcd/commit/43431bd6f83b60d13a29ef9df53d7f04fe63fcfd",
+        "https://github.com/etcd-io/etcd/issues/19172",
+        "https://github.com/etcd-io/etcd/pull/19221",
+        "https://github.com/etcd-io/etcd/commit/3c04b6c7fc1d8a46f1f3e96794060c8d06526a33",
+        "https://github.com/etcd-io/etcd/pull/19258"
+      ],
+      "notes": "The local gold solution identifies mainline PR #19221 and fix commit 43431bd6f83b60d13a29ef9df53d7f04fe63fcfd. The authoritative Git commit object confirms that SHA is the merge of PR #19221, has Git committer timestamp 2025-01-22T14:44:21Z, and has first parent c9045d650e6c1cb2e5361723adf3bb8c6ea22ee0 (the revision selected by the case's fix-commit~1 buggy reference). GitHub's PR timeline confirms the exact SHA was merged at 2025-01-22T14:44:21Z. GitHub issue metadata shows #19172 is CLOSED/COMPLETED, identifies #19221 among its closing PR references, and was updated by that closure at 2025-01-22T14:44:22Z, so issue_close_date is selected even though it falls on the same YYYY-MM-DD. The local solution also identifies the later 3.5 backport PR #19258 and commit 3c04b6c7fc1d8a46f1f3e96794060c8d06526a33 (committer timestamp 2025-01-22T15:41:40Z), but the benchmark case and selected confirmed fix are explicitly based on the mainline commit."
+    },
+    {
+      "case_id": "etcd-19179-watch-tombstone-compact",
+      "selected_date": "2025-01-20",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "83cf7bb4fc621f017fcaa9a735194fcec23420b8",
+      "fix_commit_sha": "83cf7bb4fc621f017fcaa9a735194fcec23420b8",
+      "fix_commit_date": "2025-01-20",
+      "issue_url": "https://github.com/etcd-io/etcd/issues/19179",
+      "issue_closed_date": null,
+      "other_reference_url": "https://github.com/etcd-io/etcd/pull/19188",
+      "other_reference_closed_or_merged_date": "2025-01-20",
+      "evidence_urls": [
+        "https://github.com/etcd-io/etcd/commit/83cf7bb4fc621f017fcaa9a735194fcec23420b8",
+        "https://github.com/etcd-io/etcd/issues/19179",
+        "https://github.com/etcd-io/etcd/pull/19188"
+      ],
+      "notes": "The local gold solution identifies PR #19188 and fix commit 83cf7bb4fc621f017fcaa9a735194fcec23420b8. The authoritative Git commit object confirms that SHA is the merge of PR #19188, has author and committer timestamp 2025-01-20T09:18:24Z, and first parent bae527c3cd0585c579c64d754e1c4f9607e85c81 (the revision selected by the case's fix-commit~1 buggy reference). GitHub's rendered PR timeline independently confirms that exact SHA was merged into main at 2025-01-20T09:18:24Z. GitHub's issue page authoritatively shows #19179 is closed/completed, but its currently rendered metadata does not expose a verifiable ClosedEvent timestamp; its updatedAt value is not treated as a closure timestamp. Fidelity-first, issue_closed_date is therefore null and the confirmed fix commit date is selected."
+    },
+    {
+      "case_id": "etcd-20221-watch-restore-revision",
+      "selected_date": "2025-07-04",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "9fb8c3685fd4573e39470a5451d3f85c0f29bfb1",
+      "fix_commit_sha": "9fb8c3685fd4573e39470a5451d3f85c0f29bfb1",
+      "fix_commit_date": "2025-07-04",
+      "issue_url": "https://github.com/etcd-io/etcd/issues/20221",
+      "issue_closed_date": "2025-07-04",
+      "other_reference_url": "https://github.com/etcd-io/etcd/pull/20281",
+      "other_reference_closed_or_merged_date": "2025-07-04",
+      "evidence_urls": [
+        "https://github.com/etcd-io/etcd/commit/9fb8c3685fd4573e39470a5451d3f85c0f29bfb1",
+        "https://github.com/etcd-io/etcd/issues/20221",
+        "https://github.com/etcd-io/etcd/pull/20281"
+      ],
+      "notes": "The local case uses 9fb8c3685fd4573e39470a5451d3f85c0f29bfb1~1 as its buggy revision, and solution.md identifies 9fb8c3685fd4573e39470a5451d3f85c0f29bfb1 from PR #20281 as the fix. Direct Git metadata confirms that SHA is the two-parent merge of PR #20281, its first parent is the case's buggy revision, and its committer timestamp is 2025-07-04T17:32:23+02:00. The public GitHub PR timeline independently shows that exact SHA merged into main on 2025-07-04; the PR body says \"Fixes #20221\" and describes the restore path lowering future watchers' minRev. GitHub's issue header marks standalone issue #20221 closed by #20281, establishing its closure on the PR's 2025-07-04 merge date. Since the confirmed fix commit and issue closure tie at calendar precision, the confirmed fix commit is used as the selected reference; no later confirmed calendar date exists."
+    },
+    {
+      "case_id": "etcd-20704-leasing-linearizability",
+      "selected_date": "2025-11-30",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/etcd-io/etcd/issues/20704",
+      "fix_commit_sha": null,
+      "fix_commit_date": null,
+      "issue_url": "https://github.com/etcd-io/etcd/issues/20704",
+      "issue_closed_date": "2025-11-30",
+      "other_reference_url": null,
+      "other_reference_closed_or_merged_date": null,
+      "evidence_urls": [
+        "https://github.com/etcd-io/etcd/issues/20704"
+      ],
+      "notes": "The local case uses buggy_commit main, and its gold solution records issue #20704 as open with a fix pending; it names no fix PR or commit. The current authoritative GitHub issue page and embedded timeline now show #20704 CLOSED with state reason NOT_PLANNED. A ClosedEvent records that github-actions closed it at 2025-11-30T00:14:37Z after a stale-issue comment. The same page reports no linked pull requests and no closing pull requests. Therefore no fix commit is claimed, but the explicitly verified issue close date is selected under the requested issue-close fallback. This is an administrative not-planned closure, not evidence that the underlying leasing linearizability bug was fixed."
+    },
+    {
+      "case_id": "etcd-20893-force-new-cluster-learner",
+      "selected_date": "2025-11-06",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/etcd-io/etcd/issues/20893",
+      "fix_commit_sha": "c58e6f1caf7dfe07da002230a2b61d664ab21a34",
+      "fix_commit_date": "2025-11-06",
+      "issue_url": "https://github.com/etcd-io/etcd/issues/20893",
+      "issue_closed_date": "2025-11-06",
+      "other_reference_url": "https://github.com/etcd-io/etcd/pull/20894",
+      "other_reference_closed_or_merged_date": "2025-11-06",
+      "evidence_urls": [
+        "https://github.com/etcd-io/etcd/commit/c58e6f1caf7dfe07da002230a2b61d664ab21a34",
+        "https://github.com/etcd-io/etcd/issues/20893",
+        "https://github.com/etcd-io/etcd/pull/20894"
+      ],
+      "notes": "The local gold solution identifies PR #20894 and fix commit c58e6f1caf7dfe07da002230a2b61d664ab21a34. GitHub's authoritative commit page identifies that SHA as the merge of PR #20894, gives authored and committed timestamps of 2025-11-06T19:18:27Z, and shows first parent 9f1883643231ae949be4019f7f9a6ec07d2c34d1, matching the case's buggy revision (fix commit~1). GitHub's PR page confirms PR #20894 merged and closed at 2025-11-06T19:18:27Z with merge commit c58e6f1caf7dfe07da002230a2b61d664ab21a34. The authoritative issue timeline records an initial closure by PR #20894 at 2025-11-06T19:18:28Z, a reopen at 2025-11-06T19:19:59Z, and the final COMPLETED closure at 2025-11-06T20:39:50Z. The final issue closure is later than the fix commit landing, so issue_close_date is selected."
+    },
+    {
+      "case_id": "kafka-14334-delayed-fetch-purgatory",
+      "selected_date": "2022-11-16",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://issues.apache.org/jira/browse/KAFKA-14334",
+      "fix_commit_sha": "dbf5826cd545820652ed6d136727aa80a03f4f54",
+      "fix_commit_date": "2022-11-16",
+      "issue_url": "https://issues.apache.org/jira/browse/KAFKA-14334",
+      "issue_closed_date": "2022-11-16",
+      "other_reference_url": "https://github.com/apache/kafka/pull/12783",
+      "other_reference_closed_or_merged_date": "2022-11-16",
+      "evidence_urls": [
+        "https://github.com/apache/kafka/commit/dbf5826cd545820652ed6d136727aa80a03f4f54",
+        "https://github.com/apache/kafka/pull/12783",
+        "https://issues.apache.org/jira/browse/KAFKA-14334",
+        "https://issues.apache.org/jira/rest/api/2/issue/KAFKA-14334?fields=summary,status,resolution,resolutiondate,updated,created",
+        "https://issues.apache.org/jira/rest/api/2/issue/KAFKA-14334?expand=changelog&fields=resolutiondate,status,resolution"
+      ],
+      "notes": "The local gold solution identifies PR #12783 and fix commit dbf5826cd545820652ed6d136727aa80a03f4f54. The authoritative Git commit object confirms that SHA has Git committer timestamp 2022-11-16T13:54:42Z, identifies KAFKA-14334 and PR #12783 in its message, and has first parent 039cccca245a2314c63834e61989939738579bad (the revision selected by the case's fix-commit~1 buggy reference). GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2022-11-16T13:54:42Z. Apache Jira's authoritative REST record gives resolutiondate 2022-11-16T14:04:26.093Z, status Resolved, and resolution Fixed; its changelog confirms the Open-to-Resolved and unset-to-Fixed transitions at 2022-11-16T14:04:26.102Z. The Jira resolution occurred about ten minutes after the confirmed fix landed, so it is recorded in issue_closed_date and selected as the later resolution signal. No date is inferred from release labels."
+    },
+    {
+      "case_id": "kafka-15170-endless-rebalance-loop",
+      "selected_date": "2024-05-15",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://issues.apache.org/jira/browse/KAFKA-15170",
+      "fix_commit_sha": "f0291ac74b88b988c4ab07c16286942838ba4556",
+      "fix_commit_date": "2024-05-15",
+      "issue_url": "https://issues.apache.org/jira/browse/KAFKA-15170",
+      "issue_closed_date": "2024-05-15",
+      "other_reference_url": "https://github.com/apache/kafka/pull/13965",
+      "other_reference_closed_or_merged_date": "2024-05-15",
+      "evidence_urls": [
+        "https://github.com/apache/kafka/commit/f0291ac74b88b988c4ab07c16286942838ba4556",
+        "https://github.com/apache/kafka/pull/13965",
+        "https://issues.apache.org/jira/browse/KAFKA-15170",
+        "https://issues.apache.org/jira/rest/api/2/issue/KAFKA-15170"
+      ],
+      "notes": "The local case uses f0291ac74b88b988c4ab07c16286942838ba4556~1 as its buggy revision, and solution.md identifies f0291ac74b88b988c4ab07c16286942838ba4556 from PR #13965 as the fix. Direct Git metadata confirms that SHA's sole parent is the case's buggy revision, its subject names KAFKA-15170 and PR #13965, and its committer timestamp is 2024-05-14T17:06:05-07:00, equivalent to 2024-05-15T00:06:05Z. The public GitHub commit page independently shows the same KAFKA-15170 rack-aware AbstractStickyAssignor fix, while the PR timeline confirms PR #13965 merged that exact SHA at 2024-05-15T00:06:05Z. Apache Jira's authoritative issue record marks KAFKA-15170 Resolved with resolution Fixed at 2024-05-15T00:14:11.305Z; the rendered Jira page likewise displays Resolved 15/May/24 00:14 and links PR #13965. Because the Jira resolution occurred about eight minutes after the confirmed commit landed, issue_close_date is selected, although both events share the same UTC calendar date."
+    },
+    {
+      "case_id": "kafka-15784-txn-offset-atomicity",
+      "selected_date": "2023-12-14",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://issues.apache.org/jira/browse/KAFKA-15784",
+      "fix_commit_sha": "e4249b69bda215d308ac5580a89fcc58ca054b97",
+      "fix_commit_date": "2023-12-14",
+      "issue_url": "https://issues.apache.org/jira/browse/KAFKA-15784",
+      "issue_closed_date": "2023-12-14",
+      "other_reference_url": "https://github.com/apache/kafka/pull/14774",
+      "other_reference_closed_or_merged_date": "2023-12-14",
+      "evidence_urls": [
+        "https://github.com/apache/kafka/commit/e4249b69bda215d308ac5580a89fcc58ca054b97",
+        "https://github.com/apache/kafka/pull/14774",
+        "https://issues.apache.org/jira/browse/KAFKA-15784",
+        "https://issues.apache.org/jira/rest/api/2/issue/KAFKA-15784?expand=changelog"
+      ],
+      "notes": "The local gold solution identifies PR #14774 and fix commit e4249b69bda215d308ac5580a89fcc58ca054b97. GitHub's authoritative commit page gives that commit authored and committed timestamps of 2023-12-13T17:45:09-08:00 (2023-12-14T01:45:09Z) and shows parent a87e86e015f61de9a66012fd542dbf0417eb0387, matching the case's buggy revision (fix commit~1). GitHub's PR page confirms PR #14774 merged and closed at 2023-12-14T01:45:09Z with merge commit e4249b69bda215d308ac5580a89fcc58ca054b97. Apache Jira's authoritative issue record reports KAFKA-15784 as Resolved with resolution Fixed and resolutiondate 2023-12-14T19:06:36.676Z; its changelog independently records the In Progress to Resolved transition at 2023-12-14T19:06:36.686Z. The Jira resolution occurred later than the confirmed fix commit landing, so issue_close_date is selected."
+    },
+    {
+      "case_id": "kvrocks-2214-slave-sync-gap",
+      "selected_date": "2024-04-05",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/apache/kvrocks/issues/2214",
+      "fix_commit_sha": "7e1b797920517edf9c798cd4b440789b524d7956",
+      "fix_commit_date": "2024-04-05",
+      "issue_url": "https://github.com/apache/kvrocks/issues/2214",
+      "issue_closed_date": "2024-04-05",
+      "other_reference_url": "https://github.com/apache/kvrocks/pull/2221",
+      "other_reference_closed_or_merged_date": "2024-04-05",
+      "evidence_urls": [
+        "https://github.com/apache/kvrocks/commit/7e1b797920517edf9c798cd4b440789b524d7956",
+        "https://github.com/apache/kvrocks/issues/2214",
+        "https://github.com/apache/kvrocks/pull/2221"
+      ],
+      "notes": "The local gold solution identifies PR #2221 and fix commit 7e1b797920517edf9c798cd4b440789b524d7956. The authoritative Git commit object confirms that SHA has Git committer timestamp 2024-04-05T09:40:59+08:00 (2024-04-05T01:40:59Z), first parent bf5ba41dcdaba15c975ef204acef706db0bac37e (the revision selected by the case's fix-commit~1 buggy reference), and message 'Fix wrongly try to rewrite the namespace in the cluster mode (#2221)' followed by 'This closes #2214'. GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2024-04-05T01:40:59Z. GitHub's issue metadata identifies merged PR #2221 as the closing reference and exposes a ClosedEvent at 2024-04-05T01:41:00Z. The issue closed one second after the confirmed fix landed, so issue_close_date is selected even though both events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "kvrocks-2512-slaveof-deadlock",
+      "selected_date": "2024-09-02",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/apache/kvrocks/issues/2512",
+      "fix_commit_sha": "ab41cbb69d081711437e25846c86c920cb5253e1",
+      "fix_commit_date": "2024-09-02",
+      "issue_url": "https://github.com/apache/kvrocks/issues/2512",
+      "issue_closed_date": "2024-09-02",
+      "other_reference_url": "https://github.com/apache/kvrocks/pull/2516",
+      "other_reference_closed_or_merged_date": "2024-09-02",
+      "evidence_urls": [
+        "https://github.com/apache/kvrocks/commit/ab41cbb69d081711437e25846c86c920cb5253e1",
+        "https://github.com/apache/kvrocks/issues/2512",
+        "https://github.com/apache/kvrocks/pull/2516"
+      ],
+      "notes": "The local gold solution identifies PR #2516 and fix commit ab41cbb69d081711437e25846c86c920cb5253e1. GitHub's authoritative commit page gives that commit authored and committed timestamps of 2024-09-02T15:10:02+08:00 (2024-09-02T07:10:02Z), describes the replication deadlock fix when switching masters frequently, and shows parent 0329170d60d67a5f0f62ee565a1a14f0bbfb81da, matching the case's buggy revision (fix commit~1). GitHub's PR page confirms PR #2516 merged and closed at 2024-09-02T07:10:03Z with merge commit ab41cbb69d081711437e25846c86c920cb5253e1. The authoritative issue timeline records #2512 closing as COMPLETED at 2024-09-02T07:10:04Z, linked to both the confirmed commit and PR #2516. The issue closure occurred two seconds after the commit landed, so issue_close_date is selected."
+    },
+    {
+      "case_id": "kvrocks-2520-namespace-fullsync",
+      "selected_date": "2024-09-08",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/apache/kvrocks/issues/2520",
+      "fix_commit_sha": "a29df097dd23c36a749e5c616f4d1cae1051e853",
+      "fix_commit_date": "2024-09-08",
+      "issue_url": "https://github.com/apache/kvrocks/issues/2520",
+      "issue_closed_date": "2024-09-08",
+      "other_reference_url": "https://github.com/apache/kvrocks/pull/2527",
+      "other_reference_closed_or_merged_date": "2024-09-08",
+      "evidence_urls": [
+        "https://github.com/apache/kvrocks/commit/a29df097dd23c36a749e5c616f4d1cae1051e853",
+        "https://github.com/apache/kvrocks/issues/2520",
+        "https://github.com/apache/kvrocks/pull/2527"
+      ],
+      "notes": "The local gold solution identifies PR #2527 and fix commit a29df097dd23c36a749e5c616f4d1cae1051e853. The authoritative Git commit object confirms that SHA has Git committer timestamp 2024-09-08T20:21:54+08:00 (2024-09-08T12:21:54Z), first parent 1d450ee6f5a4169866fbea6786e678925afa797d (the revision selected by the case's fix-commit~1 buggy reference), and message 'fix(namespace): didn't reload namespaces from DB after the full sync (#2527)'. GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2024-09-08T12:21:54Z. GitHub's issue metadata identifies merged PR #2527 as the closing reference and exposes a ClosedEvent at 2024-09-08T12:21:55Z. The issue closed one second after the confirmed fix landed, so issue_close_date is selected even though both events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "kvrocks-3148-namespace-delete",
+      "selected_date": "2025-08-28",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/apache/kvrocks/issues/3148",
+      "fix_commit_sha": "833ae36aa1d17e87be494724689b87e5234286ec",
+      "fix_commit_date": "2025-08-28",
+      "issue_url": "https://github.com/apache/kvrocks/issues/3148",
+      "issue_closed_date": "2025-08-28",
+      "other_reference_url": "https://github.com/apache/kvrocks/pull/3149",
+      "other_reference_closed_or_merged_date": "2025-08-28",
+      "evidence_urls": [
+        "https://github.com/apache/kvrocks/commit/833ae36aa1d17e87be494724689b87e5234286ec",
+        "https://github.com/apache/kvrocks/issues/3148",
+        "https://github.com/apache/kvrocks/pull/3149"
+      ],
+      "notes": "The local case uses 833ae36aa1d17e87be494724689b87e5234286ec~1 as its buggy revision, and solution.md identifies 833ae36aa1d17e87be494724689b87e5234286ec from PR #3149 as the fix. Direct Git metadata confirms that SHA's sole parent is the case's buggy revision, its subject describes the namespace-token deletion bug and names PR #3149, and its committer timestamp is 2025-08-28T14:24:29Z. GitHub's public PR metadata and timeline independently confirm PR #3149 merged that exact SHA at 2025-08-28T14:24:29Z. The standalone issue #3148 timeline records a completed ClosedEvent at 2025-08-28T14:24:30Z and identifies PR #3149 as the closer. Therefore issue_close_date is selected; both events fall on 2025-08-28, but the issue closure is one second later at timestamp precision."
+    },
+    {
+      "case_id": "kvrocks-3208-replication-watermark",
+      "selected_date": "2025-11-02",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/apache/kvrocks/issues/3208",
+      "fix_commit_sha": "54929cd01603f9a19cd3b700b8b4da1683e4eda9",
+      "fix_commit_date": "2025-11-01",
+      "issue_url": "https://github.com/apache/kvrocks/issues/3208",
+      "issue_closed_date": "2025-11-02",
+      "other_reference_url": "https://github.com/apache/kvrocks/pull/3243",
+      "other_reference_closed_or_merged_date": "2025-11-01",
+      "evidence_urls": [
+        "https://github.com/apache/kvrocks/commit/54929cd01603f9a19cd3b700b8b4da1683e4eda9",
+        "https://github.com/apache/kvrocks/issues/3208",
+        "https://github.com/apache/kvrocks/pull/3243"
+      ],
+      "notes": "The local gold solution identifies PR #3243 and fix commit 54929cd01603f9a19cd3b700b8b4da1683e4eda9. GitHub's authoritative commit page gives authored and committed timestamps corresponding to 2025-11-01T15:31:25Z, describes fixing stuck replication caused by a wrong watermark, and shows parent 2b7e69a5acd9e1490b96aafc84746d1baef6579e, matching the case's buggy revision (fix commit~1). GitHub's PR page confirms PR #3243 merged and closed at 2025-11-01T15:31:25Z with merge commit 54929cd01603f9a19cd3b700b8b4da1683e4eda9. In issue #3208, a maintainer linked PR #3243, the reporter subsequently confirmed that testing ran smoothly without replication stalls, and the authoritative timeline records the issue closing as COMPLETED at 2025-11-02T10:37:16Z. The verified issue closure is later than the fix commit landing, so issue_close_date is selected."
+    },
+    {
+      "case_id": "kvrocks-3315-zdiff-crash",
+      "selected_date": "2025-12-29",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/apache/kvrocks/issues/3315",
+      "fix_commit_sha": "c2c5d094d4335c4951f88e7de319d78e1bf5b3b8",
+      "fix_commit_date": "2025-12-29",
+      "issue_url": "https://github.com/apache/kvrocks/issues/3315",
+      "issue_closed_date": "2025-12-29",
+      "other_reference_url": "https://github.com/apache/kvrocks/pull/3316",
+      "other_reference_closed_or_merged_date": "2025-12-29",
+      "evidence_urls": [
+        "https://github.com/apache/kvrocks/commit/c2c5d094d4335c4951f88e7de319d78e1bf5b3b8",
+        "https://github.com/apache/kvrocks/issues/3315",
+        "https://github.com/apache/kvrocks/pull/3316"
+      ],
+      "notes": "The local gold solution identifies PR #3316 and fix commit c2c5d094d4335c4951f88e7de319d78e1bf5b3b8. The authoritative Git commit object confirms that SHA has Git committer timestamp 2025-12-29T17:48:16Z, first parent a320c90205bbe7a289e197470cd380a41e81f357 (the revision selected by the case's fix-commit~1 buggy reference), and message 'fix(command): Enhance zdiff parse error case to avoid crash (#3316)' followed by 'closes #3315'. GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2025-12-29T17:48:16Z. GitHub's issue metadata identifies merged PR #3316 as the closing reference and exposes a ClosedEvent at 2025-12-29T17:48:17Z. The issue closed one second after the confirmed fix landed, so issue_close_date is selected even though both events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "kvrocks-3339-xreadgroup-double",
+      "selected_date": "2026-01-12",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/apache/kvrocks/issues/3339",
+      "fix_commit_sha": "25216331bce6f9e97b945aad1cbb04e2db261287",
+      "fix_commit_date": "2026-01-09",
+      "issue_url": "https://github.com/apache/kvrocks/issues/3339",
+      "issue_closed_date": "2026-01-12",
+      "other_reference_url": "https://github.com/apache/kvrocks/pull/3337",
+      "other_reference_closed_or_merged_date": "2026-01-09",
+      "evidence_urls": [
+        "https://github.com/apache/kvrocks/commit/25216331bce6f9e97b945aad1cbb04e2db261287",
+        "https://github.com/apache/kvrocks/issues/3339",
+        "https://github.com/apache/kvrocks/issues/3338",
+        "https://github.com/apache/kvrocks/pull/3337"
+      ],
+      "notes": "The local case uses 25216331bce6f9e97b945aad1cbb04e2db261287~1 as its buggy revision, and solution.md identifies 25216331bce6f9e97b945aad1cbb04e2db261287 from PR #3337 as the fix. Direct Git metadata confirms that SHA's sole parent is the case's buggy revision, its message describes the missing-return double-response failure, and its committer timestamp is 2026-01-09T03:05:41Z. GitHub's public PR metadata and timeline independently confirm PR #3337 merged that exact SHA at the same timestamp. PR #3337 formally resolved original issue #3338, not later issue #3339. Issue #3339 was opened on 2026-01-12 reporting the same symptom, but its reporter then determined the deployed environment had used the wrong image and could not reproduce the bug with the corrected deployment. GitHub's timeline records issue #3339 manually closed completed at 2026-01-12T22:14:30Z. Therefore the corresponding registry issue's later close date, 2026-01-12, is selected, while preserving the distinction that PR #3337 did not directly close #3339."
+    },
+    {
+      "case_id": "kvrocks-3356-replication-wal",
+      "selected_date": "2026-02-04",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/apache/kvrocks/issues/3356",
+      "fix_commit_sha": "559a667bef223a07fea350a27168e91fe0a74601",
+      "fix_commit_date": "2026-02-04",
+      "issue_url": "https://github.com/apache/kvrocks/issues/3356",
+      "issue_closed_date": "2026-02-04",
+      "other_reference_url": "https://github.com/apache/kvrocks/pull/3357",
+      "other_reference_closed_or_merged_date": "2026-02-04",
+      "evidence_urls": [
+        "https://github.com/apache/kvrocks/commit/559a667bef223a07fea350a27168e91fe0a74601",
+        "https://github.com/apache/kvrocks/issues/3356",
+        "https://github.com/apache/kvrocks/pull/3357"
+      ],
+      "notes": "The local gold solution identifies PR #3357 and fix commit 559a667bef223a07fea350a27168e91fe0a74601. The authoritative Git commit object confirms that SHA has Git committer timestamp 2026-02-04T09:36:05+08:00 (2026-02-04T01:36:05Z), first parent 38e3c1ff0763190fa606d0dbf05d6c86e216442e (the revision selected by the case's fix-commit~1 buggy reference), and explicitly says 'Fixes https://github.com/apache/kvrocks/issues/3356'. GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2026-02-04T01:36:05Z. GitHub's issue metadata identifies merged PR #3357 as the closing reference, renders the issue as closed by #3357, and records its closure update at 2026-02-04T01:36:07Z. The issue therefore closed two seconds after the confirmed fix landed, so issue_close_date is selected even though both events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "nats-6374-consumer-stuck-redelivery",
+      "selected_date": "2025-01-22",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/nats-io/nats-server/issues/6374",
+      "fix_commit_sha": "4be933fc655c3d35b678a74402dacd8c0448c0a7",
+      "fix_commit_date": "2025-01-22",
+      "issue_url": "https://github.com/nats-io/nats-server/issues/6374",
+      "issue_closed_date": "2025-01-22",
+      "other_reference_url": "https://github.com/nats-io/nats-server/pull/6387",
+      "other_reference_closed_or_merged_date": "2025-01-22",
+      "evidence_urls": [
+        "https://github.com/nats-io/nats-server/commit/4be933fc655c3d35b678a74402dacd8c0448c0a7",
+        "https://github.com/nats-io/nats-server/issues/6374",
+        "https://github.com/nats-io/nats-server/pull/6387"
+      ],
+      "notes": "The local gold solution identifies PR #6387 and fix commit 4be933fc655c3d35b678a74402dacd8c0448c0a7. GitHub's authoritative commit page gives that merge commit authored and committed timestamps of 2025-01-22T08:19:24-05:00 (2025-01-22T13:19:24Z), describes the consumer stuck/slowdown fix during leader changes or redeliveries, and shows first parent 2a8ee64628f6bd87a4d86557af4330ec69783f7f, exactly matching the case's buggy_commit. GitHub's PR page confirms PR #6387 merged and closed at 2025-01-22T13:19:25Z with merge commit 4be933fc655c3d35b678a74402dacd8c0448c0a7. The authoritative issue timeline records #6374 closing as COMPLETED at 2025-01-22T13:19:26Z, linked to both the confirmed commit and PR #6387. The issue closure occurred two seconds after the fix commit landed, so issue_close_date is selected."
+    },
+    {
+      "case_id": "nats-6455-reserved-resource-leak",
+      "selected_date": "2025-02-05",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/nats-io/nats-server/issues/6455",
+      "fix_commit_sha": "bc18f1a4cbdbeebbfb09913a0a760c9f6bf8ac3a",
+      "fix_commit_date": "2025-02-05",
+      "issue_url": "https://github.com/nats-io/nats-server/issues/6455",
+      "issue_closed_date": "2025-02-05",
+      "other_reference_url": "https://github.com/nats-io/nats-server/pull/6457",
+      "other_reference_closed_or_merged_date": "2025-02-05",
+      "evidence_urls": [
+        "https://github.com/nats-io/nats-server/commit/bc18f1a4cbdbeebbfb09913a0a760c9f6bf8ac3a",
+        "https://github.com/nats-io/nats-server/commit/58cafceab177002297438dc1f4d3db3b6a7a22f4",
+        "https://github.com/nats-io/nats-server/issues/6455",
+        "https://github.com/nats-io/nats-server/pull/6457"
+      ],
+      "notes": "The local gold solution identifies PR #6457, merge commit bc18f1a4cbdbeebbfb09913a0a760c9f6bf8ac3a, and underlying fix commit 58cafceab177002297438dc1f4d3db3b6a7a22f4. GitHub's authoritative page for 58cafceab177002297438dc1f4d3db3b6a7a22f4 describes the reserved-resource accounting fix, has committer timestamp 2025-02-05T14:19:43+01:00 (2025-02-05T13:19:43Z), and shows parent 29fbf46d70601600af6b1152fa02e41fd646d0e2, exactly matching the case's buggy_commit. The authoritative merge-commit page shows bc18f1a4cbdbeebbfb09913a0a760c9f6bf8ac3a landed at 2025-02-05T14:44:50Z and includes 58cafceab177002297438dc1f4d3db3b6a7a22f4 as its second parent; this merge SHA is recorded as the confirmed landed fix commit. The PR page confirms PR #6457 merged and closed at that same timestamp with merge commit bc18f1a4cbdbeebbfb09913a0a760c9f6bf8ac3a. The issue timeline records #6455 closing as COMPLETED via PR #6457 at 2025-02-05T14:44:51Z, one second after the fix landed, so issue_close_date is selected."
+    },
+    {
+      "case_id": "nats-7308-delete-nonexistent-reset",
+      "selected_date": "2025-09-24",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/nats-io/nats-server/issues/7308",
+      "fix_commit_sha": "fd40cf513b17717b4070da83d3764d9af30c6a77",
+      "fix_commit_date": "2025-09-24",
+      "issue_url": "https://github.com/nats-io/nats-server/issues/7308",
+      "issue_closed_date": "2025-09-24",
+      "other_reference_url": "https://github.com/nats-io/nats-server/pull/7348",
+      "other_reference_closed_or_merged_date": "2025-09-24",
+      "evidence_urls": [
+        "https://github.com/nats-io/nats-server/commit/fd40cf513b17717b4070da83d3764d9af30c6a77",
+        "https://github.com/nats-io/nats-server/issues/7308",
+        "https://github.com/nats-io/nats-server/pull/7348"
+      ],
+      "notes": "The local case uses release tag v2.11.8 as its buggy revision, and solution.md identifies fd40cf513b17717b4070da83d3764d9af30c6a77 from PR #7348 as the fix. Direct Git metadata confirms that SHA is the two-parent merge of PR #7348, its message describes preventing clustered-state reset when deleting a nonexistent message, explicitly resolves issue #7308, and has a committer timestamp of 2025-09-24T13:40:37+01:00, equivalent to 2025-09-24T12:40:37Z. GitHub's public PR metadata and timeline independently confirm PR #7348 merged that exact SHA at 2025-09-24T12:40:37Z and declares that it resolves #7308. The standalone issue timeline records a completed ClosedEvent at 2025-09-24T12:40:38Z and identifies PR #7348 as the closer. Therefore issue_close_date is selected; both events fall on 2025-09-24, but issue closure is one second later at timestamp precision."
+    },
+    {
+      "case_id": "nats-7707-wq-consumer-map-crash",
+      "selected_date": "2026-01-08",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/nats-io/nats-server/issues/7707",
+      "fix_commit_sha": "3a90a2d087b792c10d4cbed27f3cc5ef0fb77571",
+      "fix_commit_date": "2026-01-08",
+      "issue_url": "https://github.com/nats-io/nats-server/issues/7707",
+      "issue_closed_date": "2026-01-08",
+      "other_reference_url": "https://github.com/nats-io/nats-server/pull/7708",
+      "other_reference_closed_or_merged_date": "2026-01-08",
+      "evidence_urls": [
+        "https://github.com/nats-io/nats-server/commit/3a90a2d087b792c10d4cbed27f3cc5ef0fb77571",
+        "https://github.com/nats-io/nats-server/issues/7707",
+        "https://github.com/nats-io/nats-server/pull/7708"
+      ],
+      "notes": "The local gold solution identifies PR #7708 and fix commit 3a90a2d087b792c10d4cbed27f3cc5ef0fb77571. The authoritative Git commit object confirms that SHA is the merge of PR #7708, has Git committer timestamp 2026-01-08T09:02:06Z, and first parent 278b1d854fdf20e87a83e650c59b7794b68428ea (the revision selected by the case's fix-commit~1 buggy reference). GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2026-01-08T09:02:07Z. GitHub's issue metadata identifies merged PR #7708 as the closing reference and exposes a ClosedEvent at 2026-01-08T09:02:08Z. The issue closed one second after the PR merge event (two seconds after the Git committer timestamp), so issue_close_date is selected even though all events fall on the same YYYY-MM-DD. The later issue updatedAt value reflects subsequent activity and is not used as the close date."
+    },
+    {
+      "case_id": "nats-7718-subscription-leak",
+      "selected_date": "2026-01-13",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/nats-io/nats-server/issues/7718",
+      "fix_commit_sha": "b72becc443073300e5599d06fa0cde1cd5518589",
+      "fix_commit_date": "2026-01-13",
+      "issue_url": "https://github.com/nats-io/nats-server/issues/7718",
+      "issue_closed_date": "2026-01-13",
+      "other_reference_url": "https://github.com/nats-io/nats-server/pull/7720",
+      "other_reference_closed_or_merged_date": "2026-01-13",
+      "evidence_urls": [
+        "https://github.com/nats-io/nats-server/commit/b72becc443073300e5599d06fa0cde1cd5518589",
+        "https://github.com/nats-io/nats-server/issues/7718",
+        "https://github.com/nats-io/nats-server/pull/7720"
+      ],
+      "notes": "The local gold solution identifies PR #7720 and fix commit b72becc443073300e5599d06fa0cde1cd5518589. The authoritative Git commit object confirms that SHA is the merge of PR #7720, has Git committer timestamp 2026-01-13T15:20:48Z, and first parent 49e9e7b27ff2da7dc2b38ff38eb3f7810f91a567 (the revision selected by the case's fix-commit~1 buggy reference). GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2026-01-13T15:20:48Z. GitHub's issue metadata identifies merged PR #7720 as the closing reference and exposes a ClosedEvent at 2026-01-13T15:20:49Z. The issue closed one second after the confirmed fix landed, so issue_close_date is selected even though both events fall on the same YYYY-MM-DD. The later issue updatedAt value reflects subsequent activity and is not used as the close date."
+    },
+    {
+      "case_id": "nats-7726-mixed-filter",
+      "selected_date": "2026-01-20",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "74c12317902f02e7cb8748364fb383852c99e4ce",
+      "fix_commit_sha": "74c12317902f02e7cb8748364fb383852c99e4ce",
+      "fix_commit_date": "2026-01-20",
+      "issue_url": "https://github.com/nats-io/nats-server/issues/7726",
+      "issue_closed_date": "2026-01-19",
+      "other_reference_url": "https://github.com/nats-io/nats-server/pull/7745",
+      "other_reference_closed_or_merged_date": "2026-01-20",
+      "evidence_urls": [
+        "https://github.com/nats-io/nats-server/commit/74c12317902f02e7cb8748364fb383852c99e4ce",
+        "https://github.com/nats-io/nats-server/pull/7745",
+        "https://github.com/nats-io/nats-server/issues/7726",
+        "https://github.com/nats-io/nats-server/commit/6aded805ec9625b20ee50ded3b63135d5fe3d0a8",
+        "https://github.com/nats-io/nats-server/pull/7725",
+        "https://github.com/nats-io/nats-server/commit/7a7ff0dcfaa5a0a019552da9bd60ab68e6c1c96c",
+        "https://github.com/nats-io/nats-server/pull/7741"
+      ],
+      "notes": "The local gold solution names PR #7725 and merge commit 6aded805ec9625b20ee50ded3b63135d5fe3d0a8, which landed at 2026-01-14T17:55:46Z. However, authoritative upstream history shows this was a precursor, not the final resolution of issue #7726: the issue was opened later on January 14 with more specific mixed-filter reproduction details. GitHub's issue timeline records #7726 closing as COMPLETED via PR #7741 / commit 7a7ff0dcfaa5a0a019552da9bd60ab68e6c1c96c at 2026-01-19T16:50:21Z. On January 20, the reporter explicitly confirmed the bug still reproduced in release-candidate builds containing that change. The maintainer then identified an early-return bug where a wildcard with differing following literal tokens masked another literal, supplied a test image, and the reporter confirmed it fixed the reported behavior. GitHub's authoritative pages show the corresponding PR #7745, Fix subject intersection bug due to early return, merged at 2026-01-20T14:07:58Z as commit 74c12317902f02e7cb8748364fb383852c99e4ce. Because the issue had been closed prematurely and was not reopened, the confirmed final fix commit is later than issue_closed_date and is selected fidelity-first."
+    },
+    {
+      "case_id": "nats-7760-filter-stepdown",
+      "selected_date": "2026-01-27",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/nats-io/nats-server/issues/7760",
+      "fix_commit_sha": "d345774fdb1c3e4e49297a7f9ca1da0a06065dab",
+      "fix_commit_date": "2026-01-27",
+      "issue_url": "https://github.com/nats-io/nats-server/issues/7760",
+      "issue_closed_date": "2026-01-27",
+      "other_reference_url": "https://github.com/nats-io/nats-server/pull/7773",
+      "other_reference_closed_or_merged_date": "2026-01-27",
+      "evidence_urls": [
+        "https://github.com/nats-io/nats-server/commit/d345774fdb1c3e4e49297a7f9ca1da0a06065dab",
+        "https://github.com/nats-io/nats-server/issues/7760",
+        "https://github.com/nats-io/nats-server/pull/7773"
+      ],
+      "notes": "The local case uses release tag v2.12.3 as its buggy revision, and solution.md identifies d345774fdb1c3e4e49297a7f9ca1da0a06065dab from PR #7773 as the fix. Direct Git metadata confirms that SHA is the two-parent merge of PR #7773, its message describes the interest-stream desynchronization after a consumer filter update, and its committer timestamp is 2026-01-27T09:45:59Z. GitHub's public PR metadata and timeline independently confirm PR #7773 merged that exact SHA at the same timestamp and declares that it resolves issue #7760. The standalone issue timeline records a completed manual ClosedEvent later at 2026-01-27T12:01:42Z. Therefore issue_close_date is selected; both events fall on 2026-01-27, but the issue closure occurred about two hours and sixteen minutes after the confirmed fix landed."
+    },
+    {
+      "case_id": "nats-7817-workqueue-message-loss",
+      "selected_date": "2026-02-18",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/nats-io/nats-server/issues/7817",
+      "fix_commit_sha": "a07f134d51a727fa051a042233ce00a8c18374f9",
+      "fix_commit_date": "2026-02-18",
+      "issue_url": "https://github.com/nats-io/nats-server/issues/7817",
+      "issue_closed_date": "2026-02-18",
+      "other_reference_url": "https://github.com/nats-io/nats-server/pull/7845",
+      "other_reference_closed_or_merged_date": "2026-02-18",
+      "evidence_urls": [
+        "https://github.com/nats-io/nats-server/commit/a07f134d51a727fa051a042233ce00a8c18374f9",
+        "https://github.com/nats-io/nats-server/issues/7817",
+        "https://github.com/nats-io/nats-server/pull/7845"
+      ],
+      "notes": "The local gold solution identifies PR #7845 and fix commit a07f134d51a727fa051a042233ce00a8c18374f9. The authoritative Git commit object confirms that SHA is the merge of PR #7845, has Git committer timestamp 2026-02-18T09:53:45Z, and explicitly says it resolves issue #7817. GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2026-02-18T09:53:45Z. GitHub's issue metadata identifies merged PR #7845 as the closing reference and exposes a ClosedEvent at 2026-02-18T09:53:47Z. The issue closed two seconds after the confirmed fix landed, so issue_close_date is selected even though both events fall on the same YYYY-MM-DD. The case's buggy revision is the v2.12.3 tag rather than fix-commit~1, so no parent-commit equivalence is claimed."
+    },
+    {
+      "case_id": "nats-7852-filter-perf",
+      "selected_date": "2026-02-20",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/nats-io/nats-server/issues/7852",
+      "fix_commit_sha": "66e9bbc7f8684dd1b31c54ef686924e0841f9846",
+      "fix_commit_date": "2026-02-20",
+      "issue_url": "https://github.com/nats-io/nats-server/issues/7852",
+      "issue_closed_date": "2026-02-20",
+      "other_reference_url": "https://github.com/nats-io/nats-server/pull/7856",
+      "other_reference_closed_or_merged_date": "2026-02-20",
+      "evidence_urls": [
+        "https://github.com/nats-io/nats-server/commit/66e9bbc7f8684dd1b31c54ef686924e0841f9846",
+        "https://github.com/nats-io/nats-server/issues/7852",
+        "https://github.com/nats-io/nats-server/pull/7856"
+      ],
+      "notes": "The local case uses 66e9bbc7f8684dd1b31c54ef686924e0841f9846~1 as its buggy revision, and solution.md identifies 66e9bbc7f8684dd1b31c54ef686924e0841f9846 from PR #7856 as the fix. Direct Git metadata confirms that SHA is the two-parent merge of PR #7856, its first parent is the case's buggy revision, its message describes avoiding the multi-filter path for a single FilterSubjects entry, explicitly resolves issue #7852, and has a committer timestamp of 2026-02-20T11:41:06Z. GitHub's public PR metadata and timeline independently confirm PR #7856 merged that exact SHA at the same timestamp and declares that it resolves #7852. The standalone issue timeline records a completed ClosedEvent at 2026-02-20T11:41:07Z and identifies PR #7856 as the closer. Therefore issue_close_date is selected; both events fall on 2026-02-20, but issue closure is one second later at timestamp precision."
+    },
+    {
+      "case_id": "ra-439-election-livelock",
+      "selected_date": "2024-06-05",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/rabbitmq/ra/issues/439",
+      "fix_commit_sha": "d128c812fbf582bbaffd0f94bc20a236d078fb6f",
+      "fix_commit_date": "2024-06-05",
+      "issue_url": "https://github.com/rabbitmq/ra/issues/439",
+      "issue_closed_date": "2024-06-05",
+      "other_reference_url": "https://github.com/rabbitmq/ra/pull/442",
+      "other_reference_closed_or_merged_date": "2024-06-05",
+      "evidence_urls": [
+        "https://github.com/rabbitmq/ra/commit/d128c812fbf582bbaffd0f94bc20a236d078fb6f",
+        "https://github.com/rabbitmq/ra/issues/439",
+        "https://github.com/rabbitmq/ra/pull/442"
+      ],
+      "notes": "The local gold solution identifies PR #442 and fix commit d128c812fbf582bbaffd0f94bc20a236d078fb6f. The authoritative Git commit object confirms that SHA is the merge of PR #442, has Git committer timestamp 2024-06-05T08:38:49+01:00 (2024-06-05T07:38:49Z), and first parent bdf8349a5515df5871e36918e8c5e1ee4c0011b3, exactly matching the case's buggy commit. GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2024-06-05T07:38:49Z. GitHub's issue metadata identifies merged PR #442 as the closing reference and exposes a ClosedEvent at 2024-06-05T07:38:50Z. The issue closed one second after the confirmed fix landed, so issue_close_date is selected even though both events fall on the same YYYY-MM-DD. The later issue updatedAt value reflects subsequent activity and is not used as the close date."
+    },
+    {
+      "case_id": "rabbitmq-12635-qq-snapshot-crash",
+      "selected_date": "2024-11-01",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/rabbitmq/rabbitmq-server/issues/12635",
+      "fix_commit_sha": "94e677987f1452980a0692e431a6c813fb244833",
+      "fix_commit_date": "2024-11-01",
+      "issue_url": "https://github.com/rabbitmq/rabbitmq-server/issues/12635",
+      "issue_closed_date": "2024-11-01",
+      "other_reference_url": "https://github.com/rabbitmq/rabbitmq-server/pull/12636",
+      "other_reference_closed_or_merged_date": "2024-11-01",
+      "evidence_urls": [
+        "https://github.com/rabbitmq/rabbitmq-server/commit/94e677987f1452980a0692e431a6c813fb244833",
+        "https://github.com/rabbitmq/rabbitmq-server/commit/ef2c8dfbdafb4e47beab0d3cb9d64b0a2f56fbaf",
+        "https://github.com/rabbitmq/rabbitmq-server/issues/12635",
+        "https://github.com/rabbitmq/rabbitmq-server/pull/12636"
+      ],
+      "notes": "The local gold solution identifies PR #12636 and direct fix commit 94e677987f1452980a0692e431a6c813fb244833, merged as ef2c8dfbdafb4e47beab0d3cb9d64b0a2f56fbaf. GitHub's authoritative fix-commit page gives 94e677987f1452980a0692e431a6c813fb244833 authored and committed timestamps of 2024-11-01T11:37:20Z, describes handling stale read requests that crash quorum queue members, and shows parent 889fdc9163a43207f80a578769486bcce909f129, exactly matching the case's buggy_commit. The merge-commit page shows ef2c8dfbdafb4e47beab0d3cb9d64b0a2f56fbaf landed at 2024-11-01T17:23:43Z and includes the direct fix as its second parent. GitHub's PR page confirms PR #12636 merged and closed at that same timestamp. The authoritative issue timeline records #12635 closing as COMPLETED via PR #12636 at 2024-11-01T17:23:44Z, one second after the fix landed on the target branch, so issue_close_date is selected."
+    },
+    {
+      "case_id": "raft-268-shutdown-deadlock",
+      "selected_date": "2020-02-27",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/hashicorp/raft/issues/268",
+      "fix_commit_sha": "2e997410f28efe8106fc606d21cb655be1b05dee",
+      "fix_commit_date": "2020-02-27",
+      "issue_url": "https://github.com/hashicorp/raft/issues/268",
+      "issue_closed_date": "2020-02-27",
+      "other_reference_url": "https://github.com/hashicorp/raft/pull/390",
+      "other_reference_closed_or_merged_date": "2020-02-27",
+      "evidence_urls": [
+        "https://github.com/hashicorp/raft/commit/2e997410f28efe8106fc606d21cb655be1b05dee",
+        "https://github.com/hashicorp/raft/issues/268",
+        "https://github.com/hashicorp/raft/pull/390"
+      ],
+      "notes": "The local gold solution identifies PR #390 and fix commit 2e997410f28efe8106fc606d21cb655be1b05dee. The authoritative Git commit object confirms that SHA has Git committer timestamp 2020-02-27T06:19:10-05:00 (2020-02-27T11:19:10Z), first parent 9a647f6c2bb9e057c49b85176086ab94a210c09d (the revision selected by the case's fix-commit~1 buggy reference), and message 'futures can react to shutdown (#390)'. GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2020-02-27T11:19:11Z. GitHub's issue metadata identifies merged PR #390 as the closing reference and exposes a ClosedEvent at 2020-02-27T11:19:11Z. The issue closure is one second after the Git committer timestamp and coincides with the rendered merge event, so issue_close_date is selected even though all events fall on the same YYYY-MM-DD."
+    },
+    {
+      "case_id": "raft-358-negative-log-range",
+      "selected_date": "2019-10-01",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/hashicorp/raft/issues/358",
+      "fix_commit_sha": "7b09f38f739f486a692096c35236c7eef094e933",
+      "fix_commit_date": "2019-09-23",
+      "issue_url": "https://github.com/hashicorp/raft/issues/358",
+      "issue_closed_date": "2019-10-01",
+      "other_reference_url": "https://github.com/hashicorp/raft/pull/362",
+      "other_reference_closed_or_merged_date": "2019-09-23",
+      "evidence_urls": [
+        "https://github.com/hashicorp/raft/commit/7b09f38f739f486a692096c35236c7eef094e933",
+        "https://github.com/hashicorp/raft/issues/358",
+        "https://github.com/hashicorp/raft/pull/362"
+      ],
+      "notes": "The local case uses 7b09f38f739f486a692096c35236c7eef094e933~1 as its buggy revision, and solution.md identifies 7b09f38f739f486a692096c35236c7eef094e933 from PR #362 as the fix. Direct Git metadata confirms that SHA's sole parent is the case's buggy revision, its subject names issue #358 and PR #362, and its committer timestamp is 2019-09-23T16:35:38+01:00, equivalent to 2019-09-23T15:35:38Z. GitHub's public PR metadata and timeline independently confirm PR #362 merged that exact SHA at 2019-09-23T15:35:39Z, and the PR text says it fixes #358. The standalone issue did not close at merge time; its timeline records a manual completed ClosedEvent at 2019-10-01T16:01:34Z. Therefore the later issue_close_date, 2019-10-01, is selected over the confirmed 2019-09-23 fix-commit date."
+    },
+    {
+      "case_id": "raft-460-logcache-store-order",
+      "selected_date": "2021-04-16",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "f810f43d71b4a051a0c0e16e003f0a55456dd0fb",
+      "fix_commit_sha": "f810f43d71b4a051a0c0e16e003f0a55456dd0fb",
+      "fix_commit_date": "2021-04-16",
+      "issue_url": "https://github.com/hashicorp/raft/issues/429",
+      "issue_closed_date": "2020-12-18",
+      "other_reference_url": "https://github.com/hashicorp/raft/pull/460",
+      "other_reference_closed_or_merged_date": "2021-04-16",
+      "evidence_urls": [
+        "https://github.com/hashicorp/raft/commit/f810f43d71b4a051a0c0e16e003f0a55456dd0fb",
+        "https://github.com/hashicorp/raft/issues/429",
+        "https://github.com/hashicorp/raft/pull/460",
+        "https://github.com/hashicorp/raft/pull/430"
+      ],
+      "notes": "The local gold solution identifies issue #429, updated fix PR #460, and fix commit f810f43d71b4a051a0c0e16e003f0a55456dd0fb. GitHub's authoritative commit page gives that commit authored and committed timestamps of 2021-04-16T14:52:12-05:00 (2021-04-16T19:52:12Z), describes preventing LogCache from caching on StoreLogs errors, and shows parent 2e7a35f5c1ae81243c11e3db0bd332c9206baa69, matching the case's buggy revision (fix commit~1). GitHub's PR page confirms PR #460 merged and closed at 2021-04-16T19:52:12Z with merge commit f810f43d71b4a051a0c0e16e003f0a55456dd0fb. The authoritative issue timeline records #429 closing as COMPLETED by the stale bot at 2020-12-18T06:44:25Z, months before the updated fix merged; the earlier PR #430 was closed without merging. Because the confirmed fix commit landed later than the administrative issue closure, confirmed_fix_commit_date is selected."
+    },
+    {
+      "case_id": "raft-517-candidate-appendentries-race",
+      "selected_date": "2023-09-28",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/hashicorp/raft/issues/517",
+      "fix_commit_sha": "49bd61b66666fa76cb23fa81897e350f6e9b75de",
+      "fix_commit_date": "2023-09-28",
+      "issue_url": "https://github.com/hashicorp/raft/issues/517",
+      "issue_closed_date": "2023-09-28",
+      "other_reference_url": "https://github.com/hashicorp/raft/pull/570",
+      "other_reference_closed_or_merged_date": "2023-09-28",
+      "evidence_urls": [
+        "https://github.com/hashicorp/raft/commit/49bd61b66666fa76cb23fa81897e350f6e9b75de",
+        "https://github.com/hashicorp/raft/issues/517",
+        "https://github.com/hashicorp/raft/pull/570"
+      ],
+      "notes": "The local gold solution identifies PR #570 and fix commit 49bd61b66666fa76cb23fa81897e350f6e9b75de. The authoritative Git commit object confirms that SHA has Git committer timestamp 2023-09-27T23:00:07-07:00 (2023-09-28T06:00:07Z), first parent a3a1c107918603d3c855205c4eaff47b66ac30b1 (the revision selected by the case's fix-commit~1 buggy reference), and message 'make candidateFromLeadershipTransfer atomic to avoid a race (#570)'. GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2023-09-28T06:00:08Z. GitHub's issue metadata identifies merged PR #570 as the closing reference and exposes a ClosedEvent at 2023-09-28T06:00:09Z. The issue closed two seconds after the Git committer timestamp and one second after the merge event, so issue_close_date is selected even though all events fall on the same YYYY-MM-DD. Later PR activity in 2026 is unrelated and is not used."
+    },
+    {
+      "case_id": "raft-581-transfer-write-race",
+      "selected_date": "2023-12-04",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "62eaa1c192d4c09c90caa5e227177eb9205a6267",
+      "fix_commit_sha": "62eaa1c192d4c09c90caa5e227177eb9205a6267",
+      "fix_commit_date": "2023-12-04",
+      "issue_url": null,
+      "issue_closed_date": null,
+      "other_reference_url": "https://github.com/hashicorp/raft/pull/581",
+      "other_reference_closed_or_merged_date": "2023-12-04",
+      "evidence_urls": [
+        "https://github.com/hashicorp/raft/commit/62eaa1c192d4c09c90caa5e227177eb9205a6267",
+        "https://github.com/hashicorp/raft/pull/581"
+      ],
+      "notes": "The local case uses 62eaa1c192d4c09c90caa5e227177eb9205a6267~1 as its buggy revision, and solution.md identifies 62eaa1c192d4c09c90caa5e227177eb9205a6267 from PR #581 as the fix. Direct Git metadata confirms that SHA's sole parent is the case's buggy revision, its message describes preventing writes during leadership transfer, and its committer timestamp is 2023-12-04T09:38:08-05:00, equivalent to 2023-12-04T14:38:08Z. GitHub's public PR metadata and timeline independently confirm PR #581 merged that exact SHA at 2023-12-04T14:38:09Z. The registry reference is a pull request, and neither the PR conversation/body nor the fix commit identifies a separate corresponding issue. Accordingly, issue fields remain null and the PR merge date is retained only as other-reference metadata. The selected resolution date comes from the confirmed fix commit."
+    },
+    {
+      "case_id": "raft-609-prevote-contact-liveness",
+      "selected_date": "2024-08-28",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "42d34464b2d203e389e11ed6d43db698792c0604",
+      "fix_commit_sha": "42d34464b2d203e389e11ed6d43db698792c0604",
+      "fix_commit_date": "2024-08-28",
+      "issue_url": null,
+      "issue_closed_date": null,
+      "other_reference_url": "https://github.com/hashicorp/raft/pull/609",
+      "other_reference_closed_or_merged_date": "2024-08-28",
+      "evidence_urls": [
+        "https://github.com/hashicorp/raft/commit/42d34464b2d203e389e11ed6d43db698792c0604",
+        "https://github.com/hashicorp/raft/pull/609"
+      ],
+      "notes": "The local case registry and gold solution identify PR #609 rather than a standalone issue, and identify fix commit 42d34464b2d203e389e11ed6d43db698792c0604. GitHub's authoritative commit page gives that commit authored and committed timestamps of 2024-08-28T13:20:42-04:00 (2024-08-28T17:20:42Z), describes not updating leader last-contact when granting a pre-vote request, and shows parent 185ae2ea91f09c04428c4293641db142b130a631, matching the case's buggy revision (fix commit~1). GitHub's PR page confirms PR #609 merged and closed at 2024-08-28T17:20:42Z with merge commit 42d34464b2d203e389e11ed6d43db698792c0604. No corresponding standalone issue was linked in the local metadata or verified on the authoritative PR page. PR closure is retained only as other-reference metadata, and confirmed_fix_commit_date is selected."
+    },
+    {
+      "case_id": "raft-rs-221-campaign-conf-change",
+      "selected_date": "2019-04-29",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/tikv/raft-rs/issues/221",
+      "fix_commit_sha": "64571f0fb7d87e5c335f05a67b2ff5fbe90dec36",
+      "fix_commit_date": "2019-04-29",
+      "issue_url": "https://github.com/tikv/raft-rs/issues/221",
+      "issue_closed_date": "2019-04-29",
+      "other_reference_url": "https://github.com/tikv/raft-rs/pull/225",
+      "other_reference_closed_or_merged_date": "2019-04-29",
+      "evidence_urls": [
+        "https://github.com/tikv/raft-rs/commit/64571f0fb7d87e5c335f05a67b2ff5fbe90dec36",
+        "https://github.com/tikv/raft-rs/issues/221",
+        "https://github.com/tikv/raft-rs/pull/225"
+      ],
+      "notes": "The local gold solution identifies PR #225 and fix commit 64571f0fb7d87e5c335f05a67b2ff5fbe90dec36. The authoritative Git commit object confirms that SHA has Git committer timestamp 2019-04-29T16:05:24+08:00 (2019-04-29T08:05:24Z), first parent aa131db1ba95166501c1cf5b8d90cd7c7bde2308, exactly matching the case's buggy commit, and message 'Check pending conf change before campaign (#225)' followed by 'Fix #221'. GitHub's rendered PR timeline independently confirms the exact SHA was merged at 2019-04-29T08:05:25Z. GitHub's issue metadata exposes a manual ClosedEvent at 2019-04-29T08:26:59Z; its closer field is null and it does not identify an automatic closing PR, so no automatic-closure relationship is inferred. The actual issue close event occurred about 21 minutes after the confirmed fix landed, so issue_close_date is selected."
+    },
+    {
+      "case_id": "raft-rs-345-readindex-config-change",
+      "selected_date": "2020-05-21",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/tikv/raft-rs/issues/345",
+      "fix_commit_sha": "513b82ce4507747a678fee7b4405c8b8b106fc12",
+      "fix_commit_date": "2020-05-21",
+      "issue_url": "https://github.com/tikv/raft-rs/issues/345",
+      "issue_closed_date": "2020-05-21",
+      "other_reference_url": "https://github.com/tikv/raft-rs/pull/363",
+      "other_reference_closed_or_merged_date": "2020-05-21",
+      "evidence_urls": [
+        "https://github.com/tikv/raft-rs/commit/513b82ce4507747a678fee7b4405c8b8b106fc12",
+        "https://github.com/tikv/raft-rs/issues/345",
+        "https://github.com/tikv/raft-rs/pull/363"
+      ],
+      "notes": "The local case uses 513b82ce4507747a678fee7b4405c8b8b106fc12~1 as its buggy revision, and solution.md identifies 513b82ce4507747a678fee7b4405c8b8b106fc12 from PR #363 as the fix. Direct Git metadata confirms that SHA's sole parent is the case's buggy revision, its subject describes checking pending reads when quorum shrinks, and its committer timestamp is 2020-05-21T14:00:35+08:00, equivalent to 2020-05-21T06:00:35Z. GitHub's public PR metadata and timeline independently confirm PR #363 merged that exact SHA at 2020-05-21T06:00:36Z, and the PR body explicitly closes issue #345. The standalone issue timeline records a completed ClosedEvent at 2020-05-21T06:00:37Z and identifies PR #363 as the closer. Therefore issue_close_date is selected; all events fall on 2020-05-21, with issue closure two seconds after the confirmed fix commit timestamp."
+    },
+    {
+      "case_id": "rocksdb-10751-stalled-writes-shutdown",
+      "selected_date": "2022-10-10",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://github.com/facebook/rocksdb/issues/10751",
+      "fix_commit_sha": "a45e6878f39cdc777c54e5d6749d53c1f70e2b52",
+      "fix_commit_date": "2022-10-10",
+      "issue_url": "https://github.com/facebook/rocksdb/issues/10751",
+      "issue_closed_date": "2022-10-10",
+      "other_reference_url": "https://github.com/facebook/rocksdb/pull/10765",
+      "other_reference_closed_or_merged_date": "2022-10-10",
+      "evidence_urls": [
+        "https://github.com/facebook/rocksdb/commit/a45e6878f39cdc777c54e5d6749d53c1f70e2b52",
+        "https://github.com/facebook/rocksdb/issues/10751",
+        "https://github.com/facebook/rocksdb/pull/10765"
+      ],
+      "notes": "The local gold solution and case metadata identify issue #10751 and fix commit a45e6878f39cdc777c54e5d6749d53c1f70e2b52. GitHub's authoritative commit page gives that commit authored and committed timestamps of 2022-10-10T09:46:09-07:00 (2022-10-10T16:46:09Z), explicitly says it fixes issue #10751 through PR #10765, and shows parent c401f285c3215043346e150e6a7f319946d2f325, matching the case's buggy revision (fix commit~1). The PR page records PR #10765 as closed, not merged, at 2022-10-10T16:48:33Z; the landed target-branch fix is nevertheless confirmed by the commit page. The authoritative issue timeline records #10751 closing as COMPLETED via commit a45e6878f39cdc777c54e5d6749d53c1f70e2b52 at 2022-10-10T16:48:33Z, two minutes after the commit timestamp. Therefore issue_close_date is selected as the later confirmed resolution event."
+    },
+    {
+      "case_id": "zookeeper-4643-sync-epoch-ordering",
+      "selected_date": "2024-09-19",
+      "selected_source": "confirmed_fix_commit_date",
+      "selected_reference": "9fcb805fa1bb37b1f64ceb3bc5d7ccf349971bb7",
+      "fix_commit_sha": "9fcb805fa1bb37b1f64ceb3bc5d7ccf349971bb7",
+      "fix_commit_date": "2024-09-19",
+      "issue_url": "https://issues.apache.org/jira/browse/ZOOKEEPER-4643",
+      "issue_closed_date": "2024-09-19",
+      "other_reference_url": "https://github.com/apache/zookeeper/pull/2152",
+      "other_reference_closed_or_merged_date": "2024-09-19",
+      "evidence_urls": [
+        "https://github.com/apache/zookeeper/commit/9fcb805fa1bb37b1f64ceb3bc5d7ccf349971bb7",
+        "https://github.com/apache/zookeeper/pull/2152",
+        "https://issues.apache.org/jira/browse/ZOOKEEPER-4643",
+        "https://issues.apache.org/jira/rest/api/2/issue/ZOOKEEPER-4643?expand=changelog&fields=summary,status,resolution,resolutiondate,updated,created",
+        "https://issues.apache.org/jira/rest/api/2/issue/ZOOKEEPER-4643?fields=issuelinks,description,resolution,resolutiondate,status",
+        "https://issues.apache.org/jira/browse/ZOOKEEPER-4394",
+        "https://issues.apache.org/jira/rest/api/2/issue/ZOOKEEPER-4394?fields=summary,status,resolution,resolutiondate"
+      ],
+      "notes": "The local gold solution identifies PR #2152 and fix commit 9fcb805fa1bb37b1f64ceb3bc5d7ccf349971bb7. The authoritative Git commit object confirms that SHA has Git committer timestamp 2024-09-19T10:28:02-05:00 (2024-09-19T15:28:02Z), first parent ff2406d23990b9612f6c36a72863e5e339aca988 (the revision selected by the case's fix-commit~1 buggy reference), and commit subject 'ZOOKEEPER-4394: Apply only committed requests in sync with leader before NEWLEADER ACK'; GitHub's rendered PR timeline confirms the exact SHA was merged at 2024-09-19T15:28:02Z. Apache Jira's authoritative record for the benchmark's corresponding issue ZOOKEEPER-4643 gives resolutiondate 2024-09-19T06:18:26.650Z, status Resolved, and resolution Duplicate; its changelog confirms the Open-to-Resolved and unset-to-Duplicate transitions at 2024-09-19T06:18:26.659Z. Jira links ZOOKEEPER-4643 with ZOOKEEPER-4394, whose record is Fixed/Closed. Because the confirmed fix commit landed about nine hours after ZOOKEEPER-4643 was resolved as a duplicate, confirmed_fix_commit_date is the later signal and is selected. No release-label date is inferred."
+    },
+    {
+      "case_id": "zookeeper-4846-fuzzy-snapshot-acl",
+      "selected_date": "2025-08-29",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://issues.apache.org/jira/browse/ZOOKEEPER-4846",
+      "fix_commit_sha": "8532163df198466913f26141c0278dc11dbf53ab",
+      "fix_commit_date": "2025-02-11",
+      "issue_url": "https://issues.apache.org/jira/browse/ZOOKEEPER-4846",
+      "issue_closed_date": "2025-08-29",
+      "other_reference_url": "https://github.com/apache/zookeeper/pull/2222",
+      "other_reference_closed_or_merged_date": "2025-02-11",
+      "evidence_urls": [
+        "https://github.com/apache/zookeeper/commit/8532163df198466913f26141c0278dc11dbf53ab",
+        "https://github.com/apache/zookeeper/pull/2222",
+        "https://issues.apache.org/jira/browse/ZOOKEEPER-4846",
+        "https://issues.apache.org/jira/rest/api/2/issue/ZOOKEEPER-4846?expand=changelog"
+      ],
+      "notes": "The local gold solution identifies PR #2222 and fix commit 8532163df198466913f26141c0278dc11dbf53ab. GitHub's authoritative commit page gives that commit authored and committed timestamps of 2025-02-11T10:43:20-06:00 (2025-02-11T16:43:20Z), and shows parent a8eb7faa34e90c748f5f49f211a6dbad78c16f0b, matching the case's buggy revision (fix commit~1). GitHub's PR page confirms PR #2222 merged and closed at 2025-02-11T16:43:20Z with merge commit 8532163df198466913f26141c0278dc11dbf53ab. Apache Jira reports resolution Fixed with resolutiondate 2025-02-11T16:49:08.685Z and a Patch Available to Resolved transition at the same time. Its authoritative changelog then records a distinct final Resolved to Closed transition at 2025-08-29T21:28:59.354Z. Because the actual Jira closure is later than both the fix landing and initial resolution, issue_close_date is recorded as 2025-08-29 and selected."
+    },
+    {
+      "case_id": "zookeeper-4925-diff-sync-committedlog-hole",
+      "selected_date": "2025-06-10",
+      "selected_source": "issue_close_date",
+      "selected_reference": "https://issues.apache.org/jira/browse/ZOOKEEPER-4925",
+      "fix_commit_sha": "e5dd60bf0512ccc1e090d99410a8da48623219da",
+      "fix_commit_date": "2025-06-10",
+      "issue_url": "https://issues.apache.org/jira/browse/ZOOKEEPER-4925",
+      "issue_closed_date": "2025-06-10",
+      "other_reference_url": "https://github.com/apache/zookeeper/pull/2254",
+      "other_reference_closed_or_merged_date": "2025-06-10",
+      "evidence_urls": [
+        "https://github.com/apache/zookeeper/commit/e5dd60bf0512ccc1e090d99410a8da48623219da",
+        "https://github.com/apache/zookeeper/pull/2254",
+        "https://issues.apache.org/jira/browse/ZOOKEEPER-4925",
+        "https://issues.apache.org/jira/rest/api/2/issue/ZOOKEEPER-4925?fields=summary,status,resolution,resolutiondate,created,updated"
+      ],
+      "notes": "The local case uses e5dd60bf0512ccc1e090d99410a8da48623219da~1 as its buggy revision, and solution.md identifies PR #2254 and e5dd60bf0512ccc1e090d99410a8da48623219da as the fix for ZOOKEEPER-4925. Direct Git metadata confirms that SHA's sole parent is the revision selected by the case's buggy reference, its subject is 'ZOOKEEPER-4925: Fix data loss due to propagation of discontinuous committedLog (#2254)', and its committer timestamp is 2025-06-11T01:36:56+08:00, equivalent to 2025-06-10T17:36:56Z. GitHub's rendered PR timeline confirms the exact SHA was merged at 2025-06-10T17:36:57Z. Apache Jira's authoritative record reports resolution Fixed, status Closed, and resolutiondate 2025-06-10T17:41:26.129Z. Because Jira resolution occurred about four minutes thirty seconds after the confirmed fix commit landed, issue_close_date is the later signal and is selected."
+    }
+  ]
+}

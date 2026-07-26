@@ -2,6 +2,10 @@ name: kvrocks-2512-slaveof-deadlock
 project: kvrocks
 repo: https://github.com/apache/kvrocks.git
 buggy_commit: "ab41cbb69d081711437e25846c86c920cb5253e1~1"
+resolve_time:
+  date: "2024-09-02"
+  source: issue_close_date
+  reference: "https://github.com/apache/kvrocks/issues/2512"
 submodules: true
 build:
   command: "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DDISABLE_JEMALLOC=ON && make -j$(nproc)"

@@ -101,7 +101,7 @@ Each case folder contains:
 
 ```
 cases/<project>-<issue#>-<slug>/
-├── case.yaml        # Declarative metadata (project, commit, build command, Docker caps)
+├── case.yaml        # Metadata (project, buggy commit, resolve time, build, Docker caps)
 ├── setup.sh         # Automated: clone, checkout buggy commit, install deps, build
 ├── reproduce.sh     # Automated: start system, trigger bug, report PASS/FAIL
 ├── README.md        # Quick start, prerequisites, what to expect
@@ -114,6 +114,10 @@ cases/<project>-<issue#>-<slug>/
 - `setup.sh` and `reproduce.sh` are the executable entry points — everything else is documentation.
 - `reproduce.sh` exits with code 1 and prints `FAIL` when the bug is present, code 0 and `PASS` when the bug is fixed.
 - Solutions are in `cases-solution/<case-name>/solution.md` — consult only after attempting diagnosis.
+- `case.yaml` records the estimated `resolve_time` and whether its date comes
+  from a confirmed fix commit or the corresponding issue's later close date.
+  Detailed upstream evidence for all cases is in
+  [`registry/resolve_times.json`](registry/resolve_times.json).
 
 ## bench.sh Commands
 

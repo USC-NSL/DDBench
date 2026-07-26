@@ -2,6 +2,10 @@ name: kvrocks-3148-namespace-delete
 project: kvrocks
 repo: https://github.com/apache/kvrocks.git
 buggy_commit: "833ae36aa1d17e87be494724689b87e5234286ec~1"
+resolve_time:
+  date: "2025-08-28"
+  source: issue_close_date
+  reference: "https://github.com/apache/kvrocks/issues/3148"
 submodules: true
 build:
   command: "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)"

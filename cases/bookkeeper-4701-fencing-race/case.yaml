@@ -2,6 +2,10 @@ name: bookkeeper-4701-fencing-race
 project: bookkeeper
 repo: https://github.com/apache/bookkeeper.git
 buggy_commit: "44607a0e31ee8f979211eb5a4ef424de2871b92e~1"
+resolve_time:
+  date: "2026-01-20"
+  source: confirmed_fix_commit_date
+  reference: "44607a0e31ee8f979211eb5a4ef424de2871b92e"
 submodules: false
 build:
   command: "mvn -pl bookkeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q"

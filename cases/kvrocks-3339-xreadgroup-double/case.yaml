@@ -2,6 +2,10 @@ name: kvrocks-3339-xreadgroup-double
 project: kvrocks
 repo: https://github.com/apache/kvrocks.git
 buggy_commit: "25216331bce6f9e97b945aad1cbb04e2db261287~1"
+resolve_time:
+  date: "2026-01-12"
+  source: issue_close_date
+  reference: "https://github.com/apache/kvrocks/issues/3339"
 submodules: true
 build:
   command: "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)"

@@ -2,6 +2,10 @@ name: etcd-20704-leasing-linearizability
 project: etcd
 repo: https://github.com/etcd-io/etcd.git
 buggy_commit: "main"
+resolve_time:
+  date: "2025-11-30"
+  source: issue_close_date
+  reference: "https://github.com/etcd-io/etcd/issues/20704"
 submodules: false
 build:
   command: "make build"

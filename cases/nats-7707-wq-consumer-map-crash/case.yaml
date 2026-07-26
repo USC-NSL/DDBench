@@ -2,6 +2,10 @@ name: nats-7707-wq-consumer-map-crash
 project: nats
 repo: https://github.com/nats-io/nats-server.git
 buggy_commit: "3a90a2d087b792c10d4cbed27f3cc5ef0fb77571~1"
+resolve_time:
+  date: "2026-01-08"
+  source: issue_close_date
+  reference: "https://github.com/nats-io/nats-server/issues/7707"
 submodules: false
 build:
   command: "go build -buildvcs=false -o nats-server ."

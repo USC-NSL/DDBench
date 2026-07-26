@@ -2,6 +2,10 @@ name: raft-358-negative-log-range
 project: raft
 repo: https://github.com/hashicorp/raft.git
 buggy_commit: "7b09f38f739f486a692096c35236c7eef094e933~1"
+resolve_time:
+  date: "2019-10-01"
+  source: issue_close_date
+  reference: "https://github.com/hashicorp/raft/issues/358"
 submodules: false
 build:
   command: ""

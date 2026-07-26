@@ -2,6 +2,10 @@ name: raft-rs-221-campaign-conf-change
 project: raft-rs
 repo: https://github.com/tikv/raft-rs.git
 buggy_commit: "aa131db1ba95166501c1cf5b8d90cd7c7bde2308"
+resolve_time:
+  date: "2019-04-29"
+  source: issue_close_date
+  reference: "https://github.com/tikv/raft-rs/issues/221"
 submodules: false
 build:
   command: "RUSTFLAGS='--cap-lints allow' cargo test --no-run 2>&1 | tail -5"

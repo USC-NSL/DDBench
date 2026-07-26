@@ -2,6 +2,10 @@ name: etcd-17158-delete-linearizability
 project: etcd
 repo: https://github.com/etcd-io/etcd.git
 buggy_commit: "b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d~1"
+resolve_time:
+  date: "2024-11-10"
+  source: issue_close_date
+  reference: "https://github.com/etcd-io/etcd/issues/17158"
 submodules: false
 build:
   command: "make build"

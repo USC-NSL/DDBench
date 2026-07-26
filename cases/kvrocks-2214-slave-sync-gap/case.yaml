@@ -2,6 +2,10 @@ name: kvrocks-2214-slave-sync-gap
 project: kvrocks
 repo: https://github.com/apache/kvrocks.git
 buggy_commit: "7e1b797920517edf9c798cd4b440789b524d7956~1"
+resolve_time:
+  date: "2024-04-05"
+  source: issue_close_date
+  reference: "https://github.com/apache/kvrocks/issues/2214"
 submodules: true
 build:
   command: "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DDISABLE_JEMALLOC=ON && make -j$(nproc)"

@@ -2,6 +2,10 @@ name: consul-8377-snapshot-restore-index
 project: consul
 repo: https://github.com/hashicorp/consul.git
 buggy_commit: "9bc9d3014d2d8f48c4c87926bfb98c8536364532~1"
+resolve_time:
+  date: "2020-08-11"
+  source: confirmed_fix_commit_date
+  reference: "9bc9d3014d2d8f48c4c87926bfb98c8536364532"
 submodules: false
 build:
   command: "mkdir -p pkg.bin.new/linux_amd64 && make dev-build"

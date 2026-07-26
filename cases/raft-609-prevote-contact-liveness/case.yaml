@@ -2,6 +2,10 @@ name: raft-609-prevote-contact-liveness
 project: raft
 repo: https://github.com/hashicorp/raft.git
 buggy_commit: "42d34464b2d203e389e11ed6d43db698792c0604~1"
+resolve_time:
+  date: "2024-08-28"
+  source: confirmed_fix_commit_date
+  reference: "42d34464b2d203e389e11ed6d43db698792c0604"
 submodules: false
 build:
   command: ""

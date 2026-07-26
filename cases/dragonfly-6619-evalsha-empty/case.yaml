@@ -2,6 +2,10 @@ name: dragonfly-6619-evalsha-empty
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "761387a51433a5becb06db2ac7bf7e9f18b832d2~1"
+resolve_time:
+  date: "2026-02-14"
+  source: issue_close_date
+  reference: "https://github.com/dragonflydb/dragonfly/issues/6619"
 submodules: true
 build:
   command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"

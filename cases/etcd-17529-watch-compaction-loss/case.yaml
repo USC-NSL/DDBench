@@ -2,6 +2,10 @@ name: etcd-17529-watch-compaction-loss
 project: etcd
 repo: https://github.com/etcd-io/etcd.git
 buggy_commit: "fca3e8a9b5c5b52a65d4ac0fe2fd7fdc7577551a~1"
+resolve_time:
+  date: "2024-03-16"
+  source: confirmed_fix_commit_date
+  reference: "fca3e8a9b5c5b52a65d4ac0fe2fd7fdc7577551a"
 submodules: false
 build:
   command: "make build"

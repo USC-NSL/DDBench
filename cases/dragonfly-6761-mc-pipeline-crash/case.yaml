@@ -2,6 +2,10 @@ name: dragonfly-6761-mc-pipeline-crash
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "5a78b758ff21f179963de4da9e7ad301459e23bb~1"
+resolve_time:
+  date: "2026-03-01"
+  source: issue_close_date
+  reference: "https://github.com/dragonflydb/dragonfly/issues/6761"
 submodules: true
 build:
   command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"

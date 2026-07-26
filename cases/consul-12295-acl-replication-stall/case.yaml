@@ -2,6 +2,10 @@ name: consul-12295-acl-replication-stall
 project: consul
 repo: https://github.com/hashicorp/consul.git
 buggy_commit: "24245edfcc9d56eb1033908c607f56b19f7d1360~1"
+resolve_time:
+  date: "2022-04-05"
+  source: confirmed_fix_commit_date
+  reference: "24245edfcc9d56eb1033908c607f56b19f7d1360"
 submodules: false
 build:
   command: "go build -o bin/consul ./... 2>/dev/null || true"

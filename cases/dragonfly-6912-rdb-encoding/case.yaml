@@ -2,6 +2,10 @@ name: dragonfly-6912-rdb-encoding
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "ef296f099b6e210ad28f043be9d0a8cec4dc4885~1"
+resolve_time:
+  date: "2026-03-20"
+  source: issue_close_date
+  reference: "https://github.com/dragonflydb/dragonfly/issues/6912"
 submodules: true
 build:
   command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"

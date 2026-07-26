@@ -2,6 +2,10 @@ name: rocksdb-10751-stalled-writes-shutdown
 project: rocksdb
 repo: https://github.com/facebook/rocksdb.git
 buggy_commit: "a45e6878f39cdc777c54e5d6749d53c1f70e2b52~1"
+resolve_time:
+  date: "2022-10-10"
+  source: issue_close_date
+  reference: "https://github.com/facebook/rocksdb/issues/10751"
 submodules: false
 build:
   command: |

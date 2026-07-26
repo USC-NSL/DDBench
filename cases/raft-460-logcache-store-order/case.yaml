@@ -2,6 +2,10 @@ name: raft-460-logcache-store-order
 project: raft
 repo: https://github.com/hashicorp/raft.git
 buggy_commit: "f810f43d71b4a051a0c0e16e003f0a55456dd0fb~1"
+resolve_time:
+  date: "2021-04-16"
+  source: confirmed_fix_commit_date
+  reference: "f810f43d71b4a051a0c0e16e003f0a55456dd0fb"
 submodules: false
 build:
   command: ""

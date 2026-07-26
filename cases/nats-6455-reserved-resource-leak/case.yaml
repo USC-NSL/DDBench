@@ -2,6 +2,10 @@ name: nats-6455-reserved-resource-leak
 project: nats
 repo: https://github.com/nats-io/nats-server.git
 buggy_commit: "29fbf46d70601600af6b1152fa02e41fd646d0e2"
+resolve_time:
+  date: "2025-02-05"
+  source: issue_close_date
+  reference: "https://github.com/nats-io/nats-server/issues/6455"
 submodules: false
 build:
   command: "go build -buildvcs=false -o nats-server ."

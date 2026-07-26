@@ -2,6 +2,10 @@ name: dragonfly-6764-hincrbyfloat-nan
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "01ce1ca9ea6c429e531d6177f72963b1fd29c26d~1"
+resolve_time:
+  date: "2026-03-01"
+  source: issue_close_date
+  reference: "https://github.com/dragonflydb/dragonfly/issues/6764"
 submodules: true
 build:
   command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"

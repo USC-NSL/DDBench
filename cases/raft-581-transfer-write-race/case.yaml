@@ -2,6 +2,10 @@ name: raft-581-transfer-write-race
 project: raft
 repo: https://github.com/hashicorp/raft.git
 buggy_commit: "62eaa1c192d4c09c90caa5e227177eb9205a6267~1"
+resolve_time:
+  date: "2023-12-04"
+  source: confirmed_fix_commit_date
+  reference: "62eaa1c192d4c09c90caa5e227177eb9205a6267"
 submodules: false
 build:
   command: ""

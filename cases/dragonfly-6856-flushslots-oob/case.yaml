@@ -2,6 +2,10 @@ name: dragonfly-6856-flushslots-oob
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "c79bbe0c646c1bce47f76168dbe813951aecd8ce~1"
+resolve_time:
+  date: "2026-03-10"
+  source: issue_close_date
+  reference: "https://github.com/dragonflydb/dragonfly/issues/6856"
 submodules: true
 build:
   command: "./helio/blaze.sh -DCMAKE_BUILD_TYPE=Debug -DWITH_AWS=OFF && cd build-dbg && ninja dragonfly"
