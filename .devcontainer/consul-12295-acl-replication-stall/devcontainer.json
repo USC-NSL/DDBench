@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-consul-src,target=/workspace,type=volume",
+    "source=bug-bench-case-consul-12295-acl-replication-stall-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/consul-12295-acl-replication-stall,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/consul-12295-acl-replication-stall",

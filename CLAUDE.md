@@ -33,11 +33,16 @@ A benchmark suite of 62 verified real-world bug cases from open-source distribut
 ./bench.sh shell <case-name> [--addon <name>]   # interactive shell (with optional addons)
 ./bench.sh agent <case-name> --addon <name>     # launch AI agent inside container
 ./bench.sh reset <case-name>                    # revert source to original buggy commit
-./bench.sh clean <case-name>                    # remove worktree for this case
+./bench.sh clean <case-name>                    # remove this case's repo volume
 ./bench.sh clean-all                            # remove all Docker artifacts
 ```
 
-Same-project cases share a single git clone via Docker volumes.
+Each case gets its own Docker volume holding a git repository truncated to the
+**ancestry of the buggy commit** — commits after it (which contain the upstream fix)
+are never transferred, so agents cannot read the answer out of git history. A
+per-project full clone is kept in a separate cache volume that is mounted only
+during `setup`, never into agent/reproduce containers. `setup` aborts if the
+containment assertions fail. See `docs/git-leakage-audit.md`.
 
 ### Working with addons
 

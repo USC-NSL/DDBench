@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-dragonfly-src,target=/workspace,type=volume",
+    "source=bug-bench-case-dragonfly-6907-ftsearch-vector-crash-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/dragonfly-6907-ftsearch-vector-crash,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/dragonfly-6907-ftsearch-vector-crash",

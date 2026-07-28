@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-nats-src,target=/workspace,type=volume",
+    "source=bug-bench-case-nats-7817-workqueue-message-loss-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/nats-7817-workqueue-message-loss,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/nats-7817-workqueue-message-loss",

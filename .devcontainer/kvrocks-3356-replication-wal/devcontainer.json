@@ -8,7 +8,7 @@
     "--cap-add=NET_ADMIN"
   ],
   "mounts": [
-    "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
+    "source=bug-bench-case-kvrocks-3356-replication-wal-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/kvrocks-3356-replication-wal,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-3356-replication-wal",

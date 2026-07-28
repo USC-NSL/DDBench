@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-rabbitmq-src,target=/workspace,type=volume",
+    "source=bug-bench-case-rabbitmq-12635-qq-snapshot-crash-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/rabbitmq-12635-qq-snapshot-crash,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/rabbitmq-12635-qq-snapshot-crash",

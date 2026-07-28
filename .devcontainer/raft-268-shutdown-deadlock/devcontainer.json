@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-raft-src,target=/workspace,type=volume",
+    "source=bug-bench-case-raft-268-shutdown-deadlock-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/raft-268-shutdown-deadlock,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/raft-268-shutdown-deadlock",

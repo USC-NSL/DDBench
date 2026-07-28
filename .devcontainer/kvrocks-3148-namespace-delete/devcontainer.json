@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
+    "source=bug-bench-case-kvrocks-3148-namespace-delete-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/kvrocks-3148-namespace-delete,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-3148-namespace-delete",

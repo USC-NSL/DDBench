@@ -4,7 +4,7 @@
     "dockerfile": "../../docker/zookeeper.Dockerfile"
   },
   "mounts": [
-    "source=bug-bench-zookeeper-src,target=/workspace,type=volume",
+    "source=bug-bench-case-zookeeper-4925-diff-sync-committedlog-hole-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/zookeeper-4925-diff-sync-committedlog-hole,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/zookeeper-4925-diff-sync-committedlog-hole",

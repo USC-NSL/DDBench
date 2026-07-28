@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-etcd-src,target=/workspace,type=volume",
+    "source=bug-bench-case-etcd-20893-force-new-cluster-learner-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/etcd-20893-force-new-cluster-learner,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/etcd-20893-force-new-cluster-learner",

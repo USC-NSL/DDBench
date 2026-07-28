@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-ra-src,target=/workspace,type=volume",
+    "source=bug-bench-case-ra-439-election-livelock-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/ra-439-election-livelock,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/ra-439-election-livelock",

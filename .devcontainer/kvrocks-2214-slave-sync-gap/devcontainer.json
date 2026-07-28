@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
+    "source=bug-bench-case-kvrocks-2214-slave-sync-gap-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/kvrocks-2214-slave-sync-gap,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-2214-slave-sync-gap",

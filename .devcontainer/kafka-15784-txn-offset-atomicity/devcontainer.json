@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-kafka-src,target=/workspace,type=volume",
+    "source=bug-bench-case-kafka-15784-txn-offset-atomicity-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/kafka-15784-txn-offset-atomicity,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kafka-15784-txn-offset-atomicity",

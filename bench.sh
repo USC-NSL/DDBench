@@ -156,82 +156,163 @@ ensure_project_image() {
     fi
 }
 
-# ── Volume & Worktree Management ─────────────────────────────────────────────
+# ── Volume & Case-Repo Management ────────────────────────────────────────────
+#
+# CONTAINMENT: an agent must never be able to read commits that come AFTER the
+# buggy commit. Those commits contain the upstream fix, and agents were
+# repeatedly observed copying it straight out of git history (see
+# docs/git-leakage-audit.md). Two properties enforce containment:
+#
+#   1. Each case gets its OWN source volume. A sibling case of the same project
+#      may sit at a later commit whose ancestry contains THIS case's fix, so
+#      cases must not share a filesystem.
+#   2. Each case repository is built by fetching ONLY the ancestry of the buggy
+#      commit from a per-project cache. Descendant objects are never transferred,
+#      so `git show <fix-sha>`, `git log --all` and `git diff HEAD..main` have
+#      nothing to find — the objects are absent, not merely unreachable.
+#
+# The full clone lives in a separate cache volume that is mounted ONLY during
+# setup, never into agent / reproduce / score containers.
 
 volume_name() {
-    local project="$1"
-    echo "${IMAGE_PREFIX}-${project}-src"
+    local case_name="$1"
+    echo "${IMAGE_PREFIX}-case-${case_name}-src"
 }
 
-ensure_clone() {
-    local project="$1" repo="$2" image="$3" vol="$4" submodules="$5"
+cache_volume_name() {
+    local project="$1"
+    echo "${IMAGE_PREFIX}-${project}-cache"
+}
 
-    # Check if the volume already has a clone
+# Path of the full-history cache inside the cache volume.
+CACHE_GIT_DIR="/cache/repo.git"
+
+ensure_clone() {
+    local project="$1" repo="$2" image="$3" cache_vol="$4" submodules="$5"
+
+    # Check if the cache volume already has a clone
     local has_git
-    has_git=$(docker run --rm -v "${vol}:/workspace" "$image" \
-        sh -c '[ -d /workspace/.git ] && echo yes || echo no') || has_git="error"
+    has_git=$(docker run --rm -v "${cache_vol}:/cache" -e "CACHE_GIT_DIR=${CACHE_GIT_DIR}" "$image" \
+        sh -c '[ -d "$CACHE_GIT_DIR" ] && echo yes || echo no') || has_git="error"
 
     if [ "$has_git" = "error" ]; then
-        die "Failed to check volume $vol. Is the Docker daemon running?"
+        die "Failed to check cache volume $cache_vol. Is the Docker daemon running?"
     fi
 
     if [ "$has_git" = "no" ]; then
-        echo "Cloning $repo into volume $vol ..."
-        local -a clone_cmd=(git clone --no-checkout)
-        [ "$submodules" = "true" ] && clone_cmd+=(--recurse-submodules)
-        # Pass repo as env var to avoid shell injection in bash -c strings
+        echo "Cloning $repo into cache volume $cache_vol ..."
+        # Pass repo as env var to avoid shell injection in bash -c strings.
+        # The cache is bare: it is only ever used as a fetch source.
         docker run --rm \
-            -v "${vol}:/workspace" \
+            -v "${cache_vol}:/cache" \
             -e "CLONE_REPO=${repo}" \
-            -e "CLONE_SUBMODULES=${submodules}" \
+            -e "CACHE_GIT_DIR=${CACHE_GIT_DIR}" \
             "$image" \
             bash -c '
-                git clone --no-checkout ${CLONE_SUBMODULES:+--recurse-submodules} "$CLONE_REPO" /tmp/_clone && \
-                shopt -s dotglob && \
-                mv /tmp/_clone/.git /workspace/.git && \
-                rm -rf /tmp/_clone
+                set -e
+                git clone --quiet --bare "$CLONE_REPO" "$CACHE_GIT_DIR"
+                # Let per-case repos fetch the buggy commit by SHA directly.
+                git --git-dir="$CACHE_GIT_DIR" config uploadpack.allowAnySHA1InWant true
             '
     else
-        echo "Repository already cloned in volume $vol."
+        echo "Repository already cached in volume $cache_vol."
     fi
 }
 
-ensure_worktree() {
-    local case_name="$1" commit="$2" image="$3" vol="$4" submodules="$5"
+# Create the per-case repository, truncated to the buggy commit's ancestry.
+ensure_case_repo() {
+    local case_name="$1" commit="$2" image="$3" vol="$4" cache_vol="$5" submodules="$6" repo="$7"
     local wt_path="/workspace/worktrees/${case_name}"
 
     local has_wt
     has_wt=$(docker run --rm -v "${vol}:/workspace" "$image" \
-        sh -c '[ -d "$1" ] && echo yes || echo no' -- "$wt_path") || has_wt="error"
+        sh -c '[ -e "$1/.git" ] && echo yes || echo no' -- "$wt_path") || has_wt="error"
 
     if [ "$has_wt" = "error" ]; then
-        die "Failed to check worktree for $case_name."
+        die "Failed to check case repository for $case_name."
     fi
 
-    if [ "$has_wt" = "no" ]; then
-        echo "Creating worktree for $case_name at commit $commit ..."
-        # Pass all values via env vars to avoid injection
-        docker run --rm \
-            -v "${vol}:/workspace" \
-            -e "CASE_COMMIT=${commit}" \
-            -e "CASE_WT_PATH=${wt_path}" \
-            -e "CASE_SUBMODULES=${submodules}" \
-            "$image" \
-            bash -c '
-                cd /workspace
-                git config --global --add safe.directory /workspace 2>/dev/null || true
-                git fetch --all 2>/dev/null || true
-                RESOLVED=$(git rev-parse "$CASE_COMMIT" 2>/dev/null || echo "$CASE_COMMIT")
-                mkdir -p /workspace/worktrees
-                git worktree add --detach "$CASE_WT_PATH" "$RESOLVED"
-                if [ "$CASE_SUBMODULES" = "true" ]; then
-                    cd "$CASE_WT_PATH"
-                    git submodule update --init --recursive
-                fi
-            '
-    else
-        echo "Worktree already exists for $case_name."
+    if [ "$has_wt" = "yes" ]; then
+        echo "Case repository already exists for $case_name."
+        return 0
     fi
+
+    echo "Creating truncated case repository for $case_name at commit $commit ..."
+    # Cache is mounted read-only: setup can read history, but nothing here can
+    # write it back, and it is never mounted for agent runs.
+    docker run --rm \
+        -v "${vol}:/workspace" \
+        -v "${cache_vol}:/cache:ro" \
+        -e "CASE_COMMIT=${commit}" \
+        -e "CASE_WT_PATH=${wt_path}" \
+        -e "CASE_SUBMODULES=${submodules}" \
+        -e "CASE_REPO=${repo}" \
+        -e "CACHE_GIT_DIR=${CACHE_GIT_DIR}" \
+        "$image" \
+        bash -c '
+            set -eu
+            git config --global --add safe.directory "*" 2>/dev/null || true
+
+            RESOLVED=$(git --git-dir="$CACHE_GIT_DIR" rev-parse --verify "${CASE_COMMIT}^{commit}")
+
+            rm -rf "$CASE_WT_PATH"
+            mkdir -p "$(dirname "$CASE_WT_PATH")"
+            git init -q "$CASE_WT_PATH"
+            cd "$CASE_WT_PATH"
+            git config advice.detachedHead false
+
+            # Transfer ONLY the ancestry of the buggy commit. Descendant objects
+            # (which carry the upstream fix) are never sent over the wire.
+            git fetch -q --no-tags --no-recurse-submodules "$CACHE_GIT_DIR" "$RESOLVED"
+            git checkout -q --detach "$RESOLVED"
+
+            if [ "$CASE_SUBMODULES" = "true" ]; then
+                # .gitmodules may use URLs relative to the superproject remote,
+                # so origin has to exist while submodules are resolved. It is
+                # removed again immediately afterwards.
+                git remote add origin "$CASE_REPO"
+                git submodule update --init --recursive --quiet
+                git remote remove origin
+            fi
+
+            # Strip every entry point to anything outside the checked-out
+            # ancestry, then physically drop unreachable objects. Detached HEAD
+            # keeps the ancestry itself alive.
+            git for-each-ref --format="%(refname)" | while read -r ref; do
+                git update-ref -d "$ref"
+            done
+            for r in $(git remote); do git remote remove "$r"; done
+            rm -f "$(git rev-parse --git-dir)/FETCH_HEAD"
+            git reflog expire --expire=now --all
+            git gc --quiet --prune=now
+
+            if [ "$CASE_SUBMODULES" = "true" ]; then
+                git submodule foreach --recursive --quiet '\''
+                    git for-each-ref --format="%(refname)" | while read -r ref; do
+                        git update-ref -d "$ref"
+                    done
+                    for r in $(git remote); do git remote remove "$r"; done
+                    git reflog expire --expire=now --all
+                    git gc --quiet --prune=now
+                '\''
+            fi
+
+            # Containment gate. If either assertion fires, the case repo can
+            # expose post-buggy-commit history and MUST NOT be used for an
+            # evaluation run. Fail setup loudly rather than score a tainted case.
+            remaining_refs=$(git for-each-ref | wc -l)
+            if [ "$remaining_refs" -ne 0 ]; then
+                echo "CONTAINMENT FAILURE: $remaining_refs ref(s) survived truncation" >&2
+                exit 1
+            fi
+            ancestry=$(git rev-list HEAD --count)
+            in_store=$(git cat-file --batch-all-objects --batch-check="%(objecttype)" | grep -c "^commit$")
+            if [ "$ancestry" != "$in_store" ]; then
+                echo "CONTAINMENT FAILURE: $in_store commit objects present but ancestry is $ancestry" >&2
+                exit 1
+            fi
+            echo "  containment OK: $ancestry commits, 0 refs, no remotes"
+        '
 }
 
 # ── Docker Run Helpers ───────────────────────────────────────────────────────
@@ -473,26 +554,29 @@ cmd_setup() {
     build_cmd=$(yaml_nested "$yaml" "build" "command")
 
     local image="${IMAGE_PREFIX}/${project}"
-    local vol
-    vol=$(volume_name "$project")
+    local vol cache_vol
+    vol=$(volume_name "$case_name")
+    cache_vol=$(cache_volume_name "$project")
     local wt_path="/workspace/worktrees/${case_name}"
 
     echo "=== bench.sh setup: $case_name ==="
     echo "  Project:  $project"
     echo "  Image:    $image"
     echo "  Volume:   $vol"
+    echo "  Cache:    $cache_vol (setup only)"
     echo "  Commit:   $commit"
     echo ""
 
     # Step 1: Build Docker image
     ensure_project_image "$project"
 
-    # Step 2: Create volume and clone repo
+    # Step 2: Create volumes and populate the full-history cache
     docker volume create "$vol" &>/dev/null
-    ensure_clone "$project" "$repo" "$image" "$vol" "$submodules"
+    docker volume create "$cache_vol" &>/dev/null
+    ensure_clone "$project" "$repo" "$image" "$cache_vol" "$submodules"
 
-    # Step 3: Create worktree for this case
-    ensure_worktree "$case_name" "$commit" "$image" "$vol" "$submodules"
+    # Step 3: Create this case's repository, truncated to the buggy ancestry
+    ensure_case_repo "$case_name" "$commit" "$image" "$vol" "$cache_vol" "$submodules" "$repo"
 
     # Step 4: Build inside container
     if [ -n "$build_cmd" ]; then
@@ -612,7 +696,7 @@ cmd_reproduce() {
     project=$(yaml_val "$yaml" "project")
     local image="${IMAGE_PREFIX}/${project}"
     local vol
-    vol=$(volume_name "$project")
+    vol=$(volume_name "$case_name")
     local wt_path="/workspace/worktrees/${case_name}"
     local build_cmd
     build_cmd=$(yaml_nested "$yaml" "build" "command")
@@ -666,7 +750,7 @@ cmd_shell() {
     project=$(yaml_val "$yaml" "project")
     local image="${IMAGE_PREFIX}/${project}"
     local vol
-    vol=$(volume_name "$project")
+    vol=$(volume_name "$case_name")
     local wt_path="/workspace/worktrees/${case_name}"
     local cname
     cname=$(container_name "$case_name")
@@ -774,7 +858,7 @@ cmd_agent() {
     project=$(yaml_val "$yaml" "project")
     local image="${IMAGE_PREFIX}/${project}"
     local vol
-    vol=$(volume_name "$project")
+    vol=$(volume_name "$case_name")
     local wt_path="/workspace/worktrees/${case_name}"
     local cname
     cname=$(container_name "$case_name")
@@ -950,7 +1034,7 @@ cmd_rebuild() {
     project=$(yaml_val "$yaml" "project")
     local image="${IMAGE_PREFIX}/${project}"
     local vol
-    vol=$(volume_name "$project")
+    vol=$(volume_name "$case_name")
     local wt_path="/workspace/worktrees/${case_name}"
 
     echo "=== bench.sh rebuild: $case_name ==="
@@ -988,7 +1072,7 @@ cmd_reset() {
     commit=$(yaml_val "$yaml" "buggy_commit")
     local image="${IMAGE_PREFIX}/${project}"
     local vol
-    vol=$(volume_name "$project")
+    vol=$(volume_name "$case_name")
     local wt_path="/workspace/worktrees/${case_name}"
 
     echo "=== bench.sh reset: $case_name ==="
@@ -1049,7 +1133,7 @@ cmd_clean() {
     local project
     project=$(yaml_val "$yaml" "project")
     local vol
-    vol=$(volume_name "$project")
+    vol=$(volume_name "$case_name")
     local wt_path="/workspace/worktrees/${case_name}"
     local image="${IMAGE_PREFIX}/${project}"
 
@@ -1069,12 +1153,15 @@ cmd_clean() {
         docker rm "$cid" 2>/dev/null || true
     done
 
-    echo "Removing worktree for $case_name ..."
+    # Each case owns its volume, so the whole thing goes. The per-project cache
+    # volume is deliberately left alone — it is shared and expensive to rebuild.
+    echo "Removing case repository for $case_name ..."
     docker run --rm \
         -v "${vol}:/workspace" \
         -e "CASE_WT_PATH=${wt_path}" \
         "$image" \
-        bash -c 'git config --system --add safe.directory "*" 2>/dev/null || git config --global --add safe.directory "*" 2>/dev/null || true; cd /workspace && git worktree remove "$CASE_WT_PATH" --force 2>/dev/null || rm -rf "$CASE_WT_PATH"' 2>/dev/null || true
+        bash -c 'rm -rf "$CASE_WT_PATH"' 2>/dev/null || true
+    docker volume rm "$vol" &>/dev/null || true
 
     echo "Cleaned $case_name."
 }
@@ -1134,7 +1221,7 @@ Commands:
   agent <case-name> --addon <name>     Launch an AI agent inside container
   stop <case-name>                     Stop the running container for a case
   reset <case-name>                    Revert source to original buggy commit (undo all edits)
-  clean <case-name>                    Remove worktree + container for a case
+  clean <case-name>                    Remove this case's repo volume + container
   clean-all                            Remove all bug-bench Docker artifacts
 
 Addon Options (for shell and agent):

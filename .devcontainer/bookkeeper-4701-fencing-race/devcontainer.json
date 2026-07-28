@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-bookkeeper-src,target=/workspace,type=volume",
+    "source=bug-bench-case-bookkeeper-4701-fencing-race-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/bookkeeper-4701-fencing-race,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/bookkeeper-4701-fencing-race",

@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-etcd-src,target=/workspace,type=volume",
+    "source=bug-bench-case-etcd-17529-watch-compaction-loss-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/etcd-17529-watch-compaction-loss,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/etcd-17529-watch-compaction-loss",

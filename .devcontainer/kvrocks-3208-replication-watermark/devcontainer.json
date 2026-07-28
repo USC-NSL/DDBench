@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
+    "source=bug-bench-case-kvrocks-3208-replication-watermark-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/kvrocks-3208-replication-watermark,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-3208-replication-watermark",

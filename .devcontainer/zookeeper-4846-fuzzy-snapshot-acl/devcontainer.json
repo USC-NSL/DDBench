@@ -4,7 +4,7 @@
     "dockerfile": "../../docker/zookeeper.Dockerfile"
   },
   "mounts": [
-    "source=bug-bench-zookeeper-src,target=/workspace,type=volume",
+    "source=bug-bench-case-zookeeper-4846-fuzzy-snapshot-acl-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/zookeeper-4846-fuzzy-snapshot-acl,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/zookeeper-4846-fuzzy-snapshot-acl",

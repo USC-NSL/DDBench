@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-dragonfly-src,target=/workspace,type=volume",
+    "source=bug-bench-case-dragonfly-6614-monitor-multiexec-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/dragonfly-6614-monitor-multiexec,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/dragonfly-6614-monitor-multiexec",

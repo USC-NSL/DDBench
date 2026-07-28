@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-kvrocks-src,target=/workspace,type=volume",
+    "source=bug-bench-case-kvrocks-3339-xreadgroup-double-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/kvrocks-3339-xreadgroup-double,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kvrocks-3339-xreadgroup-double",

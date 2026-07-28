@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-nats-src,target=/workspace,type=volume",
+    "source=bug-bench-case-nats-7707-wq-consumer-map-crash-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/nats-7707-wq-consumer-map-crash,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/nats-7707-wq-consumer-map-crash",

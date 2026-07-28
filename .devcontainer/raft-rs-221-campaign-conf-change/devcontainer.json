@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "../../docker/raft-rs.Dockerfile"
   },
-  "workspaceMount": "source=bug-bench-raft-rs-src,target=/workspace,type=volume",
+  "workspaceMount": "source=bug-bench-case-raft-rs-221-campaign-conf-change-src,target=/workspace,type=volume",
   "workspaceFolder": "/workspace/worktrees/raft-rs-221-campaign-conf-change",
   "mounts": [
     "source=bug-bench-tools,target=/bench-tools,type=volume"

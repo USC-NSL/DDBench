@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-raft-src,target=/workspace,type=volume",
+    "source=bug-bench-case-raft-517-candidate-appendentries-race-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/raft-517-candidate-appendentries-race,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/raft-517-candidate-appendentries-race",

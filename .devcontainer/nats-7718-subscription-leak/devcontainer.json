@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-nats-src,target=/workspace,type=volume",
+    "source=bug-bench-case-nats-7718-subscription-leak-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/nats-7718-subscription-leak,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/nats-7718-subscription-leak",

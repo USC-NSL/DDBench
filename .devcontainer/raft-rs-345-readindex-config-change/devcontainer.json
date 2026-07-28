@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-raft-rs-src,target=/workspace,type=volume",
+    "source=bug-bench-case-raft-rs-345-readindex-config-change-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/raft-rs-345-readindex-config-change,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/raft-rs-345-readindex-config-change",

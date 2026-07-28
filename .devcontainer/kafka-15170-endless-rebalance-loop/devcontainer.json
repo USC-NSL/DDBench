@@ -4,7 +4,7 @@
     "dockerfile": "../../docker/kafka.Dockerfile"
   },
   "mounts": [
-    "source=bug-bench-kafka-src,target=/workspace,type=volume",
+    "source=bug-bench-case-kafka-15170-endless-rebalance-loop-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/kafka-15170-endless-rebalance-loop,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/kafka-15170-endless-rebalance-loop",

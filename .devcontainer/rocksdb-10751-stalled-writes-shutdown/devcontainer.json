@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-rocksdb-src,target=/workspace,type=volume",
+    "source=bug-bench-case-rocksdb-10751-stalled-writes-shutdown-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/rocksdb-10751-stalled-writes-shutdown,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/rocksdb-10751-stalled-writes-shutdown",

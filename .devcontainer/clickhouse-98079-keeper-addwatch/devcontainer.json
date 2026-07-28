@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-clickhouse-src,target=/workspace,type=volume",
+    "source=bug-bench-case-clickhouse-98079-keeper-addwatch-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/clickhouse-98079-keeper-addwatch,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/clickhouse-98079-keeper-addwatch",

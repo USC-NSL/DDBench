@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-raft-src,target=/workspace,type=volume",
+    "source=bug-bench-case-raft-358-negative-log-range-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/raft-358-negative-log-range,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/raft-358-negative-log-range",

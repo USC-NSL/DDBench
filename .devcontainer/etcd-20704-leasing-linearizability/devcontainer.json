@@ -7,7 +7,7 @@
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-etcd-src,target=/workspace,type=volume",
+    "source=bug-bench-case-etcd-20704-leasing-linearizability-src,target=/workspace,type=volume",
     "source=${localWorkspaceFolder}/cases/etcd-20704-leasing-linearizability,target=/bench,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace/worktrees/etcd-20704-leasing-linearizability",
