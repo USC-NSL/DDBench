@@ -15,7 +15,7 @@ Source: `registry/case_registry.json` (version 1.0.0, generated 2026-03-30T22:12
 | oracle types | 6 |
 | cases with solution | 60 |
 | cases with gold complete | 0 |
-| cases with evidence dir | 60 |
+| cases with context dir | 60 |
 | cases with inject test | 1 |
 | cases with submodules | 22 |
 
@@ -135,10 +135,10 @@ Source: `registry/case_registry.json` (version 1.0.0, generated 2026-03-30T22:12
 | reproduce_md_lines | 60 | 14 | 28.0 | 48.0 | 51.12 | 70.25 | 125 | 3067 |
 | verification_md_lines | 60 | 9 | 20.0 | 27.0 | 29.98 | 39.5 | 71 | 1799 |
 | readme_md_lines | 60 | 15 | 42.0 | 43.0 | 42.67 | 45.0 | 47 | 2560 |
-| reproduce_sh_lines | 60 | 37 | 75.25 | 106.5 | 123.72 | 159.25 | 265 | 7423 |
+| reproduce_sh_lines | 60 | 37 | 75.25 | 106.5 | 127.38 | 159.25 | 432 | 7643 |
 | setup_sh_lines | 60 | 48 | 54.0 | 57.0 | 66.33 | 58.0 | 300 | 3980 |
 | solution_md_lines | 60 | 17 | 20.0 | 33.5 | 36.68 | 50.5 | 77 | 2201 |
-| evidence_files_per_case | 60 | 1 | 1.0 | 1.0 | 1.35 | 2.0 | 3 | 81 |
+| context_files_per_case | 60 | 1 | 1.0 | 1.0 | 1.35 | 2.0 | 3 | 81 |
 | inject_test_files_per_case | 60 | 0 | 0.0 | 0.0 | 0.08 | 0.0 | 5 | 5 |
 
 ## Cross-tab: surface tier × language

@@ -1,7 +1,7 @@
-# DDBench Evidence Bundle Statistics
+# DDBench Debug-Context Bundle Statistics
 
 Cases analyzed: **60**  
-Total evidence bytes: **176,631**  
+Total debug-context bytes: **176,631**  
 Total files: **81**  
 
 ## Per-case distribution (across all tiers)

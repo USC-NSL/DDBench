@@ -1,6 +1,6 @@
 # /sanitize — Symptom File Leakage Scanner
 
-Scan symptom files for information leakage — both lexical (specific terms from the solution) and semantic (descriptions that reveal the root cause, diagnosis, or fix strategy without naming exact identifiers). Triage information into three tiers, extract runtime evidence into a separate `evidence/` directory, and redact fix-revealing content entirely.
+Scan symptom files for information leakage — both lexical (specific terms from the solution) and semantic (descriptions that reveal the root cause, diagnosis, or fix strategy without naming exact identifiers). Triage information into three tiers, extract runtime context into a separate `context/` directory, and redact fix-revealing content entirely.
 
 ## Usage
 
@@ -20,14 +20,14 @@ All information about a bug falls into exactly one of these tiers:
 │  Crash/hang/wrong output, user-facing errors, CLI output.   │
 │  The developer's FIRST contact with the problem.            │
 ├─────────────────────────────────────────────────────────────┤
-│  Tier 2: evidence/ — What a developer GATHERS              │
+│  Tier 2: context/ — What a developer GATHERS               │
 │  Obtained by running the system with standard tools         │
 │  (logs, debugger, strace, tcpdump, metrics dashboard).      │
 │  Helps narrow investigation WITHOUT pinpointing the fix.    │
 ├─────────────────────────────────────────────────────────────┤
 │  Tier 3: REDACTED — What requires reading source code       │
 │  Root cause, fix location, internal mechanism, regression    │
-│  provenance. Goes NOWHERE — not in symptom, not in evidence.│
+│  provenance. Goes NOWHERE — not in symptom, not in context. │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -41,7 +41,7 @@ For each piece of information in a symptom file, ask these questions in order:
 
 2. **Could a developer obtain this using standard runtime tools, WITHOUT reading the project's source code?**
    (stack trace, log output, goroutine dump, strace, core dump backtraces, metrics, config state, protocol-level network captures)
-   → **Tier 2: evidence/** — but ONLY if it doesn't reveal the fix (see evidence anti-patterns below)
+   → **Tier 2: context/** — but ONLY if it doesn't reveal the fix (see debug-context anti-patterns below)
 
 3. **Would you need to read the source code to know this?**
    (which function is wrong, which data structure has a gap, which prior commit introduced it, what the fix should do)
@@ -61,7 +61,7 @@ They do NOT know:
 - Which subsystem, module, or component to investigate
 - What the fix looks like
 
-Every sentence in `symptom.md` must pass this test: **"Could this sentence have been written by someone who only ran the software and observed the failure, without ever reading the source code?"** If not, it either moves to evidence (Tier 2) or gets redacted (Tier 3).
+Every sentence in `symptom.md` must pass this test: **"Could this sentence have been written by someone who only ran the software and observed the failure, without ever reading the source code?"** If not, it either moves to debug context (Tier 2) or gets redacted (Tier 3).
 
 ## Procedure
 
@@ -165,18 +165,18 @@ For every violation found in Steps 2–3, classify it:
 | If the information... | Tier | Action |
 |---|---|---|
 | Is externally observable without tools (crash msg, wrong output, missing data) | Tier 1 | Keep in `symptom.md` (reword if phrasing leaks) |
-| Could be obtained with runtime tools (stack trace, logs, goroutine dump, metrics) AND does not reveal the fix location | Tier 2 | Extract to `evidence/` |
+| Could be obtained with runtime tools (stack trace, logs, goroutine dump, metrics) AND does not reveal the fix location | Tier 2 | Extract to `context/` |
 | Requires source code knowledge OR reveals fix location/strategy | Tier 3 | Redact entirely |
 
-**The critical boundary is between Tier 2 and Tier 3.** Information that a developer could obtain from runtime tools (e.g., a stack trace) might still reveal the fix if it names the exact buggy function. Apply the evidence anti-patterns below to decide.
+**The critical boundary is between Tier 2 and Tier 3.** Information that a developer could obtain from runtime tools (e.g., a stack trace) might still reveal the fix if it names the exact buggy function. Apply the debug-context anti-patterns below to decide.
 
-### Step 5: Extract evidence files
+### Step 5: Extract debug-context files
 
-For violations classified as Tier 2, extract them into `cases/<case-name>/evidence/`.
+For violations classified as Tier 2, extract them into `cases/<case-name>/context/`.
 
-#### Evidence file types
+#### Debug-context file types
 
-Create separate markdown files by evidence category. Only create files for categories that have content.
+Create separate markdown files by debug-context category. Only create files for categories that have content.
 
 | File | Contains | Example content |
 |---|---|---|
@@ -188,16 +188,16 @@ Create separate markdown files by evidence category. Only create files for categ
 | `test-output.md` | Test runner output showing the failure | Test assertion messages; diff output; expected vs actual |
 | `error-output.md` | Full error messages, stderr output, exit codes | Complete error text beyond what fits in symptom's summary |
 
-#### Evidence file format
+#### Debug-context file format
 
-Each evidence file must have this structure:
+Each debug-context file must have this structure:
 
 ```markdown
-# <Evidence Type>: <case-name>
+# <Context Type>: <case-name>
 
 ## How this was obtained
 
-<Brief description of the tool/method used to capture this evidence.
+<Brief description of the tool/method used to capture this debug context.
 Must be a standard runtime tool — not source code reading.>
 
 ## Evidence
@@ -206,13 +206,13 @@ Must be a standard runtime tool — not source code reading.>
 
 ## What this tells a developer
 
-<1-2 sentences describing what direction this evidence suggests,
+<1-2 sentences describing what direction this debug context suggests,
 WITHOUT naming the fix or the buggy code location.>
 ```
 
-#### Evidence sanitization rules
+#### Debug-context sanitization rules
 
-Before writing any evidence file, sanitize it:
+Before writing any debug-context file, sanitize it:
 
 1. **Stack traces**: Keep the full trace shape (call depth, goroutine count, thread IDs) but redact frames that name functions from the solution's "Fix locus" → "Files" list if those frame names would uniquely identify the buggy function. Keep frames that are part of the runtime, standard library, or public API.
    - **Keep:** `runtime.gopanic`, `net/http.(*Server).Serve`, `main.main`
@@ -223,11 +223,11 @@ Before writing any evidence file, sanitize it:
 
 3. **Metrics**: Keep values and trends. Don't annotate which internal component is responsible for the anomaly unless that component name is user-facing.
 
-### Step 5b: Recommend missing evidence (for clean cases)
+### Step 5b: Recommend missing debug context (for clean cases)
 
-If a case has zero violations but no `evidence/` directory, check whether natural Tier 2 evidence is missing based on the oracle type (from `case.yaml` or `verification.md`):
+If a case has zero violations but no `context/` directory, check whether natural Tier 2 debug context is missing based on the oracle type (from `case.yaml` or `verification.md`):
 
-| Oracle type | Expected Tier 2 evidence | Tool to obtain it |
+| Oracle type | Expected Tier 2 debug context | Tool to obtain it |
 |---|---|---|
 | CRASH | Stack trace, core dump backtrace | Captured from stderr/coredump on crash |
 | HANG | Goroutine dump (Go), thread dump (Java), `gdb bt` (C++) | `kill -SIGQUIT`, `jstack`, `gdb -p` |
@@ -236,26 +236,26 @@ If a case has zero violations but no `evidence/` directory, check whether natura
 | RACE | Race detector output | `-race` flag (Go), TSAN (C++) |
 | LOG | Full log window around the failure (not just the failing line) | Server log file |
 
-If natural evidence is missing, add a recommendation to the report:
+If natural debug context is missing, add a recommendation to the report:
 
 ```
-RECOMMEND: <case-name> — no evidence/ directory. Consider adding:
-  - evidence/stack-trace.md (CRASH case — capture goroutine dump from stderr)
+RECOMMEND: <case-name> — no context/ directory. Consider adding:
+  - context/stack-trace.md (CRASH case — capture goroutine dump from stderr)
 ```
 
-This is advisory only — do not auto-create evidence files from recommendation. The evidence must come from actually running the reproduction.
+This is advisory only — do not auto-create debug-context files from recommendation. The debug context must come from actually running the reproduction.
 
 ### Step 6: Rewrite symptom.md
 
-After extracting Tier 2 content to evidence/ and redacting Tier 3 content:
+After extracting Tier 2 content to context/ and redacting Tier 3 content:
 
 1. Rewrite `symptom.md` to contain ONLY Tier 1 information
 2. Apply the Fresh Developer Test to every sentence
-3. Add a brief pointer at the end of symptom.md if evidence files were created:
+3. Add a brief pointer at the end of symptom.md if debug-context files were created:
    ```markdown
-   ## Additional evidence
+   ## Additional debug context
    
-   Runtime diagnostic artifacts are available in the `evidence/` directory.
+   Runtime diagnostic artifacts are available in the `context/` directory.
    ```
 4. Show before/after diff
 5. Apply the edit
@@ -279,30 +279,30 @@ For each file scanned, output a table:
 | LEAK   | lexical | 3:redact | 3 | Function name `processTxn` | Redacted |
 | LEAK   | semantic:mechanism | 3:redact | 11 | "changed processTxn to a variant that does not populate committedLog" | Redacted |
 | LEAK   | semantic:regression | 3:redact | 12 | "regression introduced by ZOOKEEPER-4394" | Redacted |
-| LEAK   | semantic:narrowing | 2:evidence | 7 | "during the SYNCHRONIZATION phase" | → evidence/runtime-behavior.md |
-| MOVE   | runtime-obtainable | 2:evidence | 9 | Stack trace showing crash path | → evidence/stack-trace.md |
+| LEAK   | semantic:narrowing | 2:context | 7 | "during the SYNCHRONIZATION phase" | → context/runtime-behavior.md |
+| MOVE   | runtime-obtainable | 2:context | 9 | Stack trace showing crash path | → context/stack-trace.md |
 | CLEAN  | — | 1:keep | — | — | — |
 ```
 
-Evidence extraction summary:
+Debug-context extraction summary:
 ```
-  Evidence files created:
-    - cases/<case-name>/evidence/stack-trace.md (from lines 8-12)
-    - cases/<case-name>/evidence/logs.md (from lines 15-20)
+  Debug-context files created:
+    - cases/<case-name>/context/stack-trace.md (from lines 8-12)
+    - cases/<case-name>/context/logs.md (from lines 15-20)
 ```
 
 ### Step 8: Verify
 
 Re-run ALL scans (lexical + semantic) on:
 1. The edited `symptom.md` — must have zero violations
-2. Each evidence file — must have zero Tier 3 violations
+2. Each debug-context file — must have zero Tier 3 violations
 
 Verification checklist:
 - [ ] `symptom.md` passes the Fresh Developer Test (every sentence)
 - [ ] `symptom.md` passes all 5 litmus tests
-- [ ] Each evidence file describes HOW it was obtained (runtime tool, not source reading)
-- [ ] No evidence file names the fix location or fix strategy
-- [ ] No evidence file is diagnostic-equivalent to the solution
+- [ ] Each debug-context file describes HOW it was obtained (runtime tool, not source reading)
+- [ ] No debug-context file names the fix location or fix strategy
+- [ ] No debug-context file is diagnostic-equivalent to the solution
 - [ ] Stack traces are sanitized per the rules above
 
 ### Output format
@@ -312,7 +312,7 @@ Verification checklist:
 Scanned: N cases
 Clean: M cases
 Violations found and fixed: K cases
-  Tier 2 extractions (→ evidence/): P items
+  Tier 2 extractions (→ context/): P items
   Tier 3 redactions: Q items
   Breakdown:
     Lexical violations: X
@@ -323,7 +323,7 @@ Violations found and fixed: K cases
       - fix-hint: D
       - diag-equiv: E
   Per-case:
-    - <case-name>: N violations (types...), evidence files created: [list]
+    - <case-name>: N violations (types...), debug-context files created: [list]
     - <case-name>: N violations (types...)
 
 Remaining violations: 0
@@ -340,23 +340,23 @@ Remaining violations: 0
 - **Over-specific scope**: "only happens when function A calls variant B instead of variant C" — this IS the diagnosis.
 - **Diagnosis laundering**: Rewording the root cause from the solution using synonyms. If the solution says "processTxn(TxnHeader, Record) doesn't call addCommittedProposal()" and the symptom says "the transaction processing variant doesn't maintain the committed log", it's the same information.
 
-### Evidence anti-patterns (Tier 2)
+### Debug-context anti-patterns (Tier 2)
 
-These patterns mean the information should be Tier 3 (redacted), NOT Tier 2 (evidence):
+These patterns mean the information should be Tier 3 (redacted), NOT Tier 2 (debug context):
 
 - **Annotated stack traces**: A stack trace is OK; a stack trace with comments like "← this is where the bug is" or "this function should call X instead" is Tier 3.
 - **Curated log snippets**: Showing ONLY the log lines from the buggy code path (as if you already know where the bug is) is Tier 3. Show the full log window around the failure instead.
-- **Diff-ready descriptions**: "The log shows that function A is called but function B is not" — this is a diagnosis wearing evidence clothing. Tier 3.
+- **Diff-ready descriptions**: "The log shows that function A is called but function B is not" — this is a diagnosis wearing debug-context clothing. Tier 3.
 - **Single-function stack traces**: If the stack trace has been trimmed to show only the buggy function and its immediate callers, that's curation that reveals the fix location. Keep the full trace or redact.
 - **Reverse-engineered internals**: "From the goroutine dump, we can see that the lock in syncWithLeader is held while..." — the developer obtained this from a goroutine dump (Tier 2 tool), but the interpretation names fix-locus internals (Tier 3 knowledge). Extract the raw goroutine dump; redact the interpretation.
 
 ### The key distinction
 
-**Evidence shows WHAT is happening at runtime. Diagnosis explains WHY.**
+**Debug context shows WHAT is happening at runtime. Diagnosis explains WHY.**
 
-- Evidence: "goroutine 47 is blocked on channel receive for >60s" → Tier 2
+- Debug context: "goroutine 47 is blocked on channel receive for >60s" → Tier 2
 - Diagnosis: "the channel blocks because addCommittedProposal is never called" → Tier 3
-- Evidence: "the server log shows 'stop replication' but no subsequent 'start replication'" → Tier 2
+- Debug context: "the server log shows 'stop replication' but no subsequent 'start replication'" → Tier 2
 - Diagnosis: "the replication routine is not restarted because the same server regains leadership" → Tier 3
 
 ## Litmus tests
@@ -369,8 +369,8 @@ Apply ALL of these. If any answers "yes" for symptom.md, it still leaks:
 4. **Narrowing test**: Does this symptom file reduce the search space from "entire codebase" to "a specific function/file/module"?
 5. **Diff test**: Could an agent use information in this file to identify the exact commit that introduced the regression?
 
-Apply these for evidence files — if any answers "yes", the evidence file leaks and needs sanitization:
+Apply these for debug-context files — if any answers "yes", the context file leaks and needs sanitization:
 
-6. **Fix-from-evidence test**: Could an agent read ONLY this evidence file and know exactly which function/line to change?
-7. **Curation test**: Does the evidence look like it was selected by someone who already knows the answer? (Only showing the relevant 3 lines from a 500-line log is curation.)
-8. **Interpretation test**: Does the evidence contain analysis/interpretation that requires source code knowledge, rather than raw runtime output?
+6. **Fix-from-context test**: Could an agent read ONLY this debug-context file and know exactly which function/line to change?
+7. **Curation test**: Does the debug context look like it was selected by someone who already knows the answer? (Only showing the relevant 3 lines from a 500-line log is curation.)
+8. **Interpretation test**: Does the debug context contain analysis/interpretation that requires source code knowledge, rather than raw runtime output?

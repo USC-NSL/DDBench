@@ -379,7 +379,7 @@ parse_addons() {
     AGENT_CMD=""
     AGENT_CONFIG=""
     AGENT_OUTPUT_DIR=""
-    AGENT_EVIDENCE=false
+    AGENT_CONTEXT=false
     AGENT_FORCE=false
     REMAINING_ARGS=()
 
@@ -410,8 +410,8 @@ parse_addons() {
                 AGENT_OUTPUT_DIR="$2"
                 shift 2
                 ;;
-            --evidence)
-                AGENT_EVIDENCE=true
+            --context)
+                AGENT_CONTEXT=true
                 shift
                 ;;
             --force)
@@ -799,16 +799,16 @@ cmd_shell() {
         build_addon_args
     fi
 
-    # Pick up evidence flag from environment (set by run_agent.sh)
-    if [ "${BENCH_EVIDENCE:-}" = "1" ]; then
-        AGENT_EVIDENCE=true
+    # Pick up context flag from environment (set by run_agent.sh)
+    if [ "${BENCH_CONTEXT:-}" = "1" ]; then
+        AGENT_CONTEXT=true
     fi
 
-    # Mount evidence folder (read-only) into the worktree if --evidence is set
-    if [ "$AGENT_EVIDENCE" = true ]; then
-        local evidence_dir="${case_dir}/evidence"
-        [ -d "$evidence_dir" ] || die "--evidence: no evidence/ folder found at $evidence_dir"
-        RUN_ARGS+=("-v" "${evidence_dir}:${wt_path}/evidence:ro")
+    # Mount debug-context folder (read-only) into the worktree if --context is set
+    if [ "$AGENT_CONTEXT" = true ]; then
+        local context_dir="${case_dir}/context"
+        [ -d "$context_dir" ] || die "--context: no context/ folder found at $context_dir"
+        RUN_ARGS+=("-v" "${context_dir}:${wt_path}/context:ro")
     fi
 
     # Start container in background (persistent — no --rm)
@@ -844,9 +844,9 @@ cmd_agent() {
 
     [ ${#ADDON_NAMES[@]} -gt 0 ] || die "agent command requires at least one --addon flag"
 
-    # Pick up evidence flag from environment (set by run_agent.sh)
-    if [ "${BENCH_EVIDENCE:-}" = "1" ]; then
-        AGENT_EVIDENCE=true
+    # Pick up context flag from environment (set by run_agent.sh)
+    if [ "${BENCH_CONTEXT:-}" = "1" ]; then
+        AGENT_CONTEXT=true
     fi
 
     local case_dir
@@ -908,18 +908,18 @@ cmd_agent() {
 
     # Reuse running container if available
     if container_running "$cname"; then
-        if [ "$AGENT_EVIDENCE" = true ]; then
+        if [ "$AGENT_CONTEXT" = true ]; then
             if [ "$AGENT_FORCE" = true ]; then
-                # --force: stop and recreate the container for evidence mount
-                echo "Stopping running container (--force: recreating for evidence mount) ..."
+                # --force: stop and recreate the container for context mount
+                echo "Stopping running container (--force: recreating for context mount) ..."
                 docker stop "$cname" >/dev/null 2>&1 || true
                 docker rm "$cname" >/dev/null 2>&1 || true
             else
                 echo "WARNING: Container for $case_name is already running." >&2
-                echo "  evidence/ cannot be mounted into an existing container." >&2
-                echo "  The agent will run WITHOUT evidence." >&2
-                echo "  To recreate the container with evidence, add --force:" >&2
-                echo "    bench.sh agent $case_name --evidence --force ..." >&2
+                echo "  context/ cannot be mounted into an existing container." >&2
+                echo "  The agent will run WITHOUT debug context." >&2
+                echo "  To recreate the container with debug context, add --force:" >&2
+                echo "    bench.sh agent $case_name --context --force ..." >&2
                 echo "" >&2
             fi
         fi
@@ -959,11 +959,11 @@ cmd_agent() {
         RUN_ARGS+=("-v" "${output_abs}:/output")
     fi
 
-    # Mount evidence folder (read-only) into the worktree if --evidence is set
-    if [ "$AGENT_EVIDENCE" = true ]; then
-        local evidence_dir="${case_dir}/evidence"
-        [ -d "$evidence_dir" ] || die "--evidence: no evidence/ folder found at $evidence_dir"
-        RUN_ARGS+=("-v" "${evidence_dir}:${wt_path}/evidence:ro")
+    # Mount debug-context folder (read-only) into the worktree if --context is set
+    if [ "$AGENT_CONTEXT" = true ]; then
+        local context_dir="${case_dir}/context"
+        [ -d "$context_dir" ] || die "--context: no context/ folder found at $context_dir"
+        RUN_ARGS+=("-v" "${context_dir}:${wt_path}/context:ro")
     fi
 
     # Host network mode: lets the container reach services on the host's

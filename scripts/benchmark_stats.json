@@ -12,7 +12,7 @@
     "oracle_types": 6,
     "cases_with_solution": 60,
     "cases_with_gold_complete": 0,
-    "cases_with_evidence_dir": 60,
+    "cases_with_context_dir": 60,
     "cases_with_inject_test": 1,
     "cases_with_submodules": 22
   },
@@ -163,12 +163,12 @@
     "reproduce_sh_lines": {
       "n": 60,
       "min": 37,
-      "max": 265,
-      "mean": 123.72,
+      "max": 432,
+      "mean": 127.38,
       "median": 106.5,
       "p25": 75.25,
       "p75": 159.25,
-      "total": 7423
+      "total": 7643
     },
     "setup_sh_lines": {
       "n": 60,
@@ -190,7 +190,7 @@
       "p75": 50.5,
       "total": 2201
     },
-    "evidence_files_per_case": {
+    "context_files_per_case": {
       "n": 60,
       "min": 1,
       "max": 3,
@@ -296,10 +296,10 @@
       "readme_lines": 43,
       "reproduce_sh_lines": 72,
       "setup_sh_lines": 51,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 5,
       "solution_lines": 53,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": true
     },
     {
@@ -310,10 +310,10 @@
       "readme_lines": 43,
       "reproduce_sh_lines": 236,
       "setup_sh_lines": 51,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 36,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -324,10 +324,10 @@
       "readme_lines": 38,
       "reproduce_sh_lines": 65,
       "setup_sh_lines": 50,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 41,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -338,10 +338,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 186,
       "setup_sh_lines": 55,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 36,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -352,10 +352,10 @@
       "readme_lines": 41,
       "reproduce_sh_lines": 144,
       "setup_sh_lines": 50,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 58,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -366,10 +366,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 97,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 18,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -380,10 +380,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 74,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 18,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -394,10 +394,10 @@
       "readme_lines": 47,
       "reproduce_sh_lines": 79,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 18,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -408,10 +408,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 126,
       "setup_sh_lines": 61,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 29,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -420,12 +420,12 @@
       "reproduce_md_lines": 71,
       "verification_lines": 40,
       "readme_lines": 45,
-      "reproduce_sh_lines": 76,
+      "reproduce_sh_lines": 99,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 29,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -436,10 +436,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 74,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 20,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -450,10 +450,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 75,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 18,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -464,10 +464,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 78,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 18,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -478,10 +478,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 90,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 21,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -492,10 +492,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 81,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 24,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -506,10 +506,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 76,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 43,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -520,10 +520,10 @@
       "readme_lines": 46,
       "reproduce_sh_lines": 95,
       "setup_sh_lines": 57,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 18,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -534,10 +534,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 81,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 21,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -548,10 +548,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 80,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 20,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -562,10 +562,10 @@
       "readme_lines": 41,
       "reproduce_sh_lines": 199,
       "setup_sh_lines": 57,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 64,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -576,10 +576,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 197,
       "setup_sh_lines": 57,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 55,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -590,10 +590,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 61,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 20,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -604,10 +604,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 154,
       "setup_sh_lines": 57,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 77,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -618,10 +618,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 142,
       "setup_sh_lines": 57,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 44,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -632,10 +632,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 161,
       "setup_sh_lines": 57,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 20,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -646,10 +646,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 164,
       "setup_sh_lines": 57,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 20,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -660,10 +660,10 @@
       "readme_lines": 44,
       "reproduce_sh_lines": 189,
       "setup_sh_lines": 53,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 75,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -674,10 +674,10 @@
       "readme_lines": 43,
       "reproduce_sh_lines": 146,
       "setup_sh_lines": 58,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 49,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -688,10 +688,10 @@
       "readme_lines": 43,
       "reproduce_sh_lines": 223,
       "setup_sh_lines": 53,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 51,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -702,10 +702,10 @@
       "readme_lines": 44,
       "reproduce_sh_lines": 256,
       "setup_sh_lines": 58,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 48,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -716,10 +716,10 @@
       "readme_lines": 41,
       "reproduce_sh_lines": 265,
       "setup_sh_lines": 58,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 65,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -730,10 +730,10 @@
       "readme_lines": 43,
       "reproduce_sh_lines": 68,
       "setup_sh_lines": 58,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 43,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -744,10 +744,10 @@
       "readme_lines": 44,
       "reproduce_sh_lines": 101,
       "setup_sh_lines": 58,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 23,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -758,10 +758,10 @@
       "readme_lines": 43,
       "reproduce_sh_lines": 165,
       "setup_sh_lines": 58,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 31,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -772,10 +772,10 @@
       "readme_lines": 44,
       "reproduce_sh_lines": 73,
       "setup_sh_lines": 58,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 19,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -784,12 +784,12 @@
       "reproduce_md_lines": 89,
       "verification_lines": 57,
       "readme_lines": 45,
-      "reproduce_sh_lines": 234,
+      "reproduce_sh_lines": 432,
       "setup_sh_lines": 58,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 52,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -800,10 +800,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 137,
       "setup_sh_lines": 63,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 36,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -814,10 +814,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 204,
       "setup_sh_lines": 53,
-      "evidence_files": 3,
+      "context_files": 3,
       "inject_test_files": 0,
       "solution_lines": 27,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -828,10 +828,10 @@
       "readme_lines": 41,
       "reproduce_sh_lines": 60,
       "setup_sh_lines": 53,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 62,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -842,10 +842,10 @@
       "readme_lines": 41,
       "reproduce_sh_lines": 104,
       "setup_sh_lines": 53,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 24,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -856,10 +856,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 79,
       "setup_sh_lines": 54,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 37,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -870,10 +870,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 166,
       "setup_sh_lines": 54,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 28,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -882,12 +882,12 @@
       "reproduce_md_lines": 51,
       "verification_lines": 36,
       "readme_lines": 42,
-      "reproduce_sh_lines": 82,
+      "reproduce_sh_lines": 81,
       "setup_sh_lines": 54,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 17,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -898,10 +898,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 138,
       "setup_sh_lines": 62,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 19,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -912,10 +912,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 140,
       "setup_sh_lines": 54,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 19,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -926,10 +926,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 136,
       "setup_sh_lines": 54,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 23,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -940,10 +940,10 @@
       "readme_lines": 39,
       "reproduce_sh_lines": 103,
       "setup_sh_lines": 56,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 51,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -954,10 +954,10 @@
       "readme_lines": 44,
       "reproduce_sh_lines": 147,
       "setup_sh_lines": 79,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 36,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -968,10 +968,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 37,
       "setup_sh_lines": 158,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 45,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -982,10 +982,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 133,
       "setup_sh_lines": 48,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 20,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -996,10 +996,10 @@
       "readme_lines": 45,
       "reproduce_sh_lines": 62,
       "setup_sh_lines": 53,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 66,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -1010,10 +1010,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 73,
       "setup_sh_lines": 237,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 49,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -1024,10 +1024,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 70,
       "setup_sh_lines": 300,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 30,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -1038,10 +1038,10 @@
       "readme_lines": 42,
       "reproduce_sh_lines": 74,
       "setup_sh_lines": 53,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 31,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -1052,10 +1052,10 @@
       "readme_lines": 15,
       "reproduce_sh_lines": 127,
       "setup_sh_lines": 59,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 67,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -1066,10 +1066,10 @@
       "readme_lines": 43,
       "reproduce_sh_lines": 109,
       "setup_sh_lines": 60,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 19,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -1080,10 +1080,10 @@
       "readme_lines": 44,
       "reproduce_sh_lines": 55,
       "setup_sh_lines": 121,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 42,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -1094,10 +1094,10 @@
       "readme_lines": 43,
       "reproduce_sh_lines": 230,
       "setup_sh_lines": 58,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 49,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -1108,10 +1108,10 @@
       "readme_lines": 43,
       "reproduce_sh_lines": 132,
       "setup_sh_lines": 58,
-      "evidence_files": 2,
+      "context_files": 2,
       "inject_test_files": 0,
       "solution_lines": 51,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     },
     {
@@ -1122,10 +1122,10 @@
       "readme_lines": 43,
       "reproduce_sh_lines": 142,
       "setup_sh_lines": 58,
-      "evidence_files": 1,
+      "context_files": 1,
       "inject_test_files": 0,
       "solution_lines": 58,
-      "has_evidence": true,
+      "has_context": true,
       "has_inject_test": false
     }
   ]
