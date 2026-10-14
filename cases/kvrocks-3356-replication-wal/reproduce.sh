@@ -8,7 +8,8 @@
 #                  observation window.
 #   PASS (exit 0): master detaches the stalled replica within the window and
 #                  replication recovers once the replica resumes.
-#   ERROR (exit 2): the stall could not be established (inconclusive).
+#   ERROR (exit 2): the stall could not be established (inconclusive). Failures
+#                  of the server itself (won't start, never syncs) are FAIL.
 # ── Docker mode (preferred) ──
 CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -144,7 +145,7 @@ echo "Starting master on port $MASTER_PORT..."
 MASTER_PID=$!
 for _ in $(seq 1 30); do rc "$MASTER_PORT" PING | grep -q PONG && break; sleep 0.5; done
 if ! rc "$MASTER_PORT" PING | grep -q PONG; then
-    echo "ERROR: Master failed to start."; exit 2
+    echo "FAIL: Bug is present — master failed to start"; exit 1
 fi
 
 echo "Starting replica on port $REPLICA_PORT..."
@@ -164,9 +165,9 @@ for _ in $(seq 1 60); do
     sleep 0.5
 done
 if [ "$synced" -ne 1 ]; then
-    echo "ERROR: Replica never reached a synced state; cannot run the scenario."
+    echo "FAIL: Bug is present — replication never became healthy (replica not synced before the stall)"
     rc "$MASTER_PORT" INFO replication | tr -d '\r' | grep -E "connected_slaves|^slave"
-    exit 2
+    exit 1
 fi
 echo "Replication healthy: $(rc "$MASTER_PORT" INFO replication | tr -d '\r' | grep '^slave0:')"
 

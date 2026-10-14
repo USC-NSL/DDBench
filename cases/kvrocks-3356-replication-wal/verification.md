@@ -27,7 +27,9 @@ The window is generous on purpose. A fix that detects a dead consumer within any
 
 | Build | Runs | Verdict | Detail |
 |---|---|---|---|
-| Buggy (`559a667b~1`) | 6/6 (incl. end-to-end `bench.sh reproduce`) | FAIL | send queue stuck at 2,428,800 B for the full 90 s |
-| Fixed (`559a667b`) | 9/9 | PASS | replica detached after about 30 s (`send timeout` logged); replication recovered |
+| Buggy (`559a667b~1`), earlier script wording | 5/5 | FAIL | send queue stuck at 2,428,800 B for the full 90 s |
+| Buggy (`559a667b~1`), final script (incl. 1 end-to-end `bench.sh reproduce`) | 5/5 | FAIL | send queue stuck at 2,428,800 B for the full 90 s |
+| Fixed (`559a667b`), incremental build | 9/9 | PASS | replica detached after about 30 s (`send timeout` logged); replication recovered |
+| Fixed (`559a667b`), tree hash = `559a667b^{tree}`, clean build | 3/3 | PASS | same: detached after about 30 s; replication recovered |
 
 Runtime: about 95 s for the buggy build and about 35 s for the fixed build, excluding the rebuild.
