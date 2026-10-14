@@ -257,7 +257,7 @@ These are recurring bugs from past authoring sessions. Check for them before fin
 
 - **Missing tool dependencies**: Never assume tools like `xz`, `jq`, `python3-pip`, or `rustup` exist in base images. Explicitly install everything the build needs. Check what's in the base Dockerfile and install the delta.
 - **`set -e` vs conditional logic**: `set -e` causes the script to exit on ANY non-zero exit code, including inside `if` conditions or `||` chains. If the script needs to test whether a command fails (e.g., `git checkout ... 2>/dev/null || git checkout ...`), either use `set +e` locally or restructure as an `if` block.
-- **Non-root execution**: Docker containers may run as a non-root `bench` user (when launched via `bench.sh agent`). Avoid `sudo` inside the build steps that run in-container. The host fallback path may use `sudo apt-get`, but the build itself should not require it.
+- **Non-root execution**: `bench.sh reproduce` runs as root, but agents run as the non-root `bench` user (`bench.sh agent`) and may run `/bench/reproduce.sh` themselves. The images ship no `sudo`. Never use `sudo` in reproduce.sh or in-container build steps; a `sudo` call fails silently there. The host fallback in setup.sh may use `sudo apt-get`. For fault injection, prefer process-level faults (`SIGSTOP`/`SIGCONT`, kill, a pausable proxy), which need neither root nor extra capabilities.
 - **Submodule state after checkout**: After `git checkout`, submodules may be in a detached/dirty state. Always run `git submodule update --init --recursive` after checkout if `submodules: true`.
 
 ---
@@ -319,7 +319,10 @@ fi
 - Always define a `cleanup` function with `trap cleanup EXIT`
 - Kill leftover processes from previous runs before starting
 - Port numbers: use `1<issue#>` convention (e.g., issue 6614 → port 16614)
-- Final output MUST be exactly `PASS: ...` or `FAIL: ...` with corresponding exit code
+- Final output MUST be exactly `PASS: ...` (exit 0) or `FAIL: ...` (exit 1). Inconclusive runs print `ERROR: ...` and exit 2. ERROR is only for failures of the oracle's own machinery, independent of the code under test (missing tool, trigger not established, injected oracle test doesn't compile, `-run` matches nothing). Anything the code under test does wrong (doesn't build, doesn't start, never reaches the baseline state, crashes) is FAIL. Scoring counts every non-zero exit as FAIL; ERROR is a diagnostic for case authors, never an exemption.
+- Confirm the trigger took effect before judging; never hide trigger errors with `2>/dev/null` or `|| true`
+- Observe the behavior the fix changes, not a side metric of the workload; use only options/APIs present at the buggy commit
+- Comments and printed messages are agent-visible (`/bench`): describe observations, not the root-cause mechanism
 - For Go test-based cases: extract the regression test from the fix commit, inject it into the buggy codebase, run it
 - For server-based cases: start server, trigger via client, check if process survived or produced correct output
 - For race/flaky cases: loop N times, count failures, report aggregate
@@ -341,7 +344,8 @@ fi
 | Data race | Run test with `-race` flag, N iterations | etcd-19172 |
 | Deadlock | Run test program with `timeout` wrapper, N iterations | raft-268 |
 | Data loss | Write data → trigger condition → verify data exists | kvrocks-3148 |
-| Resource leak | Run workload → measure metric → check threshold | nats-7718 |
+| Resource leak | Run workload → measure metric → check threshold (validate with a no-bug control run) | nats-7718 |
+| Liveness / stall | Freeze a peer (`SIGSTOP`) → confirm the stall → check detection/recovery within a generous window | kvrocks-3356 |
 
 ---
 

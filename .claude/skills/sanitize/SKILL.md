@@ -185,7 +185,7 @@ Create separate markdown files by debug-context category. Only create files for 
 | `metrics.md` | Resource usage, timing data, counters at time of failure | Memory growth pattern; CPU spike timing; connection count anomalies |
 | `config-state.md` | Configuration, cluster state, runtime flags at time of failure | Cluster membership; node roles; replication topology; runtime flags |
 | `runtime-behavior.md` | Observable runtime behavior that requires tools to capture | Thread/goroutine states during hang; lock contention patterns visible in profiler; network packet timing |
-| `test-output.md` | Test runner output showing the failure | Test assertion messages; diff output; expected vs actual |
+| `test-output.md` | Output of tests that exist at the buggy commit, showing the failure (never `reproduce.sh`/oracle output or verdicts) | Test assertion messages; diff output; expected vs actual |
 | `error-output.md` | Full error messages, stderr output, exit codes | Complete error text beyond what fits in symptom's summary |
 
 #### Debug-context file format

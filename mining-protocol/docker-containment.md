@@ -109,6 +109,8 @@ docker:
 
 `bench.sh` translates this to `--cap-add=NET_ADMIN` in the `docker run` command.
 
+Prefer oracles that need no extra capabilities. Capabilities only help root processes: agents run as the non-root `bench` user, so an iptables-based oracle can't run in an agent session. Process-level faults (`SIGSTOP`, kill, a pausable TCP proxy) work for both.
+
 `SYS_PTRACE` is always added (required for debuggers like gdb and dlv).
 
 ---

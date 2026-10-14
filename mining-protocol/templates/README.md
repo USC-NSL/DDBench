@@ -27,6 +27,12 @@ Choose based on bug type. These replace the generic `reproduce.sh`.
 | `reproduce-server-crash.sh` | Server crash (start → trigger → PID check) | dragonfly crash cases |
 | `reproduce-server-correctness.sh` | Data correctness (cluster → write → verify) | kvrocks-2214 |
 
+## Oracle conventions (all reproduce templates)
+
+- Exit codes: `0` = `PASS:`, `1` = `FAIL:`, `2` = `ERROR:`. ERROR is only for failures of the oracle's own machinery, independent of the code under test (missing tool, trigger not established, injected oracle test doesn't compile, `-run` matches nothing). Anything the code under test does wrong (doesn't build, doesn't start, never reaches the baseline state, crashes) is FAIL. Scoring counts every non-zero exit as FAIL; ERROR is a diagnostic for case authors, never an exemption.
+- Confirm the trigger took effect before the verdict (see the TODO in each template). No `sudo`; prefer process-level faults.
+- Go templates check the build through `go_build_guard`: compile errors only in the injected test → `ERROR`; errors anywhere in the code under test → `FAIL`; empty `-run` match → `ERROR`. A failed `REBUILD.sh` → `FAIL`.
+
 ## Placeholders
 
 All templates use uppercase placeholders. Replace before use:

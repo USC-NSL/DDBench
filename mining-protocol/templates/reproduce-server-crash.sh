@@ -17,12 +17,14 @@ PORT=TODO_PORT
 DATA_DIR=$(mktemp -d)
 
 # ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+if [ -f "$WORK_DIR/REBUILD.sh" ] && ! bash "$WORK_DIR/REBUILD.sh"; then
+    echo "FAIL: Bug is present — code under test does not build"; exit 1
+fi
 
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 1
+    exit 2
 fi
 
 SERVER_PID=""
@@ -52,7 +54,7 @@ wait_for_port() {
         fi
         sleep 1
     done
-    echo "ERROR: Server did not become ready within ${timeout}s."
+    echo "Server did not become ready within ${timeout}s."
     return 1
 }
 
@@ -60,11 +62,13 @@ wait_for_port() {
 echo "Starting server on port $PORT..."
 "$BINARY" --port "$PORT" --dir "$DATA_DIR" &>/dev/null &
 SERVER_PID=$!
-if ! wait_for_port "$PORT"; then exit 1; fi
+if ! wait_for_port "$PORT"; then echo "FAIL: Bug is present — server failed to start"; exit 1; fi
 
 # ── Trigger the bug ──
 echo "Sending trigger..."
 # TODO: Send the commands/requests that trigger the crash
+# TODO: Confirm the trigger was delivered (e.g. the client got a reply or a connection reset);
+#       if it never reached the server: echo "ERROR: ..."; exit 2
 
 sleep 1
 

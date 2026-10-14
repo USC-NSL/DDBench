@@ -28,8 +28,9 @@ The bug must be reproducible with >90% reliability in an automated script. Per-i
 The reproduce script must embody a **correctness oracle** — a ground-truth definition of expected behavior that mechanically distinguishes correct from incorrect. This is stronger than "check if it crashed":
 
 - The oracle must be **sound**: no false positives (buggy code passing) and no false negatives (fixed code failing).
-- The oracle must produce a binary PASS/FAIL via exit code: `exit 1` = FAIL (bug present), `exit 0` = PASS (bug fixed).
-- The oracle must be validated in both directions: confirmed FAIL on the buggy commit, confirmed PASS after applying the fix.
+- The oracle reports via exit code: `exit 1` = FAIL (bug present), `exit 0` = PASS (bug fixed), `exit 2` = ERROR. A broken trigger must never reach the PASS/FAIL verdict. ERROR is only for failures of the oracle's own machinery, independent of the code under test (missing tool, trigger not established, injected oracle test doesn't compile, `-run` matches nothing). Anything the code under test does wrong (doesn't build, doesn't start, never reaches the baseline state, crashes) is FAIL. Scoring counts every non-zero exit as FAIL; ERROR is a diagnostic for case authors, never an exemption.
+- The oracle must observe the behavior the **fix changes**, not a side quantity the workload produces anyway. (Counter-example: kvrocks-3356 originally thresholded data-dir size after a write benchmark. That size exceeded the threshold even with no replica attached, so the oracle FAILed regardless of the bug.)
+- The oracle must be validated in both directions, repeatedly: confirmed FAIL on the buggy commit (for the right reason: no trigger errors, plus a negative control for metric oracles), and confirmed PASS on the exact fix tree (hash-verified, clean build). See `/verify-oracle`.
 
 Examples of oracles: process survival check after a crash-triggering input, assertion on query results after a data-loss trigger, race detector output after N iterations, subscription count comparison after a workload.
 
@@ -86,7 +87,8 @@ These are not mandatory but make stronger benchmark cases:
 | Crash (memory) | SIGSEGV, SIGFPE, OOB access | Exit code 139, 136 | Signal, core dump |
 | Data race | Go `-race` detector fires | "DATA RACE" in stderr | Race detector report with goroutine stacks |
 | Deadlock | Operation hangs forever | Timeout exit code 124 | Hung goroutines, lock contention |
-| Resource leak | Subscriptions/memory grow unbounded | Metric exceeds threshold | Monitoring endpoint, `/varz` |
+| Resource leak | Subscriptions/memory grow unbounded | Metric exceeds a threshold that a no-bug control stays well under | Monitoring endpoint, `/varz` |
+| Liveness / stall | A component waits forever on a stuck peer | Peer frozen (e.g. `SIGSTOP`), stall confirmed, no recovery within a generous window | Thread dump, replication status |
 | Data loss | Records silently disappear | Missing expected output | Query results, namespace state |
 | Logic error | Wrong behavior under specific input | Assertion on output | Client response, server logs |
 | Replication failure | Replica can't sync or diverges | Error log, retry loop | RDB encoding errors, WAL state |

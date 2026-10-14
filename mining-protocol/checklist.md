@@ -98,7 +98,8 @@ Use this checklist to validate a new case before merging it into the benchmark.
 - [ ] `./bench.sh setup <case-name>` completes successfully
 - [ ] `./bench.sh reproduce <case-name>` outputs `FAIL: ...` (bug present on buggy commit)
 - [ ] `./bench.sh shell <case-name>` starts an interactive shell
-- [ ] Inside shell: applying the fix + rebuilding + re-running reproduce gives `PASS`
+- [ ] `reproduce` output shows no trigger-path errors (`command not found`, `Permission denied`, …) before the verdict
+- [ ] `/verify-oracle` Direction 2 gives `PASS`: fix from the cache volume, applied to a scratch copy, `git write-tree` == `<fix>^{tree}`, clean build
 - [ ] `./bench.sh clean <case-name>` followed by `setup` + `reproduce` still works (clean slate)
 - [ ] Second `setup` run is fast (idempotent — skips clone and build)
 
@@ -114,8 +115,12 @@ Use this checklist to validate a new case before merging it into the benchmark.
 - [ ] The fix is localized (clear component, preferably 1-3 files)
 
 ### Oracle soundness
-- [ ] `reproduce.sh` produces FAIL on the buggy commit (confirmed)
-- [ ] `reproduce.sh` produces PASS after applying the fix commit (confirmed)
+- [ ] `reproduce.sh` produces FAIL on the buggy commit (confirmed, ≥3 runs; ≥5 for timing/metric/race)
+- [ ] `reproduce.sh` produces PASS on the hash-verified fix tree (confirmed, same run counts)
+- [ ] The FAIL condition measures the behavior the fix diff changes
+- [ ] Metric/threshold oracles: a negative control (bug trigger removed) does not FAIL, with a clear margin
+- [ ] Trigger is confirmed in-script; inconclusive runs exit 2 with `ERROR:`
+- [ ] No `sudo`, no fix-only config/APIs, generous detection windows
 - [ ] No false positives (buggy code cannot accidentally pass)
 - [ ] No false negatives (fixed code does not spuriously fail)
 
@@ -128,7 +133,8 @@ Use this checklist to validate a new case before merging it into the benchmark.
 - [ ] `symptom.md` does not mention function names, variable names, or code paths from the fix
 - [ ] `reproduce.md` does not reference the fix PR or commit
 - [ ] `verification.md` does not hint at the root cause
-- [ ] `setup.sh` and `reproduce.sh` do not contain comments revealing the fix
+- [ ] `setup.sh` and `reproduce.sh` do not contain comments or printed messages revealing the fix or root-cause mechanism (agents can read `/bench`)
+- [ ] `context/` contains only debug context an agent could gather at the buggy commit: no `reproduce.sh` output, PASS/FAIL verdicts, or oracle thresholds, windows, or trigger parameters
 - [ ] `solution.md` is in `cases-solution/`, NOT in `cases/`
 - [ ] The GitHub issue text does not trivially reveal the fix (if it does, the case is excluded — see selection criteria)
 

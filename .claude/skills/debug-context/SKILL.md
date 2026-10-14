@@ -50,15 +50,16 @@ The agent works **inside a Docker container** at `/workspace/worktrees/<case>/` 
 - Standard development tools (GDB, Go toolchain, Maven, cargo, rebar3, etc.)
 - Network tools (redis-cli, etcdctl, nats CLI, curl, etc.)
 
-It does NOT have:
-- `reproduce.sh`, `bench.sh`, or any case scripts
+Debug context must NOT depend on:
+- `reproduce.sh`, `bench.sh`, or any case scripts (`bench.sh agent` does mount the case dir read-only at `/bench`, but debug context must stand on the buggy source alone)
 - Injected test files (regression tests cherry-picked from the fix commit)
 - Files from the `inject_test/` directory
 - The `cases/` or `cases-solution/` directories
 
 **Every piece of debug context must be obtainable by the agent using only what exists at the buggy commit.** This means:
 
-- **NEVER run `reproduce.sh`** as a debug-context source — it often injects test files that don't exist at the buggy commit
+- **NEVER run `reproduce.sh`** as a debug-context source. It often injects test files that don't exist at the buggy commit. More fundamentally, **its output is the oracle**: its trigger, thresholds, observation window, and verdict. Context with oracle information tells the agent exactly how it will be graded. This holds even when reproduce.sh injects nothing.
+- **NO oracle information in any form:** no `PASS:`/`FAIL:`/`Bug is present` lines, no oracle thresholds, windows, or data sizes, and no rewording of reproduce.sh's steps or messages. Use your own scenario parameters (e.g. the project's default ports, not the oracle's). The provenance line describes the *symptom condition* ("while the replica had stopped consuming"), not the oracle's trigger recipe.
 - **NEVER use output from injected tests** — if `reproduce.sh` writes `FooTest.java` or `bug_test.go` into the source tree, that test doesn't exist for the agent
 - **ALWAYS work from clean buggy commit state** — enter via `bench.sh shell` (which does NOT run reproduce.sh) or reset with `bench.sh reset`
 
@@ -354,6 +355,8 @@ Before finalizing, verify debug context does not leak the fix:
 
 2. **Injected-test check**: Is this output from a test/file that was injected by reproduce.sh? If yes, DELETE the debug-context file.
 
+2b. **Oracle-leak check**: Compare against `reproduce.sh` and `verification.md`. Does the file contain a verdict line, the oracle's messages, its thresholds, windows, or data sizes, or its exact trigger recipe? If yes, DELETE it and re-capture with your own scenario.
+
 3. **Native output test**: Every line under `## Output` must be something the tool actually produced. No annotations, no decoded constants, no source-derived commentary.
 
 4. **Fix-from-context test (CRITICAL)**: Could someone read ONLY this debug-context file and know exactly which function/line to fix and what to change? If yes, the debug context is too specific — it has become a diagnosis, not a clue. Rewrite or DELETE.
@@ -428,7 +431,7 @@ Total: 62 | Already had debug context: N | Generated: M | Placeholders: P | Erro
 | Server logs | `logs.md` |
 | Race detector | `race-detector.md` |
 | ASAN/TSAN | `sanitizer-output.md` |
-| Test output | `test-output.md` |
+| Test output (existing tests at the buggy commit only, never reproduce.sh) | `test-output.md` |
 | Test failure | `test-failure.md` |
 | Crash stderr | `crash-output.md` |
 | Hang/timeout | `hang-timeout.md` |
@@ -440,7 +443,7 @@ Total: 62 | Already had debug context: N | Generated: M | Placeholders: P | Erro
 
 ## Common Mistakes to Avoid
 
-1. **Running `reproduce.sh` as debug-context source**: This is the #1 mistake. `reproduce.sh` often injects test files from the fix commit that the agent doesn't have. NEVER run `reproduce.sh` to generate debug context. Always work from clean buggy commit state via `bench.sh shell`.
+1. **Running `reproduce.sh` as debug-context source**: This is the #1 mistake. `reproduce.sh` often injects test files from the fix commit that the agent doesn't have, and its output always leaks the oracle (trigger, thresholds, verdict). NEVER run `reproduce.sh` to generate debug context, and never write a `test-output.md` that mirrors its output. Always work from clean buggy commit state via `bench.sh shell`. For hangs or stalls: reproduce the symptom condition yourself, then capture a thread dump, `INFO`/status output, and logs.
 
 2. **Using output from injected tests**: If `reproduce.sh` injects `TestFoo.java` or `test_bar_test.go`, the agent doesn't have that file. Debug context from running that test is invalid. Always check what exists at the buggy commit first.
 

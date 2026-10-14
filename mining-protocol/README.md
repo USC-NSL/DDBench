@@ -30,5 +30,7 @@ mkdir -p cases-solution/<project>-<issue#>-<slug>/
 # 5. Validate
 # See checklist.md for the full pre-merge checklist
 ./bench.sh setup <case-name> && ./bench.sh reproduce <case-name>
-# Expect: FAIL (bug is present on the buggy commit)
+# Expect: FAIL (bug is present on the buggy commit), with no trigger errors in the output
+# Then: /verify-oracle <case-name>. It checks that the FAIL has the right cause and that
+#       the hash-verified fix tree PASSes, over repeated runs. Exit codes: 0 PASS, 1 FAIL, 2 ERROR.
 ```

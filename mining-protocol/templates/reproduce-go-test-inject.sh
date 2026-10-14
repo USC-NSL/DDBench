@@ -17,12 +17,14 @@ TEST_FILE="$WORK_DIR/GO_PACKAGE_PATH/TEST_FILE_NAME_test.go"
 export PATH="$PATH:/usr/local/go/bin"
 
 # ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+if [ -f "$WORK_DIR/REBUILD.sh" ] && ! bash "$WORK_DIR/REBUILD.sh"; then
+    echo "FAIL: Bug is present — code under test does not build"; exit 1
+fi
 
 # Verify setup
 if [ ! -d "$WORK_DIR" ]; then
     echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."
-    exit 1
+    exit 2
 fi
 
 echo "=== Reproducing CASE_NAME ==="
@@ -42,6 +44,25 @@ else
     echo "Injected regression test: $TEST_FILE"
 fi
 
+
+# Build check before judging. ERROR (exit 2) only when the oracle's own probe
+# is broken: the injected test doesn't compile, or -run matches nothing. If the
+# code under test doesn't build, that is FAIL (exit 1), e.g. a patch that breaks
+# compilation. Never give the code under test the benefit of the doubt.
+go_build_guard() {  # go_build_guard <go test output>; exits on a build problem
+    local out="$1" inj errs
+    inj="$(basename "$TEST_FILE")"
+    if grep -qE '\[(build|setup) failed\]|^# |cannot find package|undefined:' <<<"$out"; then
+        errs=$(grep -E '\.go:[0-9]+(:[0-9]+)?: ' <<<"$out")
+        if [ -n "$errs" ] && ! grep -qv "$inj" <<<"$errs"; then
+            echo "ERROR: injected oracle test does not compile against this code:"; head -10 <<<"$errs"; exit 2
+        fi
+        echo "FAIL: Bug is present — code under test does not compile:"; head -10 <<<"${errs:-$out}"; exit 1
+    fi
+    grep -q 'no tests to run' <<<"$out" && { echo "ERROR: -run pattern matched no tests"; exit 2; }
+    return 0
+}
+
 cd "$WORK_DIR/GO_MODULE_ROOT"
 
 FAILURES=0
@@ -51,6 +72,7 @@ for i in $(seq 1 $TOTAL); do
     echo "=== Run $i/$TOTAL ==="
     OUTPUT=$(timeout 120 go test -v -run "^TEST_FUNC_NAME$" -count=1 -timeout 90s ./GO_PACKAGE_PATH/ 2>&1)
     EXIT_CODE=$?
+    go_build_guard "$OUTPUT"
 
     echo "$OUTPUT" | grep -E "PASS|FAIL|Bug present" | head -5
 

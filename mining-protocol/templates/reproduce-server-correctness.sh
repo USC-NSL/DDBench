@@ -19,12 +19,14 @@ DATA_DIR1="$WORK_DIR/CASE_NAME-node1"
 DATA_DIR2="$WORK_DIR/CASE_NAME-node2"
 
 # ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+if [ -f "$WORK_DIR/REBUILD.sh" ] && ! bash "$WORK_DIR/REBUILD.sh"; then
+    echo "FAIL: Bug is present — code under test does not build"; exit 1
+fi
 
 # Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 1
+    exit 2
 fi
 
 NODE1_PID=""
@@ -58,7 +60,7 @@ wait_for_port() {
         fi
         sleep 1
     done
-    echo "ERROR: $label did not become ready within ${timeout}s."
+    echo "$label did not become ready within ${timeout}s."
     return 1
 }
 
@@ -67,20 +69,27 @@ echo "Step 1: Starting node 1..."
 # TODO: Start server with appropriate config
 "$BINARY" --port "$PORT1" --dir "$DATA_DIR1" &>/dev/null &
 NODE1_PID=$!
-if ! wait_for_port "$PORT1" "Node 1"; then exit 1; fi
+if ! wait_for_port "$PORT1" "Node 1"; then echo "FAIL: Bug is present — node 1 failed to start"; exit 1; fi
 
 # ── Step 2: Start node 2 ──
 echo "Step 2: Starting node 2..."
 # TODO: Start second node, set up replication
 "$BINARY" --port "$PORT2" --dir "$DATA_DIR2" &>/dev/null &
 NODE2_PID=$!
-if ! wait_for_port "$PORT2" "Node 2"; then exit 1; fi
+if ! wait_for_port "$PORT2" "Node 2"; then echo "FAIL: Bug is present — node 2 failed to start"; exit 1; fi
 
 # ── Step 3: TODO: Set up cluster/replication topology ──
 
 # ── Step 4: TODO: Write initial data and verify replication ──
 
 # ── Step 5: TODO: Trigger the bug condition ──
+# TODO: Confirm the trigger actually took effect (fault injected, request delivered,
+# node really down, connection really stalled). If not, the run is inconclusive:
+#   echo "ERROR: trigger not established (<what was observed>)"; exit 2
+# Never let a failed trigger fall through to the verdict, and don't hide trigger
+# errors with 2>/dev/null or || true. No sudo: bench.sh reproduce runs as root,
+# agents run as the non-root `bench` user. Prefer process-level faults (SIGSTOP,
+# kill, a pausable proxy) over iptables/tc.
 
 # ── Step 6: TODO: Check data correctness ──
 

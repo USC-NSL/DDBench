@@ -32,6 +32,8 @@ Before running any cases, scan each `reproduce.sh` for anti-patterns that make t
 | Reflection field check | `getDeclaredField\|getDeclaredMethod` used as the PASS/FAIL assertion | Checks code structure, not behavior |
 | Source grep as oracle | `grep -q.*"\(source file\)"` used to branch PASS/FAIL | Detects fix text, not fix effect |
 | `sed -i` on production code | `sed -i.*src/main` | Injects accessors into production code to expose internal state |
+| `sudo` in reproduce.sh | `sudo ` | The images ship no `sudo` (`bench.sh reproduce` runs as root; agents run as non-root `bench`). The step silently fails and the trigger never happens |
+| Swallowed trigger errors | trigger lines with `2>/dev/null` / `\|\| true` and no effect check | A failed trigger still reaches a PASS/FAIL verdict |
 
 Output a pre-flight warning table before the main verification:
 
@@ -73,7 +75,8 @@ For each case, determine the status:
 
 | Status | Condition |
 |--------|-----------|
-| VERIFIED | Setup OK + reproduce exits 1 with "FAIL:" in output (bug present, as expected) |
+| VERIFIED | Setup OK + reproduce exits 1 with "FAIL:" in output, and no trigger-path errors (`command not found`, `Permission denied`, `Connection refused`) earlier in the output |
+| SUSPECT | Exits 1 with "FAIL:", but trigger-path errors appear before the verdict. The FAIL may not be caused by the bug; run `/verify-oracle` |
 | FIXED | Setup OK + reproduce exits 0 with "PASS:" in output (bug already fixed — wrong commit?) |
 | SETUP_FAIL | Setup exited non-zero |
 | REPRO_ERROR | Reproduce exited non-zero but without "FAIL:" in output (script error, not bug detection) |
@@ -96,6 +99,7 @@ Cases tested: N
 
 Summary:
   VERIFIED:    N cases (bug present on buggy commit)
+  SUSPECT:     N cases (FAIL, but trigger-path errors in output — run /verify-oracle)
   FIXED:       N cases (UNEXPECTED — check buggy_commit)
   SETUP_FAIL:  N cases (build issues)
   REPRO_ERROR: N cases (script bugs)

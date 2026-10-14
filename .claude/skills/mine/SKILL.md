@@ -228,6 +228,14 @@ Derive case metadata:
 
 For build command: check existing `cases/<project>-*/case.yaml` first, then `Makefile` / `CMakeLists.txt` / `go.mod`.
 
+**Pin down the defect semantics before writing anything.** Using the issue body, the fix commit message, and the fix diff, write down:
+- **Defect:** what the buggy code does wrong (one sentence, grounded in the diff).
+- **Observable effect:** what a user or operator sees.
+- **What the fix changes observably:** the behavior that differs between the buggy and fixed builds. The oracle must observe this.
+- **Upstream test:** if the PR adds a test, read its assertions. It tells you what the maintainers consider the bug's effect.
+
+Check that the issue's terms match the diff. Don't infer semantics from a title. In kvrocks-3356, "WAL exhaustion" meant the replica's WAL position got pruned while the feed thread was blocked; the case was built as if it meant disk filling up, and the oracle measured the wrong thing. If the fix diff doesn't change what you plan to measure, rethink before scaffolding.
+
 Check deduplication: `ls cases/ | grep <issue-number>`
 
 ---
@@ -268,6 +276,16 @@ Follow `mining-protocol/authoring-guide.md` Phase 2 to create all files. Key inp
 5. Write `solution.md` in `cases-solution/` with fix locus + diagnosis chain
 6. Write `devcontainer.json` per template
 7. `chmod +x` both scripts
+8. Do **not** put oracle output in `context/`. Debug context comes only from `/debug-context` (a developer investigating at the buggy commit) or from `/sanitize` Tier-2 extraction. It never comes from `reproduce.sh` output, verdicts, or oracle parameters.
+
+**Oracle design rules (reproduce.sh):**
+- **Observe the behavior the fix changes** (Phase 1), not a side quantity the workload produces anyway. Disk size, memory, and latency thresholds are a last resort and need a negative control (`/verify-oracle` Step 2.6).
+- **Three outcomes:** `FAIL:` (exit 1), `PASS:` (exit 0), `ERROR:` (exit 2). Never let a broken trigger reach the verdict. ERROR is only for failures of the oracle's own machinery, independent of the code under test (missing tool, trigger not established, injected oracle test doesn't compile, `-run` matches nothing). Anything the code under test does wrong (doesn't build, doesn't start, never reaches the baseline state, crashes) is FAIL. Scoring counts every non-zero exit as FAIL; ERROR is a diagnostic for case authors, never an exemption.
+- **Assert every trigger took effect,** not just that the command ran: process stopped, connection stalled, partition dropping, node down. Don't use `2>/dev/null` or `|| true` on trigger steps.
+- **No `sudo`.** The images don't ship `sudo`. `bench.sh reproduce` runs as root, but agents run as the non-root `bench` user and may run the oracle themselves, so root-only faults break for them. Prefer process-level faults (`SIGSTOP`/`SIGCONT`, killing a node, a pausable TCP proxy) over `iptables`/`tc`. They need no extra capabilities and target exactly one peer. If you must filter packets, match the real connection: client-initiated connections (e.g. replica→master) use ephemeral ports.
+- **Accept alternative fixes:** no config options, commands, or log strings that exist only in the fix. Make detection windows generous (e.g. 90s when upstream uses a 30s timeout), so any reasonable fix passes.
+- **Agent-visible text stays observational.** reproduce.sh, its output, and the case `.md` files are readable from `/bench`. Describe what was observed ("replica still attached after 90s"), not the mechanism ("thread blocked in write() with no timeout").
+- **Use bounded client calls** (`timeout 5 redis-cli ...`), so a hung server yields a verdict instead of a hung oracle. Treat a failed status query as unknown, never as "healthy" or "detached".
 
 ---
 
@@ -281,31 +299,32 @@ for attempt in 1..3:
     ./bench.sh reproduce <case-name>
     if PASS on buggy → /diagnose-case --phase reproduce (Category C) → fix → continue
     if error (no FAIL:) → /diagnose-case --phase reproduce (Category B) → fix → continue
-    if FAIL: present → VERIFIED → break
+    if FAIL: present → read the full output (not just the verdict):
+        any trigger-path error (command not found, permission denied, connection refused)
+            → Category B → fix → continue
+        otherwise → VERIFIED → break
 ```
 
 Abort after 3 failed attempts. Report last failure category.
+
+A FAIL here is necessary but not sufficient. It only shows the oracle *can* FAIL. Phase 5 shows it FAILs *because of the bug*.
 
 ---
 
 ## Phase 5: Verify oracle (with diagnose-case loop)
 
-```
-Read fix commit from solution.md, build command from case.yaml
+Run `/verify-oracle <case-name>` in full. In particular:
+- **Step 2.6 validity checks:** semantic check against the fix diff, negative control for metric oracles, trigger confirmed in-script.
+- **Step 3:** the fix commit (from the project cache volume, fetched from upstream if missing) is applied to a **scratch copy** of the case volume. The tree hash is proven equal to `<fix>^{tree}` and built clean. The fix commit is not in the case volume, so `git checkout <fix-commit>` there fails.
+- **Step 3.5:** repeated runs in both directions.
 
+```
 for attempt in 1..3:
-    docker run --rm ... bash -c '
-      git checkout <fix-commit> &&
-      [git submodule update --init --recursive] &&
-      [<build-command>] &&
-      bash /bench/reproduce.sh'
-
-    if PASS: → SOUND → break
-    if FAIL: → /diagnose-case --phase oracle (Category D) → fix
-              → bench.sh reset → re-verify Direction 1 → continue
+    /verify-oracle <case-name>
+    if SOUND: → break
+    if FAIL-for-wrong-reason / control FAILs → redesign oracle (Phase 3 rules) → re-run Phase 4 → continue
+    if fixed FAILs → /diagnose-case --phase oracle (Category D) → fix → re-verify Direction 1 → continue
 ```
-
-After success: `./bench.sh reset <case-name>`
 
 Abort after 3 failed attempts.
 
@@ -314,6 +333,8 @@ Abort after 3 failed attempts.
 ## Phase 6: Sanitize and integrate
 
 1. Run `/sanitize <case-name>` — check symptom.md for leakage against solution.md
+   - Agent containers mount the whole case dir at `/bench` (read-only). Apply the same leak check to `README.md`, `reproduce.md`, `verification.md`, comments in `reproduce.sh`, and the oracle's printed messages. They may describe the scenario and what is observed, but not the root-cause mechanism or the fix.
+   - `context/` must contain no oracle information: no `reproduce.sh` output, no PASS/FAIL verdicts, and no oracle trigger parameters, thresholds, or windows.
 2. Follow `mining-protocol/authoring-guide.md` Phase 5: update `index.md`, update `CLAUDE.md` if new project
 3. Final report (single case) or progress update (campaign mode)
 
@@ -321,6 +342,8 @@ Abort after 3 failed attempts.
 
 ## Operational Notes
 
+- **SYMPTOM.md lives in the case volume too.** `bench.sh setup` copies `symptom.md` into the worktree as `SYMPTOM.md`, and `reset` preserves that copy. After editing `symptom.md` on an existing case, refresh the copy (re-run setup, or copy it into the volume).
+- **`bench.sh reproduce` rebuilds first** (its build step plus the worktree's `REBUILD.sh`; for CMake projects that's a reconfigure, which can take minutes). While iterating on reproduce.sh, run it in a plain `docker run` against the case volume, then do the final check through `bench.sh reproduce`.
 - **inject_test.go compatibility trap** (most common oracle failure): The test must compile on BOTH buggy and fixed commits. Always read source at the buggy commit before writing.
 - **Multi-commit PRs**: Fix may not be the merge commit. Check `gh pr view --json commits`.
 - **Go projects without binaries** (e.g., hashicorp/raft): `build.command` and `build.binary` are empty strings.

@@ -23,6 +23,8 @@ git log --oneline --all | grep "<PR-number>"
 
 Record the fix commit hash. The buggy commit is `<fix-commit>~1`.
 
+Then write down, from the issue, the fix commit message, and the diff: the **defect**, its **observable effect**, and **what the fix changes observably**. If the PR adds a test, read its assertions. Check that the issue's terms match the diff (kvrocks-3356's "WAL exhaustion" meant WAL pruned under a blocked replica, not disk full). The oracle in 2.7 must observe what the fix changes.
+
 ### 1.3 Verify local reproduction
 
 Before writing any case files, manually reproduce the bug:
@@ -102,9 +104,11 @@ Copy the Docker preamble from the template verbatim. Then implement the host fal
 1. Verify binary exists
 2. Clean up from previous runs
 3. Start the service (if server-based)
-4. Trigger the bug
-5. Check the outcome
-6. Print `PASS: ...` or `FAIL: ...` and exit with 0 or 1
+4. Trigger the bug, then **confirm the trigger took effect** (otherwise `ERROR: ...`, exit 2)
+5. Check the outcome: observe the behavior the fix changes (1.2), using bounded client calls (`timeout 5 ...`)
+6. Print `PASS: ...` or `FAIL: ...` and exit with 0 or 1; an inconclusive path prints `ERROR: ...` and exits 2, but only when the oracle itself failed. If the code under test fails to build or start, that is FAIL.
+
+Agents can read `/bench`, so reproduce.sh comments and messages must describe what is observed, not the root-cause mechanism. Don't use options, commands, or log strings that exist only in the fix, and make detection windows generous so alternative fixes pass.
 
 Choose the right reproduction strategy for the bug type:
 
@@ -217,13 +221,12 @@ docker run --rm -it bug-bench/<project> bash
 ./bench.sh reproduce <case-name>
 # Expected output: "FAIL: Bug is present ..."
 
-# Verify the fix works
-./bench.sh shell <case-name>
-# Inside container:
-git checkout <fix-commit>
-<rebuild command>
-bash /bench/reproduce.sh
-# Expected output: "PASS: Bug is fixed ..."
+# Verify the fix works: /verify-oracle <case-name>
+# The fix commit is NOT in the case volume (history is truncated to the buggy
+# commit), so `git checkout <fix-commit>` there fails. /verify-oracle Step 3 takes
+# the fix from the project cache volume, applies it to a scratch copy of the case
+# volume, proves `git write-tree` == <fix>^{tree}, does a clean build, and runs the
+# oracle. Expected output: "PASS: Bug is fixed ..." on every repeated run.
 ```
 
 ### 4.2 Host mode validation (if possible)
@@ -278,8 +281,10 @@ If this case introduces a new project, update the "Covered projects" table in `C
 - All 8 case files present and formatted correctly
 - solution.md present in cases-solution/ with fix locus and diagnosis chain
 - devcontainer.json present in .devcontainer/
-- Docker pipeline produces FAIL on buggy commit
-- Docker pipeline produces PASS after applying fix (oracle soundness, both directions)
+- Docker pipeline produces FAIL on buggy commit, with no trigger errors in the output (repeated runs)
+- Negative control for metric oracles: the scenario without the bug trigger does not FAIL
+- PASS on the hash-verified, clean-built fix tree (`/verify-oracle`, repeated runs)
+- `context/` contains no oracle information (no reproduce.sh output, verdicts, or oracle parameters)
 - `bench.sh reproduce` output ends with exactly `FAIL: ...` or `PASS: ...`
 - No answer leakage in symptom.md, reproduce.md, or verification.md
 - Dual-reasoning requirement met: diagnosis requires both code and runtime evidence

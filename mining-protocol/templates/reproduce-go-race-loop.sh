@@ -18,12 +18,14 @@ OUTPUT_FILE=$(mktemp)
 export PATH=$PATH:/usr/local/go/bin
 
 # ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+if [ -f "$WORK_DIR/REBUILD.sh" ] && ! bash "$WORK_DIR/REBUILD.sh"; then
+    echo "FAIL: Bug is present — code under test does not build"; exit 1
+fi
 
 # Verify setup
 if [ ! -d "$WORK_DIR" ]; then
     echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."
-    exit 1
+    exit 2
 fi
 
 cd "$WORK_DIR"
@@ -38,6 +40,24 @@ trap cleanup EXIT
 # Inject the test
 cp /bench/inject_test.go "$TEST_FILE" 2>/dev/null || cp "$CASE_DIR/inject_test.go" "$TEST_FILE"
 
+# Build check before judging. ERROR (exit 2) only when the oracle's own probe
+# is broken: the injected test doesn't compile, or -run matches nothing. If the
+# code under test doesn't build, that is FAIL (exit 1), e.g. a patch that breaks
+# compilation. Never give the code under test the benefit of the doubt.
+go_build_guard() {  # go_build_guard <go test output>; exits on a build problem
+    local out="$1" inj errs
+    inj="$(basename "$TEST_FILE")"
+    if grep -qE '\[(build|setup) failed\]|^# |cannot find package|undefined:' <<<"$out"; then
+        errs=$(grep -E '\.go:[0-9]+(:[0-9]+)?: ' <<<"$out")
+        if [ -n "$errs" ] && ! grep -qv "$inj" <<<"$errs"; then
+            echo "ERROR: injected oracle test does not compile against this code:"; head -10 <<<"$errs"; exit 2
+        fi
+        echo "FAIL: Bug is present — code under test does not compile:"; head -10 <<<"${errs:-$out}"; exit 1
+    fi
+    grep -q 'no tests to run' <<<"$out" && { echo "ERROR: -run pattern matched no tests"; exit 2; }
+    return 0
+}
+
 echo "Running TEST_FUNC_NAME with -race detector (up to RACE_ITERATIONS iterations)..."
 
 DETECTED=0
@@ -47,6 +67,7 @@ for i in $(seq 1 $TOTAL); do
     echo "=== Run $i/$TOTAL ==="
     timeout 120 go test -race -run "^TEST_FUNC_NAME$" -count=1 -timeout 90s ./GO_PACKAGE_PATH/ > "$OUTPUT_FILE" 2>&1 || true
 
+    go_build_guard "$(cat "$OUTPUT_FILE")"
     HAS_RACE=false
     grep -q "DATA RACE" "$OUTPUT_FILE" && HAS_RACE=true
     grep -q "concurrent map" "$OUTPUT_FILE" && HAS_RACE=true
