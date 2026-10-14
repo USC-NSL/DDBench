@@ -903,19 +903,25 @@ else echo "PASS: clean sync"; fi
 ---
 
 ### #46. Kvrocks #3356 — Replication feed blocks, WAL exhaustion
-**Oracle type:** `METRIC`
+**Oracle type:** `HANG`
 
 ```bash
-# With slow replica + high write rate, monitor WAL size
-WAL_SIZE=$(du -sm /data/kvrocks/wal/ | awk '{print $1}')
+# Freeze the replica so it stops reading while its TCP connection stays open,
+# then push far more data than the socket buffers hold.
+kill -STOP "$REPLICA_PID"
+# ... write 64MB to the master, confirm master->replica send queue is non-empty ...
 
-# Verdict (WAL should not grow unbounded; e.g., >1GB is a problem)
-if [ "$WAL_SIZE" -gt 1024 ]; then echo "FAIL: WAL exhaustion ($WAL_SIZE MB)"
-else echo "PASS: WAL size controlled ($WAL_SIZE MB)"; fi
+# Verdict: does the master ever detach the stalled replica?
+for t in $(seq 1 90); do
+  sleep 1
+  redis-cli -p "$MASTER_PORT" INFO replication | grep -q '^slave0:' || { DETACHED=1; break; }
+done
+[ -z "$DETACHED" ] && echo "FAIL: master kept stalled replica attached for 90s"
+# else: SIGCONT the replica, require it to catch up, then PASS
 ```
 
-- **FAIL:** WAL grows unboundedly, eventually forcing full resync.
-- **PASS:** WAL stays bounded, slow consumer handled with backpressure.
+- **FAIL:** Master keeps the stalled replica attached indefinitely (feed thread blocked in `write()`), nothing logged.
+- **PASS:** Master detaches the stalled replica within a bounded time; replication recovers after the replica resumes.
 
 ---
 

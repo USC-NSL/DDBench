@@ -1098,9 +1098,7 @@
         "binary": "build/kvrocks"
       },
       "docker": {
-        "caps": [
-          "NET_ADMIN"
-        ],
+        "caps": [],
         "min_cpus": 1
       },
       "submodules": true,

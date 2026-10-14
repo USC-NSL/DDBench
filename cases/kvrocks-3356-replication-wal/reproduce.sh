@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for kvrocks-3356-replication-wal
-# Starts Kvrocks master + replica, throttles replica via iptables,
-# generates write load, and checks WAL growth. Reports PASS/FAIL.
-# NOTE: Requires sudo for iptables rules.
+# Starts a Kvrocks master + replica, freezes the replica (SIGSTOP) so it stops
+# consuming the replication stream while its TCP connection stays open, writes
+# enough data to fill the master's socket buffers, then checks whether the
+# master ever detaches the stuck replica. Reports PASS/FAIL.
+#   FAIL (exit 1): master keeps the stalled replica attached for the whole
+#                  observation window.
+#   PASS (exit 0): master detaches the stalled replica within the window and
+#                  replication recovers once the replica resumes.
+#   ERROR (exit 2): the stall could not be established (inconclusive).
 # ── Docker mode (preferred) ──
 CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -12,126 +18,249 @@ fi
 # ── Host fallback (no Docker) ──
 set -uo pipefail
 
-CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/kvrocks-3356-replication-wal"
 BINARY="$WORK_DIR/build/kvrocks"
 MASTER_PORT=13356
 REPLICA_PORT=13357
-MASTER_DIR="$WORK_DIR/kvrocks-3356-master"
-REPLICA_DIR="$WORK_DIR/kvrocks-3356-replica"
-MASTER_CONF="$WORK_DIR/kvrocks-3356-master.conf"
-REPLICA_CONF="$WORK_DIR/kvrocks-3356-replica.conf"
+RUN_DIR="$WORK_DIR/kvrocks-3356-run"
+MASTER_DIR="$RUN_DIR/master"
+REPLICA_DIR="$RUN_DIR/replica"
+# How long the master is given to detach a stalled replica. Generous on purpose:
+# any reasonable detection delay (up to ~60s, cf. Redis repl-timeout) must PASS.
+STALL_WINDOW="${STALL_WINDOW:-90}"
+# Data pushed while the replica is frozen: far more than the loopback socket buffers
+# (tcp_wmem max 4MB + tcp_rmem max 6MB by default).
+FILL_KEYS=256
+FILL_VALUE_BYTES=262144
+
+MASTER_PID=""
+REPLICA_PID=""
+TRICKLE_PID=""
 
 # ── Rebuild if source changed ──
 [ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
 
-# Verify setup
 if [ ! -x "$BINARY" ]; then
     echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 1
+    exit 2
 fi
 
-# Cleanup function to ensure iptables rule is always removed
 cleanup() {
-    echo "Cleaning up..."
-    sudo iptables -D OUTPUT -p tcp --dport "$REPLICA_PORT" -m statistic --mode random --probability 0.9 -j DROP 2>/dev/null || true
-    kill "$MASTER_PID" 2>/dev/null || true
-    kill "$REPLICA_PID" 2>/dev/null || true
-    wait "$MASTER_PID" 2>/dev/null || true
-    wait "$REPLICA_PID" 2>/dev/null || true
-    rm -rf "$MASTER_DIR" "$REPLICA_DIR"
-    rm -f "$MASTER_CONF" "$REPLICA_CONF"
+    [ -n "$TRICKLE_PID" ] && kill "$TRICKLE_PID" 2>/dev/null
+    # A SIGSTOPped process only dies on SIGKILL or after SIGCONT, and a master
+    # with a stalled replica may not shut down cleanly -- so kill hard.
+    for pid in $REPLICA_PID $MASTER_PID; do
+        kill -CONT "$pid" 2>/dev/null
+        kill -9 "$pid" 2>/dev/null
+    done
+    wait 2>/dev/null
+    rm -rf "$RUN_DIR"
 }
 trap cleanup EXIT
 
-# Cleanup from previous runs
-pkill -f "kvrocks.*--port $MASTER_PORT" 2>/dev/null || true
-pkill -f "kvrocks.*--port $REPLICA_PORT" 2>/dev/null || true
-pkill -f "kvrocks.*-c $MASTER_CONF" 2>/dev/null || true
-pkill -f "kvrocks.*-c $REPLICA_CONF" 2>/dev/null || true
-sudo iptables -D OUTPUT -p tcp --dport "$REPLICA_PORT" -m statistic --mode random --probability 0.9 -j DROP 2>/dev/null || true
-sleep 1
-rm -rf "$MASTER_DIR" "$REPLICA_DIR"
+rc() {  # rc <port> <args...>
+    local port=$1; shift
+    timeout 5 redis-cli -p "$port" "$@" 2>/dev/null
+}
+
+info_field() {  # info_field <port> <field>
+    rc "$1" INFO replication | tr -d '\r' | awk -F: -v k="$2" '$1 == k {print $2}'
+}
+
+active_slaves() {  # replicas the master currently lists as attached; -1 if INFO fails
+    local info
+    info=$(rc "$MASTER_PORT" INFO replication | tr -d '\r')
+    if ! grep -q '^connected_slaves:' <<<"$info"; then echo -1; return; fi
+    grep -c '^slave[0-9]*:' <<<"$info"
+}
+
+alive() { kill -0 "$1" 2>/dev/null; }
+
+# Print "<replica_local_port> <master_tx_queue_bytes>" for the replica's
+# replication connection, or nothing if that connection no longer exists.
+repl_conn_state() {
+    python3 - "$REPLICA_PID" "$MASTER_PORT" <<'PY'
+import os, sys
+pid, mport = sys.argv[1], int(sys.argv[2])
+inodes = set()
+try:
+    for fd in os.listdir(f"/proc/{pid}/fd"):
+        try:
+            link = os.readlink(f"/proc/{pid}/fd/{fd}")
+        except OSError:
+            continue
+        if link.startswith("socket:["):
+            inodes.add(link[8:-1])
+except OSError:
+    sys.exit(0)
+rows = []
+for path in ("/proc/net/tcp", "/proc/net/tcp6"):
+    try:
+        with open(path) as f:
+            next(f)
+            rows += [l.split() for l in f]
+    except OSError:
+        pass
+port = lambda addr: int(addr.rsplit(":", 1)[1], 16)
+# replica side: ESTABLISHED socket owned by the replica, connected to the master port
+eph = next((port(r[1]) for r in rows if r[9] in inodes and r[3] == "01" and port(r[2]) == mport), None)
+if eph is None:
+    sys.exit(0)
+for r in rows:
+    if port(r[1]) == mport and port(r[2]) == eph and r[3] == "01":
+        print(eph, int(r[4].split(":")[0], 16))
+        break
+PY
+}
+
+dump_logs() {
+    echo "--- master log (replication-related, last 10 lines) ---"
+    grep -haiE "slave|replica|timeout|WAL" "$MASTER_DIR"/kvrocks*.log 2>/dev/null | cut -c1-200 | tail -10
+}
+
+# ── Fresh start ──
+pkill -9 -f "kvrocks.*$RUN_DIR" 2>/dev/null || true
+rm -rf "$RUN_DIR"
 mkdir -p "$MASTER_DIR" "$REPLICA_DIR"
 
-echo "=== Reproducing kvrocks-3356-replication-wal ==="
-
-# Create master config
-cat > "$MASTER_CONF" <<EOF
-bind 0.0.0.0
+cat > "$RUN_DIR/master.conf" <<EOF
+bind 127.0.0.1
 port $MASTER_PORT
 dir $MASTER_DIR
 log-dir $MASTER_DIR
 EOF
-
-# Create replica config
-cat > "$REPLICA_CONF" <<EOF
-bind 0.0.0.0
+cat > "$RUN_DIR/replica.conf" <<EOF
+bind 127.0.0.1
 port $REPLICA_PORT
 dir $REPLICA_DIR
 log-dir $REPLICA_DIR
 slaveof 127.0.0.1 $MASTER_PORT
 EOF
 
-# Start master
+echo "=== Reproducing kvrocks-3356-replication-wal ==="
+
 echo "Starting master on port $MASTER_PORT..."
-"$BINARY" -c "$MASTER_CONF" &>/dev/null &
+"$BINARY" -c "$RUN_DIR/master.conf" &>/dev/null &
 MASTER_PID=$!
-sleep 2
-
-if ! kill -0 "$MASTER_PID" 2>/dev/null; then
-    echo "ERROR: Master failed to start."
-    exit 1
+for _ in $(seq 1 30); do rc "$MASTER_PORT" PING | grep -q PONG && break; sleep 0.5; done
+if ! rc "$MASTER_PORT" PING | grep -q PONG; then
+    echo "ERROR: Master failed to start."; exit 2
 fi
 
-# Start replica
 echo "Starting replica on port $REPLICA_PORT..."
-"$BINARY" -c "$REPLICA_CONF" &>/dev/null &
+"$BINARY" -c "$RUN_DIR/replica.conf" &>/dev/null &
 REPLICA_PID=$!
-sleep 3
 
-if ! kill -0 "$REPLICA_PID" 2>/dev/null; then
-    echo "ERROR: Replica failed to start."
-    exit 1
+# ── Phase 1: healthy replication ──
+TOKEN="init-$RANDOM-$$"
+rc "$MASTER_PORT" SET oracle:sentinel "$TOKEN" >/dev/null
+synced=0
+for _ in $(seq 1 60); do
+    if [ "$(info_field "$REPLICA_PORT" master_link_status)" = "up" ] \
+       && [ "$(rc "$REPLICA_PORT" GET oracle:sentinel)" = "$TOKEN" ] \
+       && [ "$(active_slaves)" -ge 1 ]; then
+        synced=1; break
+    fi
+    sleep 0.5
+done
+if [ "$synced" -ne 1 ]; then
+    echo "ERROR: Replica never reached a synced state; cannot run the scenario."
+    rc "$MASTER_PORT" INFO replication | tr -d '\r' | grep -E "connected_slaves|^slave"
+    exit 2
+fi
+echo "Replication healthy: $(rc "$MASTER_PORT" INFO replication | tr -d '\r' | grep '^slave0:')"
+
+# ── Phase 2: replica stops consuming, connection stays open ──
+echo "Freezing replica (SIGSTOP) -- it stops reading, but its kernel keeps the TCP connection alive..."
+kill -STOP "$REPLICA_PID"
+
+echo "Writing $((FILL_KEYS * FILL_VALUE_BYTES / 1048576))MB to master to fill the replication socket buffers..."
+python3 - "$FILL_KEYS" "$FILL_VALUE_BYTES" <<'PY' | timeout 120 redis-cli -p "$MASTER_PORT" --pipe >/dev/null 2>&1
+import sys
+n, size = int(sys.argv[1]), int(sys.argv[2])
+val = b"x" * size
+out = sys.stdout.buffer
+for i in range(n):
+    key = b"oracle:fill:%d" % i
+    out.write(b"*3\r\n$3\r\nSET\r\n$%d\r\n%s\r\n$%d\r\n%s\r\n" % (len(key), key, size, val))
+PY
+
+# Confirm the stream is actually stalled: the master's send queue on the
+# replication connection is non-empty. (Or the master already dropped the
+# replica -- detaching very quickly is a legitimate outcome.)
+stall=""
+for _ in $(seq 1 20); do
+    if [ "$(active_slaves)" -eq 0 ]; then stall="detached"; break; fi
+    state=$(repl_conn_state)
+    if [ -n "$state" ] && [ "${state#* }" -gt 0 ]; then stall="$state"; break; fi
+    sleep 0.5
+done
+if [ -z "$stall" ]; then
+    echo "ERROR: Could not establish a stalled replication stream (replica connection: '${state:-none}')."
+    exit 2
+fi
+if [ "$stall" != "detached" ]; then
+    echo "Stall established: master->replica(port ${stall% *}) send queue = ${stall#* } bytes"
 fi
 
-# Verify replication is working
-echo "Checking replication status..."
-REPL_INFO=$(redis-cli -p "$MASTER_PORT" INFO replication 2>/dev/null)
-if ! echo "$REPL_INFO" | grep -q "connected_slaves:1"; then
-    echo "WARNING: Replica may not be connected yet, continuing anyway..."
-fi
-echo "$REPL_INFO" | grep -E "connected_slaves|slave0" || true
+# Keep a light write load on the master, as in production.
+( i=0; while :; do rc "$MASTER_PORT" SET "oracle:trickle:$i" "$i" >/dev/null; i=$((i + 1)); sleep 0.2; done ) &
+TRICKLE_PID=$!
 
-# Record initial WAL size
-INITIAL_SIZE=$(du -s "$MASTER_DIR" 2>/dev/null | awk '{print $1}')
-echo "Initial master dir size: ${INITIAL_SIZE}KB"
-
-# Throttle replica via iptables (drop 90% of packets to replica port)
-echo "Applying iptables rule to throttle replica (drop 90% of packets to port $REPLICA_PORT)..."
-sudo iptables -A OUTPUT -p tcp --dport "$REPLICA_PORT" -m statistic --mode random --probability 0.9 -j DROP
-
-# Generate high write load on master
-echo "Running redis-benchmark (1M SET operations, 256-byte values, 50 clients, pipeline 32)..."
-redis-benchmark -p "$MASTER_PORT" -t set -n 1000000 -r 1000000 -d 256 -c 50 -P 32 -q 2>/dev/null
-
-# Wait for WAL to accumulate
-echo "Waiting 10 seconds for WAL accumulation..."
-sleep 10
-
-# Check WAL size after load
-FINAL_SIZE=$(du -s "$MASTER_DIR" 2>/dev/null | awk '{print $1}')
-GROWTH=$((FINAL_SIZE - INITIAL_SIZE))
-echo "Final master dir size: ${FINAL_SIZE}KB"
-echo "WAL growth: ${GROWTH}KB"
-
-# WAL growth > 512MB (512000KB) indicates unbounded growth (bug present)
-if [ "$GROWTH" -gt 512000 ]; then
-    echo ""
-    echo "FAIL: Bug is present — WAL grew by ${GROWTH}KB (> 512MB, unbounded growth)"
-    exit 1
+# ── Phase 3: does the master ever give up on the stuck replica? ──
+detached_after=""
+if [ "$stall" = "detached" ]; then
+    detached_after=0
 else
-    echo ""
-    echo "PASS: Bug is fixed — WAL growth bounded at ${GROWTH}KB (< 512MB)"
-    exit 0
+    echo "Observing master for up to ${STALL_WINDOW}s..."
+    for t in $(seq 1 "$STALL_WINDOW"); do
+        sleep 1
+        if ! alive "$MASTER_PID"; then
+            echo ""
+            echo "FAIL: Bug is present — master process died while the replica was stalled"
+            exit 1
+        fi
+        if [ "$(active_slaves)" -eq 0 ]; then detached_after=$t; break; fi
+        if [ $((t % 15)) -eq 0 ]; then
+            state=$(repl_conn_state)
+            echo "  ${t}s: replica still attached, master send queue = ${state#* } bytes, $(info_field "$MASTER_PORT" connected_slaves) connected_slaves"
+        fi
+    done
 fi
+
+kill "$TRICKLE_PID" 2>/dev/null; wait "$TRICKLE_PID" 2>/dev/null; TRICKLE_PID=""
+
+if [ -z "$detached_after" ]; then
+    state=$(repl_conn_state)
+    dump_logs
+    echo ""
+    echo "FAIL: Bug is present — master kept a stalled replica attached for ${STALL_WINDOW}s"
+    echo "      (send queue stuck at ${state#* } bytes, nothing logged, replica never detached)"
+    exit 1
+fi
+echo "Master detached the stalled replica after ~${detached_after}s."
+dump_logs
+
+# ── Phase 4: replication must recover once the replica resumes ──
+echo "Resuming replica (SIGCONT) and checking that replication recovers..."
+kill -CONT "$REPLICA_PID"
+TOKEN="final-$RANDOM-$$"
+rc "$MASTER_PORT" SET oracle:sentinel "$TOKEN" >/dev/null
+recovered=0
+for _ in $(seq 1 180); do
+    if [ "$(info_field "$REPLICA_PORT" master_link_status)" = "up" ] \
+       && [ "$(rc "$REPLICA_PORT" GET oracle:sentinel)" = "$TOKEN" ]; then
+        recovered=1; break
+    fi
+    sleep 0.5
+done
+if [ "$recovered" -ne 1 ]; then
+    dump_logs
+    echo ""
+    echo "FAIL: Master detached the stalled replica, but replication did not recover within 90s after it resumed"
+    exit 1
+fi
+
+echo ""
+echo "PASS: Bug is fixed — master detached the stalled replica after ~${detached_after}s and replication recovered"
+exit 0

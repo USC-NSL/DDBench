@@ -11,5 +11,5 @@ build:
   command: "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)"
   binary: build/kvrocks
 docker:
-  caps: ["NET_ADMIN"]
+  caps: []
   num_cpus: 10

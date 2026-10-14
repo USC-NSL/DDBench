@@ -20,20 +20,15 @@ echo "=== Setting up kvrocks-3356-replication-wal ==="
 # Install dependencies
 echo "Installing build dependencies..."
 sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake git redis-tools
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake git redis-tools python3
 
 # Check prerequisites
-for cmd in git cmake g++ redis-benchmark; do
+for cmd in git cmake g++ redis-cli python3; do
     if ! command -v "$cmd" &>/dev/null; then
         echo "ERROR: $cmd is required but not installed."
         exit 1
     fi
 done
-
-# Check sudo access (needed for iptables in reproduce.sh)
-if ! sudo -n true 2>/dev/null; then
-    echo "WARNING: sudo access may be needed for iptables in reproduce.sh"
-fi
 
 # Clone
 if [ ! -d "$WORK_DIR" ]; then

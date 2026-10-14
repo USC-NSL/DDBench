@@ -203,7 +203,7 @@ See [`index.md`](index.md) for the full list with links and descriptions.
 - **Build tools**: `build-essential`, `cmake`, `ninja-build` (installed automatically by `setup.sh`)
 - **Go 1.22+** for Go-based cases (etcd, NATS, Raft)
 - **Clang 23** for ClickHouse (installed automatically by `setup.sh` from LLVM nightly)
-- **sudo access** for `apt-get install` (dependency installation) and `iptables` (one Kvrocks case)
+- **sudo access** for `apt-get install` (dependency installation)
 
 ## Bug Categories
 

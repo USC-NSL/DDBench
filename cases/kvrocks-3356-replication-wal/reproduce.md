@@ -1,58 +1,67 @@
 # Reproduce: Kvrocks #3356
 
 ## Prerequisites
-A Kvrocks master-replica setup (see setup.md).
+A built `kvrocks` binary (see setup.md), `redis-cli`, and `python3`. No root, iptables, or `tc` is needed.
 
 ## Step 1: Start master and replica
 
 ```bash
-./build/kvrocks -c master.conf &
-./build/kvrocks -c replica.conf &
+mkdir -p /tmp/kv-master /tmp/kv-replica
+cat > /tmp/master.conf <<EOF
+bind 127.0.0.1
+port 13356
+dir /tmp/kv-master
+EOF
+cat > /tmp/replica.conf <<EOF
+bind 127.0.0.1
+port 13357
+dir /tmp/kv-replica
+slaveof 127.0.0.1 13356
+EOF
+./build/kvrocks -c /tmp/master.conf &
+./build/kvrocks -c /tmp/replica.conf & REPLICA_PID=$!
 sleep 3
+redis-cli -p 13356 INFO replication   # connected_slaves:1, slave0:...
 ```
 
-Verify replication is working:
-```bash
-redis-cli -p 6666 INFO replication
-# Should show connected_slaves:1
-```
-
-## Step 2: Throttle replica network
-
-Use `iptables` to drop packets destined for the replica port, simulating a slow replica:
-```bash
-# Drop 90% of packets to the replica port (6667) to create significant replication lag
-sudo iptables -A OUTPUT -p tcp --dport 6667 -m statistic --mode random --probability 0.9 -j DROP
-```
-
-**Note:** Do not use `tc qdisc add dev lo root netem ...` on the loopback interface — it throttles all loopback traffic including the benchmark client's connection to the master, making the test impractical. The `iptables` approach targets only the replica port.
-
-## Step 3: Generate high write load on master
+## Step 2: Make the replica stop consuming, keeping its connection open
 
 ```bash
-redis-benchmark -p 6666 -t set -n 1000000 -r 1000000 -d 256 -c 50 -P 32
+kill -STOP $REPLICA_PID
 ```
 
-## Step 4: Monitor WAL growth
+The replica process no longer reads from its socket. Its kernel keeps the TCP connection alive and advertises a zero receive window. To the master, this looks the same as a replica stuck behind a congested network.
+
+## Step 3: Write more data than the socket buffers can hold
 
 ```bash
-watch -n 2 'du -sh /tmp/kvrocks-master/'
+python3 -c '
+import sys
+v = b"x" * 262144
+for i in range(256):
+    k = b"fill:%d" % i
+    sys.stdout.buffer.write(b"*3\r\n$3\r\nSET\r\n$%d\r\n%s\r\n$%d\r\n%s\r\n" % (len(k), k, len(v), v))
+' | redis-cli -p 13356 --pipe
 ```
 
-## Step 5: Check replication status
+## Step 4: Observe the master
 
 ```bash
-redis-cli -p 6666 INFO replication
-# Check replication lag
+watch -n 5 'redis-cli -p 13356 INFO replication; grep ":342C " /proc/net/tcp'
 ```
+
+`342C` is port 13356 in hex. The `tx_queue` column of the master→replica connection shows the send queue.
 
 ## Expected result (bug present)
-- WAL directory grows continuously without bound (several GB under sustained load).
-- The replication feed thread blocks on the slow consumer.
-- Eventually, replication lag exceeds WAL retention and a forced fullsync occurs.
-- Master disk usage grows dangerously.
+- The replica is still listed as attached after 90 s, and stays attached for as long as the replica is stalled.
+- The master's send queue on the replication connection stays at about 2.4 MB and does not change.
+- Nothing about the replica appears in the master log.
+
+## Expected result (bug fixed)
+- The master detaches the stalled replica within a bounded time (`slave0` disappears from `INFO replication`).
+- After `kill -CONT $REPLICA_PID`, the replica reconnects and catches up with new writes.
 
 ## Cleanup
 ```bash
-sudo iptables -D OUTPUT -p tcp --dport 6667 -m statistic --mode random --probability 0.9 -j DROP 2>/dev/null
+kill -CONT $REPLICA_PID; pkill -9 -f 'kvrocks -c /tmp/(master|replica).conf'
 ```

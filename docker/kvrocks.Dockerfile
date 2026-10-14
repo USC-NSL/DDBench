@@ -1,6 +1,6 @@
 FROM bug-bench/base-cpp
 
-# Kvrocks needs iptables for the replication-wal case (kvrocks-3356).
+# iptables is kept for interactive network-fault experiments (no case oracle requires it).
 # Go is needed for running kvrocks Go integration tests (kvrocks-2520).
 # locales is needed so cmake can extract zip archives with UTF-8 paths (pegtl).
 RUN apt-get update && apt-get install -y --no-install-recommends \

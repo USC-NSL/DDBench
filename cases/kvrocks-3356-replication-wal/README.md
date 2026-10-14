@@ -1,15 +1,15 @@
-# Kvrocks #3356: Unbounded WAL Growth with Slow Replica
+# Kvrocks #3356: Replication Stalls Indefinitely on a Slow Replica
 
 | Field | Value |
 |-------|-------|
 | Project | [Kvrocks](https://github.com/apache/kvrocks) |
 | Issue | [#3356](https://github.com/apache/kvrocks/issues/3356) |
 | Language | C++ |
-| Category | Resource Leak (unbounded WAL growth) |
+| Category | Hang / liveness (replication stalls with no timeout, leading to WAL exhaustion) |
 
 ## Bug Summary
 
-When a replica is slow to consume replication data, the master's replication feed thread blocks indefinitely. This prevents WAL compaction, causing the Write-Ahead Log to grow without bound. Under sustained write load, this leads to disk exhaustion.
+If a replica stops consuming the replication stream while its TCP connection stays open, the master never detaches it. The replica stays "connected" indefinitely (44 hours in production), with nothing logged. Meanwhile the master's WAL rotates past the replica's position. When the stall finally ends, a partial resync is no longer possible and a full resync is forced.
 
 ## Quick Start
 
@@ -17,7 +17,7 @@ When a replica is slow to consume replication data, the master's replication fee
 # 1. Set up the codebase (clone, checkout buggy commit, build)
 ./setup.sh
 
-# 2. Reproduce the bug and verify (requires sudo for iptables)
+# 2. Reproduce the bug and verify
 ./reproduce.sh
 ```
 
@@ -26,20 +26,20 @@ When a replica is slow to consume replication data, the master's replication fee
 - Git
 - C++ compiler (GCC 7+ or Clang)
 - CMake 3.16+
-- `redis-cli` and `redis-benchmark` (from redis-tools package)
-- `sudo` access (for iptables rules to simulate slow replica)
+- `redis-cli` (from redis-tools package)
+- `python3`
 
 ## What to Expect
 
 **When the bug is present (FAIL):**
-The master's WAL directory grows beyond 512MB under sustained write load with a throttled replica. The replication feed thread blocks on the slow consumer without any backpressure.
+The replica is frozen with `SIGSTOP` and 64 MB is written to the master. For the full 90 s observation window, the master keeps the stalled replica attached, with its send queue stuck.
 
 **When the bug is fixed (PASS):**
-WAL growth is bounded. The feed thread applies backpressure or disconnects the slow replica instead of blocking indefinitely.
+The master detaches the stalled replica within the window. After the replica resumes, it reconnects and catches up.
 
 ## Detailed Documentation
 
-- [`symptom.md`](symptom.md) — Observable behavior and error messages
-- [`setup.md`](setup.md) — Detailed setup instructions
-- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure
-- [`verification.md`](verification.md) — Pass/fail verification criteria
+- [`symptom.md`](symptom.md): observable behavior and error messages
+- [`setup.md`](setup.md): detailed setup instructions
+- [`reproduce.md`](reproduce.md): step-by-step reproduction procedure
+- [`verification.md`](verification.md): pass/fail verification criteria
