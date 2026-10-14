@@ -51,7 +51,7 @@ The agent works **inside a Docker container** at `/workspace/worktrees/<case>/` 
 - Network tools (redis-cli, etcdctl, nats CLI, curl, etc.)
 
 Debug context must NOT depend on:
-- `reproduce.sh`, `bench.sh`, or any case scripts (`bench.sh agent` does mount the case dir read-only at `/bench`, but debug context must stand on the buggy source alone)
+- `reproduce.sh`, `bench.sh`, or any case scripts (`bench.sh agent` never mounts the case dir, so these files are invisible to agents)
 - Injected test files (regression tests cherry-picked from the fix commit)
 - Files from the `inject_test/` directory
 - The `cases/` or `cases-solution/` directories

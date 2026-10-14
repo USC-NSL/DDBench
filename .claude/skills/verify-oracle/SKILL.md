@@ -52,7 +52,7 @@ Check for these anti-patterns:
 | **Reflection as oracle** | `getDeclaredField`/`getDeclaredMethod` used in PASS/FAIL assertion (not test setup) | HIGH — checks code structure, not behavior |
 | **Source grep branching** | `grep -q` on production source to branch test logic | MEDIUM — detects fix text, not fix effect |
 | **`sed -i` on production** | `sed -i` targeting `src/main` paths | MEDIUM — injects accessors to read internal state |
-| **`sudo` in reproduce.sh** | `grep -n 'sudo '` | HIGH — the images ship no `sudo` (`bench.sh reproduce` runs as root, agents as non-root `bench`); the step silently fails (`sudo: command not found`) and the trigger never happens |
+| **`sudo` in reproduce.sh** | `grep -n 'sudo '` | HIGH — the images ship no `sudo` (and `bench.sh reproduce` already runs as root); the step silently fails (`sudo: command not found`) and the trigger never happens |
 | **Trigger errors swallowed** | Fault-injection/trigger lines ending in `2>/dev/null`, `\|\| true`, or with no exit-status check | HIGH — a failed trigger falls through to the verdict, so FAIL/PASS no longer reflects the bug |
 | **Fix-only config / API** | Oracle sets or reads config options, commands, or log strings that only exist in the fix diff | HIGH — buggy build rejects them (false FAIL) and alternative fixes never produce them |
 | **Bare metric threshold** | PASS/FAIL decided by `du`, memory, latency, or counter vs. a constant | MEDIUM — must be backed by the negative control in Step 2.6 |

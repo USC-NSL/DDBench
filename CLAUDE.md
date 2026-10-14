@@ -61,16 +61,18 @@ Addons inject tools (AI agents, debuggers) into containers at runtime without mo
 
 Available addons: `claude-code`, `aider`, `codex`, `mini-swe-agent`, `custom-gdb-dashboard`, `rr-debugger`. See `addons/README.md` for writing custom addons.
 
-API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) are forwarded from host. Agent configs (`~/.claude/`) mounted read-only.
+API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) are forwarded from host. `bench.sh shell` mounts `~/.claude/` read-only; `bench.sh agent` mounts only the `claude-code` addon's `.credentials.json` and `settings.json` (never transcripts, file-history, or memory).
 
 ### Container mount layout
 
 | Path | Contents | Writable? |
 |------|----------|-----------|
 | `/workspace/worktrees/<case>/` | Project source code at the buggy commit, with built binaries. Edit/build/debug here. | Yes |
-| `/bench/` | Case scripts (reproduce.sh, case.yaml, docs). Same path in both VS Code and `bench.sh shell`. | No |
+| `/bench/` | Case scripts (reproduce.sh, case.yaml, docs). VS Code and `bench.sh shell` only. **Never mounted in `bench.sh agent`.** | No |
 
-Reproduce a bug: `bash /bench/reproduce.sh` (works the same regardless of entry method).
+Reproduce a bug (human sessions): `bash /bench/reproduce.sh`.
+
+**`bench.sh agent` containers get neither `/bench` nor the host `~/.claude`.** Agents being benchmarked must never see the oracle. They get `SYMPTOM.md` in the worktree, and `context/` only with `--context`. Scoring (`bench.sh reproduce`) runs the oracle in its own container. The `claude-code` addon receives only `~/.claude/.credentials.json` and `settings.json`.
 
 ## Working with cases (host fallback, no Docker)
 

@@ -140,7 +140,7 @@ Agent addons need API keys. These are passed from your host environment automati
 
 Set them on your host (e.g., in `~/.bashrc`), and `bench.sh` forwards them into the container.
 
-Agent config directories (e.g., `~/.claude/`) are also mounted read-only if they exist.
+With `bench.sh shell`, agent config directories (e.g., `~/.claude/`) are also mounted read-only if they exist. With `bench.sh agent`, the host `~/.claude/` is not mounted: its transcripts and file history can contain case solutions. Only the `claude-code` addon gets `.credentials.json` and `settings.json`. The case directory (`/bench`) is never mounted for agents.
 
 ## Persistent Tool Cache
 

@@ -906,6 +906,15 @@ cmd_agent() {
     [ -n "$AGENT_OUTPUT_DIR" ] && echo "  Output: $AGENT_OUTPUT_DIR/trajectory.traj.json"
     echo ""
 
+    # Never reuse a container that exposes the case dir (e.g. one started by
+    # `bench.sh shell`, which mounts /bench): recreate it without the oracle.
+    if container_running "$cname" && \
+       docker inspect -f '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' "$cname" 2>/dev/null | grep -qx '/bench'; then
+        echo "Running container for $case_name mounts /bench (case files); recreating it for the agent ..."
+        docker stop "$cname" >/dev/null 2>&1 || true
+        docker rm "$cname" >/dev/null 2>&1 || true
+    fi
+
     # Reuse running container if available
     if container_running "$cname"; then
         if [ "$AGENT_CONTEXT" = true ]; then
@@ -944,6 +953,24 @@ cmd_agent() {
     build_run_args "$yaml"
     build_addon_args
 
+    # Agents must not get the host ~/.claude: its session transcripts (projects/),
+    # file-history/, history and memory can contain case solutions. Drop that
+    # mount; the claude-code addon gets only its auth and settings files.
+    local _filtered=() _i
+    for ((_i = 0; _i < ${#RUN_ARGS[@]}; _i++)); do
+        if [ "${RUN_ARGS[$_i]}" = "-v" ] && [ "${RUN_ARGS[$((_i + 1))]:-}" = "${HOME}/.claude:/root/.claude:ro" ]; then
+            _i=$((_i + 1)); continue
+        fi
+        _filtered+=("${RUN_ARGS[$_i]}")
+    done
+    RUN_ARGS=("${_filtered[@]}")
+    if [[ " ${ADDON_NAMES[*]} " == *" claude-code "* ]]; then
+        local _f
+        for _f in .credentials.json settings.json; do
+            [ -f "$HOME/.claude/$_f" ] && RUN_ARGS+=("-v" "$HOME/.claude/$_f:/root/.claude/$_f:ro")
+        done
+    fi
+
     # Mount agent config file if provided
     if [ -n "$AGENT_CONFIG" ]; then
         local config_abs
@@ -975,11 +1002,14 @@ cmd_agent() {
         RUN_ARGS+=("--add-host=host.docker.internal:127.0.0.1")
     fi
 
+    # The case dir (reproduce.sh, verification.md, inject_test files, context/) is
+    # deliberately NOT mounted: agents must never see the oracle. They get
+    # SYMPTOM.md in the worktree (copied at setup) and context/ only via --context.
+    # Scoring (cmd_reproduce) runs the oracle in its own container with /bench.
     docker run -d \
         --name "$cname" \
         "${RUN_ARGS[@]}" \
         -v "${vol}:/workspace" \
-        -v "${case_dir}:/bench:ro" \
         -w "$wt_path" \
         -e "BENCH_WORKSPACE=/workspace/worktrees" \
         -e "CASE_NAME=${case_name}" \
@@ -1078,10 +1108,20 @@ cmd_reset() {
     echo "=== bench.sh reset: $case_name ==="
     echo "Reverting to the original buggy commit ($commit)..."
 
+    # Resolve the buggy commit to a SHA from the cache. The case repo is truncated
+    # (no refs, fix commit absent), so "<fix>~1" can't be resolved inside it. This
+    # container mounts only the cache, never the worktree.
+    local cache_vol resolved
+    cache_vol=$(cache_volume_name "$project")
+    resolved=$(docker run --rm -v "${cache_vol}:/cache:ro" -e "CACHE_GIT_DIR=${CACHE_GIT_DIR}" "$image" \
+        bash -c 'git config --global --add safe.directory "*" 2>/dev/null; git --git-dir="$CACHE_GIT_DIR" rev-parse --verify "$1^{commit}"' -- "$commit") \
+        || die "Cannot resolve buggy commit $commit from cache volume $cache_vol (run setup first)."
+
     docker run --rm \
         -v "${vol}:/workspace" \
         -e "CASE_WT_PATH=${wt_path}" \
         -e "CASE_COMMIT=${commit}" \
+        -e "CASE_COMMIT_SHA=${resolved}" \
         -e "CASE_SUBMODULES=${submodules}" \
         "$image" \
         bash -c '
@@ -1099,13 +1139,14 @@ cmd_reset() {
             git checkout -- .
             git clean -fd
 
-            # Step 2: Move HEAD back to the buggy commit
-            RESOLVED=$(git rev-parse "$CASE_COMMIT" 2>/dev/null || echo "$CASE_COMMIT")
-            CURRENT=$(git rev-parse HEAD)
-            if [ "$CURRENT" != "$RESOLVED" ]; then
+            # Step 2: Move HEAD back to the buggy commit (e.g. after an agent
+            # committed or checked out something else), and drop any refs created
+            # since setup: the truncated repo has none by design.
+            if [ "$(git rev-parse HEAD)" != "$CASE_COMMIT_SHA" ]; then
                 echo "HEAD was at $(git rev-parse --short HEAD), checking out $CASE_COMMIT ..."
-                git checkout "$RESOLVED" 2>&1 | tail -1
+                git checkout -q --detach "$CASE_COMMIT_SHA" || exit 1
             fi
+            git for-each-ref --format="%(refname)" | while read -r ref; do git update-ref -d "$ref"; done
 
             # Step 3: Restore benchmark files
             [ -f /tmp/_symptom_backup.md ] && mv /tmp/_symptom_backup.md SYMPTOM.md

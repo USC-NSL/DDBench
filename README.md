@@ -51,9 +51,11 @@ The container has two mount points:
 | Path | Contents | Writable? |
 |------|----------|-----------|
 | `/workspace/worktrees/<case>/` | **Project source code** — the actual repo (e.g., Dragonfly) checked out at the buggy commit, with built binaries. This is where you edit, build, and debug. | Yes |
-| `/bench/` | **Case scripts** — reproduce.sh, case.yaml, documentation for this specific case. | No (read-only) |
+| `/bench/` | **Case scripts** — reproduce.sh, case.yaml, documentation for this specific case. Human sessions only (VS Code, `bench.sh shell`). | No (read-only) |
 
-Regardless of how you entered the container (VS Code or `bench.sh shell`), the commands are the same:
+**`bench.sh agent` containers get neither `/bench` nor the host `~/.claude`.** Agents being benchmarked must never see the oracle. They get `SYMPTOM.md` in the worktree, and `context/` only with `--context`. Scoring (`bench.sh reproduce`) runs the oracle in its own container. The `claude-code` addon receives only `~/.claude/.credentials.json` and `settings.json`.
+
+In a human session (VS Code or `bench.sh shell`), the commands are the same:
 
 ```bash
 bash /bench/reproduce.sh                            # reproduce the bug
@@ -73,13 +75,13 @@ Run AI coding agents (Claude Code, Aider, Codex, etc.) inside containers to diag
 
 # 2b. Or launch Aider with a prompt
 ./bench.sh agent dragonfly-6856-flushslots-oob --addon aider \
-    --prompt "Read SYMPTOM.md. Diagnose and fix. Run bash /bench/reproduce.sh to verify."
+    --prompt "Read SYMPTOM.md. Diagnose and fix."
 
 # 2c. Or just get a shell with tools pre-installed
 ./bench.sh shell dragonfly-6856-flushslots-oob --addon claude-code --addon custom-gdb-dashboard
 ```
 
-API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) are forwarded from your host environment. Agent configs (`~/.claude/`) are mounted read-only.
+API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) are forwarded from your host environment. `bench.sh shell` mounts agent configs (`~/.claude/`) read-only. `bench.sh agent` does not, except the `claude-code` addon's `.credentials.json` and `settings.json`.
 
 First run installs the tool (~1-3 min). Subsequent runs are instant (cached in a persistent Docker volume). See [`addons/README.md`](addons/README.md) for writing custom addons.
 

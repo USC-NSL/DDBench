@@ -133,7 +133,7 @@ Use this checklist to validate a new case before merging it into the benchmark.
 - [ ] `symptom.md` does not mention function names, variable names, or code paths from the fix
 - [ ] `reproduce.md` does not reference the fix PR or commit
 - [ ] `verification.md` does not hint at the root cause
-- [ ] `setup.sh` and `reproduce.sh` do not contain comments or printed messages revealing the fix or root-cause mechanism (agents can read `/bench`)
+- [ ] `setup.sh` and `reproduce.sh` do not contain comments or printed messages revealing the fix or root-cause mechanism (defense in depth; agents never see `/bench`)
 - [ ] `context/` contains only debug context an agent could gather at the buggy commit: no `reproduce.sh` output, PASS/FAIL verdicts, or oracle thresholds, windows, or trigger parameters
 - [ ] `solution.md` is in `cases-solution/`, NOT in `cases/`
 - [ ] The GitHub issue text does not trivially reveal the fix (if it does, the case is excluded — see selection criteria)

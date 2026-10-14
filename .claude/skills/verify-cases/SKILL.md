@@ -32,7 +32,7 @@ Before running any cases, scan each `reproduce.sh` for anti-patterns that make t
 | Reflection field check | `getDeclaredField\|getDeclaredMethod` used as the PASS/FAIL assertion | Checks code structure, not behavior |
 | Source grep as oracle | `grep -q.*"\(source file\)"` used to branch PASS/FAIL | Detects fix text, not fix effect |
 | `sed -i` on production code | `sed -i.*src/main` | Injects accessors into production code to expose internal state |
-| `sudo` in reproduce.sh | `sudo ` | The images ship no `sudo` (`bench.sh reproduce` runs as root; agents run as non-root `bench`). The step silently fails and the trigger never happens |
+| `sudo` in reproduce.sh | `sudo ` | The images ship no `sudo` (and `bench.sh reproduce` already runs as root). The step silently fails and the trigger never happens |
 | Swallowed trigger errors | trigger lines with `2>/dev/null` / `\|\| true` and no effect check | A failed trigger still reaches a PASS/FAIL verdict |
 
 Output a pre-flight warning table before the main verification:

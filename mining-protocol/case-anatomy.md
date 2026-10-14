@@ -257,7 +257,7 @@ These are recurring bugs from past authoring sessions. Check for them before fin
 
 - **Missing tool dependencies**: Never assume tools like `xz`, `jq`, `python3-pip`, or `rustup` exist in base images. Explicitly install everything the build needs. Check what's in the base Dockerfile and install the delta.
 - **`set -e` vs conditional logic**: `set -e` causes the script to exit on ANY non-zero exit code, including inside `if` conditions or `||` chains. If the script needs to test whether a command fails (e.g., `git checkout ... 2>/dev/null || git checkout ...`), either use `set +e` locally or restructure as an `if` block.
-- **Non-root execution**: `bench.sh reproduce` runs as root, but agents run as the non-root `bench` user (`bench.sh agent`) and may run `/bench/reproduce.sh` themselves. The images ship no `sudo`. Never use `sudo` in reproduce.sh or in-container build steps; a `sudo` call fails silently there. The host fallback in setup.sh may use `sudo apt-get`. For fault injection, prefer process-level faults (`SIGSTOP`/`SIGCONT`, kill, a pausable proxy), which need neither root nor extra capabilities.
+- **Non-root execution**: `bench.sh reproduce` runs as root; interactive agents run as the non-root `bench` user and never see `/bench`. The images ship no `sudo`. Never use `sudo` in reproduce.sh or in-container build steps: a `sudo` call fails silently there. The host fallback in setup.sh may use `sudo apt-get`. For fault injection, prefer process-level faults (`SIGSTOP`/`SIGCONT`, kill, a pausable proxy), which need neither root nor extra capabilities.
 - **Submodule state after checkout**: After `git checkout`, submodules may be in a detached/dirty state. Always run `git submodule update --init --recursive` after checkout if `submodules: true`.
 
 ---
@@ -322,7 +322,7 @@ fi
 - Final output MUST be exactly `PASS: ...` (exit 0) or `FAIL: ...` (exit 1). Inconclusive runs print `ERROR: ...` and exit 2. ERROR is only for failures of the oracle's own machinery, independent of the code under test (missing tool, trigger not established, injected oracle test doesn't compile, `-run` matches nothing). Anything the code under test does wrong (doesn't build, doesn't start, never reaches the baseline state, crashes) is FAIL. Scoring counts every non-zero exit as FAIL; ERROR is a diagnostic for case authors, never an exemption.
 - Confirm the trigger took effect before judging; never hide trigger errors with `2>/dev/null` or `|| true`
 - Observe the behavior the fix changes, not a side metric of the workload; use only options/APIs present at the buggy commit
-- Comments and printed messages are agent-visible (`/bench`): describe observations, not the root-cause mechanism
+- Comments and printed messages describe observations, not the root-cause mechanism (defense in depth: agents never see `/bench`, humans do)
 - For Go test-based cases: extract the regression test from the fix commit, inject it into the buggy codebase, run it
 - For server-based cases: start server, trigger via client, check if process survived or produced correct output
 - For race/flaky cases: loop N times, count failures, report aggregate

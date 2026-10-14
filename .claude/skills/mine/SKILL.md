@@ -282,9 +282,9 @@ Follow `mining-protocol/authoring-guide.md` Phase 2 to create all files. Key inp
 - **Observe the behavior the fix changes** (Phase 1), not a side quantity the workload produces anyway. Disk size, memory, and latency thresholds are a last resort and need a negative control (`/verify-oracle` Step 2.6).
 - **Three outcomes:** `FAIL:` (exit 1), `PASS:` (exit 0), `ERROR:` (exit 2). Never let a broken trigger reach the verdict. ERROR is only for failures of the oracle's own machinery, independent of the code under test (missing tool, trigger not established, injected oracle test doesn't compile, `-run` matches nothing). Anything the code under test does wrong (doesn't build, doesn't start, never reaches the baseline state, crashes) is FAIL. Scoring counts every non-zero exit as FAIL; ERROR is a diagnostic for case authors, never an exemption.
 - **Assert every trigger took effect,** not just that the command ran: process stopped, connection stalled, partition dropping, node down. Don't use `2>/dev/null` or `|| true` on trigger steps.
-- **No `sudo`.** The images don't ship `sudo`. `bench.sh reproduce` runs as root, but agents run as the non-root `bench` user and may run the oracle themselves, so root-only faults break for them. Prefer process-level faults (`SIGSTOP`/`SIGCONT`, killing a node, a pausable TCP proxy) over `iptables`/`tc`. They need no extra capabilities and target exactly one peer. If you must filter packets, match the real connection: client-initiated connections (e.g. replica→master) use ephemeral ports.
+- **No `sudo`.** The images ship none, and `bench.sh reproduce` already runs as root. Prefer process-level faults (`SIGSTOP`/`SIGCONT`, killing a node, a pausable TCP proxy) over `iptables`/`tc`: they need no extra capabilities and target exactly one peer. If you must filter packets, match the real connection: client-initiated connections (e.g. replica→master) use ephemeral ports.
 - **Accept alternative fixes:** no config options, commands, or log strings that exist only in the fix. Make detection windows generous (e.g. 90s when upstream uses a 30s timeout), so any reasonable fix passes.
-- **Agent-visible text stays observational.** reproduce.sh, its output, and the case `.md` files are readable from `/bench`. Describe what was observed ("replica still attached after 90s"), not the mechanism ("thread blocked in write() with no timeout").
+- **Case text stays observational.** Agents never see `/bench` (`bench.sh agent` doesn't mount it), but humans in shells/devcontainers do, and any future leak would expose it. As defense in depth, reproduce.sh, its output, and the case `.md` files describe what was observed ("replica still attached after 90s"), not the mechanism ("thread blocked in write() with no timeout").
 - **Use bounded client calls** (`timeout 5 redis-cli ...`), so a hung server yields a verdict instead of a hung oracle. Treat a failed status query as unknown, never as "healthy" or "detached".
 
 ---
@@ -333,7 +333,7 @@ Abort after 3 failed attempts.
 ## Phase 6: Sanitize and integrate
 
 1. Run `/sanitize <case-name>` — check symptom.md for leakage against solution.md
-   - Agent containers mount the whole case dir at `/bench` (read-only). Apply the same leak check to `README.md`, `reproduce.md`, `verification.md`, comments in `reproduce.sh`, and the oracle's printed messages. They may describe the scenario and what is observed, but not the root-cause mechanism or the fix.
+   - Agents don't get `/bench`, but as defense in depth apply the same leak check to `README.md`, `reproduce.md`, `verification.md`, comments in `reproduce.sh`, and the oracle's printed messages. They may describe the scenario and what is observed, but not the root-cause mechanism or the fix.
    - `context/` must contain no oracle information: no `reproduce.sh` output, no PASS/FAIL verdicts, and no oracle trigger parameters, thresholds, or windows.
 2. Follow `mining-protocol/authoring-guide.md` Phase 5: update `index.md`, update `CLAUDE.md` if new project
 3. Final report (single case) or progress update (campaign mode)

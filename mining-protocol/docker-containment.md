@@ -95,7 +95,7 @@ Docker volume: bug-bench-<project>-src
 | Mount Path | Source | Writable | Purpose |
 |------------|--------|----------|---------|
 | `/workspace/worktrees/<case>/` | Docker volume | Yes | Project source at buggy commit; edit/build/debug here |
-| `/bench/` | Bind mount (cases/<case>/) | No | Case scripts, docs, case.yaml |
+| `/bench/` | Bind mount (cases/<case>/) | No | Case scripts, docs, case.yaml. Setup, reproduce (scoring) and shell only, **never `bench.sh agent`** |
 | `/opt/tools/` | Docker volume (bug-bench-tools) | Yes | Cached addon installations |
 
 ### Capability Management
@@ -109,7 +109,7 @@ docker:
 
 `bench.sh` translates this to `--cap-add=NET_ADMIN` in the `docker run` command.
 
-Prefer oracles that need no extra capabilities. Capabilities only help root processes: agents run as the non-root `bench` user, so an iptables-based oracle can't run in an agent session. Process-level faults (`SIGSTOP`, kill, a pausable TCP proxy) work for both.
+Prefer oracles that need no extra capabilities. Process-level faults (`SIGSTOP`, kill, a pausable TCP proxy) need none and target exactly one peer.
 
 `SYS_PTRACE` is always added (required for debuggers like gdb and dlv).
 

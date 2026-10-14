@@ -108,7 +108,7 @@ Copy the Docker preamble from the template verbatim. Then implement the host fal
 5. Check the outcome: observe the behavior the fix changes (1.2), using bounded client calls (`timeout 5 ...`)
 6. Print `PASS: ...` or `FAIL: ...` and exit with 0 or 1; an inconclusive path prints `ERROR: ...` and exits 2, but only when the oracle itself failed. If the code under test fails to build or start, that is FAIL.
 
-Agents can read `/bench`, so reproduce.sh comments and messages must describe what is observed, not the root-cause mechanism. Don't use options, commands, or log strings that exist only in the fix, and make detection windows generous so alternative fixes pass.
+Agents never see `/bench`, but as defense in depth, reproduce.sh comments and messages describe what is observed, not the root-cause mechanism. Don't use options, commands, or log strings that exist only in the fix, and make detection windows generous so alternative fixes pass.
 
 Choose the right reproduction strategy for the bug type:
 
