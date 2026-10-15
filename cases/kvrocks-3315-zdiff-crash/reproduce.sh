@@ -1,73 +1,96 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for kvrocks-3315-zdiff-crash
-# Starts Kvrocks, triggers the bug, and reports PASS/FAIL.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Sends ZDIFF 0 a (numkeys 0) and checks that the server answers it and stays up.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/kvrocks-3315-zdiff-crash"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+# ── Server liveness ──
+wait_for_ping() {  # <port> <pid> [seconds]: succeed once the server answers PING
+    local i
+    for i in $(seq 1 $(( ${3:-30} * 4 ))); do
+        kill -0 "$2" 2>/dev/null || return 1
+        [ "$(timeout 2 redis-cli -p "$1" PING 2>/dev/null)" = "PONG" ] && return 0
+        sleep 0.25
+    done
+    return 1
+}
+alive_and_responsive() {  # <port> <pid>
+    kill -0 "$2" 2>/dev/null && [ "$(timeout 5 redis-cli -p "$1" PING 2>/dev/null)" = "PONG" ]
+}
+
 BINARY="$WORK_DIR/build/kvrocks"
 PORT=13315
-DATA_DIR="$WORK_DIR/kvrocks-3315-data"
+DATA_DIR="$RUN_DIR/data"
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
-
-# Verify setup
-if [ ! -x "$BINARY" ]; then
-    echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 1
-fi
-
-# Cleanup from previous runs
-pkill -f "kvrocks.*--port $PORT" 2>/dev/null || true
-sleep 1
-rm -rf "$DATA_DIR"
+rebuild_worktree
+[ -x "$BINARY" ] || error "kvrocks binary not found at $BINARY (run setup first)"
 mkdir -p "$DATA_DIR"
 
 echo "=== Reproducing kvrocks-3315-zdiff-crash ==="
 
 cleanup() {
     [ -n "${SERVER_PID:-}" ] && kill "$SERVER_PID" 2>/dev/null && wait "$SERVER_PID" 2>/dev/null
-    rm -rf "$DATA_DIR"
 }
 trap cleanup EXIT
 
-# Start Kvrocks
-"$BINARY" --port "$PORT" --dir "$DATA_DIR" --log-dir "$DATA_DIR" &>/dev/null &
+"$BINARY" --port "$PORT" --dir "$DATA_DIR" --log-dir "$DATA_DIR" > "$RUN_DIR/server.log" 2>&1 &
 SERVER_PID=$!
-sleep 2
+wait_for_ping "$PORT" "$SERVER_PID" 60 || { tail -20 "$RUN_DIR/server.log"; fail "Kvrocks did not start serving"; }
 
-# Check server started
-if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-    echo "ERROR: Kvrocks failed to start."
-    exit 1
-fi
-
-# Trigger the bug: ZDIFF with numkeys=0
+# The out-of-bounds access on the buggy build either crashes the server or
+# leaves the connection without a reply (it depends on memory contents), so the
+# command must also be answered.
 echo "Sending: ZDIFF 0 a"
-redis-cli -p "$PORT" ZDIFF 0 a 2>/dev/null || true
+REPLY=$(python3 - "$PORT" <<'PY'
+import socket, sys
+s = socket.create_connection(("127.0.0.1", int(sys.argv[1])), timeout=10)
+s.sendall(b"*3\r\n$5\r\nZDIFF\r\n$1\r\n0\r\n$1\r\na\r\n")
+try:
+    data = s.recv(4096)
+    print(repr(data[:120]) if data else "CLOSED")
+except socket.timeout:
+    print("NO-REPLY")
+except OSError:
+    print("CLOSED")
+PY
+)
+echo "Reply: ${REPLY:-<none>}"
 sleep 1
 
-# Check if process crashed
-if kill -0 "$SERVER_PID" 2>/dev/null; then
-    echo ""
-    echo "PASS: Bug is fixed — process survived ZDIFF 0 a"
-    kill "$SERVER_PID" 2>/dev/null
-    wait "$SERVER_PID" 2>/dev/null
-    rm -rf "$DATA_DIR"
-    exit 0
-else
-    wait "$SERVER_PID" 2>/dev/null
-    EXIT_CODE=$?
-    echo ""
-    echo "FAIL: Bug is present — process crashed (exit code $EXIT_CODE)"
-    rm -rf "$DATA_DIR"
-    exit 1
+if alive_and_responsive "$PORT" "$SERVER_PID"; then
+    case "$REPLY" in
+        NO-REPLY) fail "Bug is present — the server never answered ZDIFF 0 a (connection hung)" ;;
+        CLOSED|"") fail "Bug is present — the server dropped the connection on ZDIFF 0 a" ;;
+    esac
+    pass "Bug is fixed — the server answered ZDIFF 0 a and stayed up"
 fi
+if kill -0 "$SERVER_PID" 2>/dev/null; then
+    fail "Kvrocks is running but no longer answers PING after ZDIFF 0 a"
+fi
+wait "$SERVER_PID"; EXIT_CODE=$?; SERVER_PID=
+fail "Bug is present — the server crashed on ZDIFF 0 a (exit code $EXIT_CODE)"

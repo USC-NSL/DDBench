@@ -1,37 +1,57 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for kvrocks-2512-slaveof-deadlock
-# Instruments the source with a sleep in PrepareRestoreDB to widen the
-# deadlock race window. Forces full sync by enabling use-rsid-psync.
-# If the slave deadlocks (PING times out) -> FAIL.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Switches a replica rapidly between two masters with SLAVEOF (the second switch
+# arrives while the first full sync is preparing), then checks that the replica
+# still answers PING. The replica's source is temporarily instrumented with a 2s
+# sleep to widen the race window; the instrumentation is removed afterwards.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/kvrocks-2512-slaveof-deadlock"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+
 BINARY="$WORK_DIR/build/kvrocks"
 MASTER1_PORT=12512
 MASTER2_PORT=12513
 SLAVE_PORT=12514
-MASTER1_DIR="$WORK_DIR/kvrocks-2512-master1"
-MASTER2_DIR="$WORK_DIR/kvrocks-2512-master2"
-SLAVE_DIR="$WORK_DIR/kvrocks-2512-slave"
-MASTER1_CONF="$WORK_DIR/kvrocks-2512-master1.conf"
-MASTER2_CONF="$WORK_DIR/kvrocks-2512-master2.conf"
-SLAVE_CONF="$WORK_DIR/kvrocks-2512-slave.conf"
+MASTER1_DIR="$RUN_DIR/master1"
+MASTER2_DIR="$RUN_DIR/master2"
+SLAVE_DIR="$RUN_DIR/slave"
+MASTER1_CONF="$RUN_DIR/master1.conf"
+MASTER2_CONF="$RUN_DIR/master2.conf"
+SLAVE_CONF="$RUN_DIR/slave.conf"
 SOURCE_FILE="$WORK_DIR/src/server/server.cc"
 
 # ── Instrument source to widen the deadlock race window ──
 INSTRUMENT_MARKER="BUG_BENCH_DEADLOCK_INSTRUMENT"
-needs_rebuild=false
+# Never leave the instrumentation behind, even if the build below fails (the
+# full cleanup() installed later also removes it).
+trap 'sed -i "/$INSTRUMENT_MARKER/d" "$SOURCE_FILE" 2>/dev/null' EXIT
 if ! grep -q "$INSTRUMENT_MARKER" "$SOURCE_FILE" 2>/dev/null; then
     echo "Instrumenting source to widen deadlock race window..."
-    needs_rebuild=true
 
     if ! grep -q '#include <thread>' "$SOURCE_FILE"; then
         sed -i '1 i\#include <thread>  // '"$INSTRUMENT_MARKER" "$SOURCE_FILE"
@@ -40,25 +60,21 @@ if ! grep -q "$INSTRUMENT_MARKER" "$SOURCE_FILE" 2>/dev/null; then
     # Add 2-second sleep before WorkExclusivityGuard in PrepareRestoreDB
     sed -i '/Waiting workers for finishing executing commands/a\    /* '"$INSTRUMENT_MARKER"' */ LOG(INFO) << "[server] INSTRUMENT: sleeping 2s before exclusive guard"; std::this_thread::sleep_for(std::chrono::seconds(2));' "$SOURCE_FILE"
 
-    if grep -q "$INSTRUMENT_MARKER" "$SOURCE_FILE"; then
+    if grep -q "$INSTRUMENT_MARKER.*sleep_for" "$SOURCE_FILE"; then
         echo "Instrumentation applied."
     else
-        echo "ERROR: Instrumentation failed."
-        exit 1
+        sed -i "/$INSTRUMENT_MARKER/d" "$SOURCE_FILE"
+        error "could not instrument the source (anchor log line not found); oracle cannot widen the race window"
     fi
 fi
 
-if [ "$needs_rebuild" = "true" ]; then
-    echo "Rebuilding with instrumentation (incremental)..."
-    cd "$WORK_DIR/build"
-    make -j$(nproc) kvrocks 2>&1 | tail -5
-    cd "$WORK_DIR"
-    echo "Instrumented build complete."
-fi
+# Build through REBUILD.sh (the worktree's build entry point), with the
+# instrumentation in place.
+echo "Building (with instrumentation) ..."
+rebuild_worktree
 
 if [ ! -x "$BINARY" ]; then
-    echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 1
+    error "binary not found at $BINARY (run setup first)"
 fi
 
 MASTER1_PID=""
@@ -138,27 +154,26 @@ echo ""
 echo "Step 1: Starting master1 on port $MASTER1_PORT..."
 "$BINARY" -c "$MASTER1_CONF" &>/dev/null &
 MASTER1_PID=$!
-if ! wait_for_port "$MASTER1_PORT" "Master1"; then exit 1; fi
+if ! wait_for_port "$MASTER1_PORT" "Master1"; then fail "master1 did not start serving"; fi
 
 echo ""
 echo "Step 2: Starting master2 on port $MASTER2_PORT..."
 "$BINARY" -c "$MASTER2_CONF" &>/dev/null &
 MASTER2_PID=$!
-if ! wait_for_port "$MASTER2_PORT" "Master2"; then exit 1; fi
+if ! wait_for_port "$MASTER2_PORT" "Master2"; then fail "master2 did not start serving"; fi
 
 echo ""
 echo "Step 3: Starting slave on port $SLAVE_PORT..."
 "$BINARY" -c "$SLAVE_CONF" &>/dev/null &
 SLAVE_PID=$!
-if ! wait_for_port "$SLAVE_PORT" "Slave"; then exit 1; fi
+if ! wait_for_port "$SLAVE_PORT" "Slave"; then fail "replica did not start serving"; fi
 
 echo ""
 echo "Step 4: Verifying all instances respond to PING..."
 for port in $MASTER1_PORT $MASTER2_PORT $SLAVE_PORT; do
     PONG=$(timeout 3 redis-cli -p "$port" PING 2>/dev/null)
     if [ "$PONG" != "PONG" ]; then
-        echo "ERROR: Instance on port $port not responding."
-        exit 1
+        fail "instance on port $port is not responding"
     fi
 done
 echo "All instances responsive."
@@ -255,11 +270,6 @@ for i in $(seq 1 15); do
 done
 
 if [ "$DEADLOCKED" = "true" ] || [ "$FINAL_PONG" != "PONG" ]; then
-    echo ""
-    echo "FAIL: Bug is present — slave deadlocked after rapid SLAVEOF master switching"
-    exit 1
-else
-    echo ""
-    echo "PASS: Bug is fixed — slave remains responsive after rapid SLAVEOF master switching"
-    exit 0
+    fail "Bug is present — the replica stopped responding after rapid SLAVEOF master switching"
 fi
+pass "Bug is fixed — the replica stays responsive after rapid SLAVEOF master switching"

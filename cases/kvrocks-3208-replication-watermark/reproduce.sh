@@ -1,33 +1,50 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for kvrocks-3208-replication-watermark
-# Starts master + replica, writes a large value then a small value,
-# and checks whether the small value replicates promptly. Reports PASS/FAIL.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Master + replica: after a 16KB value is replicated, a following small write
+# must reach the replica within 5 seconds (replication must not stall after a
+# large batch).
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/kvrocks-3208-replication-watermark"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+
 BINARY="$WORK_DIR/build/kvrocks"
 MASTER_PORT=13208
 REPLICA_PORT=13209
-MASTER_DIR="$WORK_DIR/kvrocks-3208-master"
-REPLICA_DIR="$WORK_DIR/kvrocks-3208-replica"
-MASTER_CONF="$WORK_DIR/kvrocks-3208-master.conf"
-REPLICA_CONF="$WORK_DIR/kvrocks-3208-replica.conf"
+MASTER_DIR="$RUN_DIR/master"
+REPLICA_DIR="$RUN_DIR/replica"
+MASTER_CONF="$RUN_DIR/master.conf"
+REPLICA_CONF="$RUN_DIR/replica.conf"
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+rebuild_worktree
 
 # Verify setup
 if [ ! -x "$BINARY" ]; then
-    echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 1
+    error "binary not found at $BINARY (run setup first)"
 fi
 
 cleanup() {
@@ -83,10 +100,7 @@ for i in $(seq 1 30); do
     sleep 0.5
 done
 
-if ! kill -0 "$MASTER_PID" 2>/dev/null; then
-    echo "ERROR: Master failed to start."
-    exit 1
-fi
+redis-cli -p "$MASTER_PORT" PING 2>/dev/null | grep -q PONG || fail "master did not start serving"
 
 # Start replica
 echo "Starting replica on port $REPLICA_PORT..."
@@ -103,18 +117,17 @@ for i in $(seq 1 60); do
     sleep 0.5
 done
 
-if ! kill -0 "$REPLICA_PID" 2>/dev/null; then
-    echo "ERROR: Replica failed to start."
-    exit 1
-fi
+echo "$LINK_STATUS" | grep -q "up" || fail "replica did not complete the initial sync (${LINK_STATUS:-no answer})"
 
 # Verify replication is working with a baseline key
 echo "Verifying baseline replication..."
-redis-cli -p "$MASTER_PORT" SET baseline_key baseline_value &>/dev/null
+[ "$(redis-cli -p "$MASTER_PORT" SET baseline_key baseline_value 2>/dev/null)" = "OK" ] || fail "SET on the master failed"
+BASELINE=false
 for i in $(seq 1 20); do
     VAL=$(redis-cli -p "$REPLICA_PORT" GET baseline_key 2>/dev/null)
     if [ "$VAL" = "baseline_value" ]; then
         echo "Baseline replication confirmed."
+        BASELINE=true
         break
     fi
     sleep 0.5
@@ -122,8 +135,9 @@ done
 
 # Step 1: Write a large value (16KB) to trigger a high read watermark on the replica
 echo "Writing 16KB value to master to trigger high read watermark..."
+[ "$BASELINE" = true ] || fail "baseline replication did not work (replica never saw baseline_key)"
 LARGE_VALUE=$(python3 -c "print('a' * 16384)")
-redis-cli -p "$MASTER_PORT" SET large_key "$LARGE_VALUE" &>/dev/null
+[ "$(redis-cli -p "$MASTER_PORT" SET large_key "$LARGE_VALUE" 2>/dev/null)" = "OK" ] || error "SET of the 16KB value on the master failed (trigger not established)"
 
 # Wait for the large value to propagate
 echo "Waiting for large value to propagate..."
@@ -138,7 +152,7 @@ done
 
 # Step 2: Write a small value immediately after
 echo "Writing small value to master..."
-redis-cli -p "$MASTER_PORT" SET small_key small_value &>/dev/null
+[ "$(redis-cli -p "$MASTER_PORT" SET small_key small_value 2>/dev/null)" = "OK" ] || fail "SET of the small value on the master failed"
 
 # Step 3: Check if the small value appears on the replica within 5 seconds
 # With the bug, the replica's read watermark is stuck at 16KB, so the small
@@ -154,12 +168,5 @@ for i in $(seq 1 50); do
     sleep 0.1
 done
 
-if [ "$FOUND" = "true" ]; then
-    echo ""
-    echo "PASS: Bug is fixed — small value replicated promptly after large batch"
-    exit 0
-else
-    echo ""
-    echo "FAIL: Bug is present — small value not replicated within 5 seconds (replication stalled after large batch)"
-    exit 1
-fi
+[ "$FOUND" = "true" ] && pass "Bug is fixed — the small value replicated promptly after the large one"
+fail "Bug is present — the small value did not reach the replica within 5 seconds (replication stalled after a large batch)"

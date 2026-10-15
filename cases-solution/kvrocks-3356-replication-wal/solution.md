@@ -1,5 +1,9 @@
 # Solution: Kvrocks #3356
 
+- **Issue:** https://github.com/apache/kvrocks/issues/3356
+- **Fix commit:** [`559a667bef223a07fea350a27168e91fe0a74601`](https://github.com/apache/kvrocks/commit/559a667bef223a07fea350a27168e91fe0a74601)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/apache/kvrocks/pull/3357
 - **Commit:** `559a667bef223a07fea350a27168e91fe0a74601`
@@ -23,6 +27,8 @@ The case title's "WAL exhaustion" means the replica's WAL position gets pruned a
 2. **Lag check:** at the top of each loop iteration, the replica is disconnected if `LatestSeqNumber() - curr_seq > max-replication-lag`. This check is off by default (`0`).
 3. **Reconnect backoff:** on the replica side, reconnects use exponential backoff (1 s, 2 s, 4 s, up to 60 s). The counter resets after a successful psync or fullsync.
 
+`gold.patch` is the `src/` part of the fix commit. The commit also documents both new options in the sample `kvrocks.conf` and adds tests; those are left out.
+
 ## How to apply
 ```bash
 git checkout 559a667bef223a07fea350a27168e91fe0a74601
@@ -32,4 +38,4 @@ make -j$(nproc)
 ```
 
 ## How to verify
-Run `reproduce.sh`. It freezes the replica with `SIGSTOP`, fills the replication socket with 64 MB of writes, and watches the master for 90 s. On the fixed build, the master detaches the replica after about 30 s. The log shows `Write error while sending batch to slave ...: send timeout ...`. After `SIGCONT`, the replica reconnects and catches up, so the script reports PASS.
+Run `./bench.sh validate-oracle kvrocks-3356-replication-wal --runs 3`, which applies `gold.patch` and runs the oracle (`reproduce.sh`). The oracle freezes the replica with `SIGSTOP`, fills the replication socket with 64 MB of writes, and watches the master for 90 s. On the fixed build, the master detaches the replica after about 30 s. The log shows `Write error while sending batch to slave ...: send timeout ...`. After `SIGCONT`, the replica reconnects and catches up, so the oracle reports PASS.

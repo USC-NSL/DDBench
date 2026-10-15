@@ -2,6 +2,7 @@ name: kvrocks-3315-zdiff-crash
 project: kvrocks
 repo: https://github.com/apache/kvrocks.git
 buggy_commit: "c2c5d094d4335c4951f88e7de319d78e1bf5b3b8~1"
+fix_commit: "c2c5d094d4335c4951f88e7de319d78e1bf5b3b8"
 resolve_time:
   date: "2025-12-29"
   source: issue_close_date

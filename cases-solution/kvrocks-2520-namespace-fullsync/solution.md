@@ -1,5 +1,9 @@
 # Solution: Kvrocks #2520
 
+- **Issue:** https://github.com/apache/kvrocks/issues/2520
+- **Fix commit:** [`a29df097dd23c36a749e5c616f4d1cae1051e853`](https://github.com/apache/kvrocks/commit/a29df097dd23c36a749e5c616f4d1cae1051e853)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **Issue:** https://github.com/apache/kvrocks/issues/2520
 - **PR:** https://github.com/apache/kvrocks/pull/2527

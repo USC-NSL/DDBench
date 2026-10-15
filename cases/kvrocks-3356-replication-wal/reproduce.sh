@@ -10,20 +10,37 @@
 #                  replication recovers once the replica resumes.
 #   ERROR (exit 2): the stall could not be established (inconclusive). Failures
 #                  of the server itself (won't start, never syncs) are FAIL.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/kvrocks-3356-replication-wal"
+CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
 BINARY="$WORK_DIR/build/kvrocks"
 MASTER_PORT=13356
 REPLICA_PORT=13357
-RUN_DIR="$WORK_DIR/kvrocks-3356-run"
 MASTER_DIR="$RUN_DIR/master"
 REPLICA_DIR="$RUN_DIR/replica"
 # How long the master is given to detach a stalled replica. Generous on purpose:
@@ -38,14 +55,6 @@ MASTER_PID=""
 REPLICA_PID=""
 TRICKLE_PID=""
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
-
-if [ ! -x "$BINARY" ]; then
-    echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 2
-fi
-
 cleanup() {
     [ -n "$TRICKLE_PID" ] && kill "$TRICKLE_PID" 2>/dev/null
     # A SIGSTOPped process only dies on SIGKILL or after SIGCONT, and a master
@@ -58,6 +67,12 @@ cleanup() {
     rm -rf "$RUN_DIR"
 }
 trap cleanup EXIT
+
+rebuild_worktree
+
+if [ ! -x "$BINARY" ]; then
+    error "binary not found at $BINARY (run setup first)"
+fi
 
 rc() {  # rc <port> <args...>
     local port=$1; shift
@@ -120,8 +135,9 @@ dump_logs() {
 }
 
 # ── Fresh start ──
-pkill -9 -f "kvrocks.*$RUN_DIR" 2>/dev/null || true
-rm -rf "$RUN_DIR"
+# Servers left over from an interrupted earlier run (e.g. in a bench.sh shell)
+# would hold the ports; they run from an earlier mktemp RUN_DIR.
+pkill -9 -f "kvrocks -c ${TMPDIR:-/tmp}/ddbench\.[A-Za-z0-9]+/(master|replica)\.conf" 2>/dev/null || true
 mkdir -p "$MASTER_DIR" "$REPLICA_DIR"
 
 cat > "$RUN_DIR/master.conf" <<EOF

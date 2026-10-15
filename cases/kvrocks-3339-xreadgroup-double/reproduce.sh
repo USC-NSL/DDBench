@@ -1,46 +1,46 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for kvrocks-3339-xreadgroup-double
+# RESP-framing oracle for XREADGROUP BLOCK: concurrent consumers block on an
+# empty stream while a producer appends; every XREADGROUP must produce exactly
+# one RESP reply frame (an extra frame desynchronizes the connection).
 #
-# Detection principle (no byte-level pattern matching):
-#   The RESP protocol contract is "one command sent => one top-level reply
-#   frame read". After sending ONE XREADGROUP we parse exactly one RESP
-#   top-level frame and then assert the server has no further bytes queued
-#   on the socket (nothing in the parser's leftover buffer AND a brief
-#   blocking recv times out). If any stray bytes appear, the server emitted
-#   an extra frame and desynchronized the client — exactly what real
-#   client libraries observe when they hit this bug.
-#
-# Race amplification:
-#   - Stream/group start EMPTY (XGROUP CREATE ... $ MKSTREAM), so consumers
-#     genuinely BLOCK instead of draining a backlog on the first iteration.
-#   - Many consumers (NUM_CONSUMERS) share the same group. One XADD wakes
-#     the group; at most one consumer claims the new entry and the rest
-#     find results.empty() in OnWrite — that is the buggy code path.
-#   - Persistent per-consumer connections mirror how real client libraries
-#     would cascade-fail after a desync.
-
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/kvrocks-3339-xreadgroup-double"
+CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+
 BINARY="$WORK_DIR/build/kvrocks"
 PORT=13339
-DATA_DIR="$WORK_DIR/kvrocks-3339-data"
-DETECT_SCRIPT="$WORK_DIR/kvrocks-3339-detect.py"
+DATA_DIR="$RUN_DIR/data"
+DETECT_SCRIPT="$RUN_DIR/detect.py"
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+rebuild_worktree
 
 if [ ! -x "$BINARY" ]; then
-    echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 1
+    error "binary not found at $BINARY (run setup first)"
 fi
 
 pkill -f "kvrocks.*--port $PORT" 2>/dev/null || true
@@ -72,10 +72,9 @@ SERVER_PID=$!
 # A bare sleep is fragile on slow CI runners; poll the port for up to 15s.
 for _ in $(seq 1 60); do
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-        echo "ERROR: Kvrocks exited during startup. Log:"
         cat "$DATA_DIR/kvrocks_launch.log" 2>/dev/null | tail -20
         cat "$DATA_DIR"/kvrocks_*.log 2>/dev/null | tail -20
-        exit 1
+        fail "Kvrocks exited during startup"
     fi
     if python3 -c "import socket;s=socket.socket();s.settimeout(0.3);
 try:
@@ -89,10 +88,9 @@ except Exception:
 done
 
 if ! python3 -c "import socket;s=socket.socket();s.settimeout(1);s.connect(('127.0.0.1',$PORT));s.close()" 2>/dev/null; then
-    echo "ERROR: Kvrocks did not start listening on port $PORT within 15s. Log:"
     cat "$DATA_DIR/kvrocks_launch.log" 2>/dev/null | tail -20
     cat "$DATA_DIR"/kvrocks_*.log 2>/dev/null | tail -20
-    exit 1
+    fail "Kvrocks did not start listening on port $PORT within 15s"
 fi
 
 cat > "$DETECT_SCRIPT" <<'PYEOF'

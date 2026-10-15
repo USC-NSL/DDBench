@@ -1,0 +1,20 @@
+diff --git a/src/commands/cmd_stream.cc b/src/commands/cmd_stream.cc
+index f4c04a21..233d8475 100644
+--- a/src/commands/cmd_stream.cc
++++ b/src/commands/cmd_stream.cc
+@@ -1353,6 +1353,7 @@ class CommandXRead : public Commander,
+ 
+     if (results.empty()) {
+       conn_->Reply(conn_->NilArray());
++      return;
+     }
+ 
+     SendReply(results);
+@@ -1664,6 +1665,7 @@ class CommandXReadGroup : public Commander,
+ 
+     if (results.empty()) {
+       conn_->Reply(redis::MultiLen(-1));
++      return;
+     }
+ 
+     SendReply(results);

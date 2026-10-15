@@ -1,0 +1,42 @@
+diff --git a/src/server/namespace.cc b/src/server/namespace.cc
+index 01a44dcf..504ad523 100644
+--- a/src/server/namespace.cc
++++ b/src/server/namespace.cc
+@@ -53,6 +53,9 @@ bool Namespace::IsAllowModify() const {
+ 
+ Status Namespace::LoadAndRewrite() {
+   auto config = storage_->GetConfig();
++  // Namespace is NOT allowed in the cluster mode, so we don't need to rewrite here.
++  if (config->cluster_enabled) return Status::OK();
++
+   // Load from the configuration file first
+   tokens_ = config->load_tokens;
+ 
+diff --git a/src/storage/redis_pubsub.cc b/src/storage/redis_pubsub.cc
+index 52264ff9..6ca153b7 100644
+--- a/src/storage/redis_pubsub.cc
++++ b/src/storage/redis_pubsub.cc
+@@ -23,6 +23,9 @@
+ namespace redis {
+ 
+ rocksdb::Status PubSub::Publish(const Slice &channel, const Slice &value) {
++  if (storage_->GetConfig()->IsSlave()) {
++    return rocksdb::Status::NotSupported("can't publish to db in slave mode");
++  }
+   auto batch = storage_->GetWriteBatchBase();
+   batch->Put(pubsub_cf_handle_, channel, value);
+   return storage_->Write(storage_->DefaultWriteOptions(), batch->GetWriteBatch());
+diff --git a/src/storage/storage.cc b/src/storage/storage.cc
+index 3074664e..2133645c 100644
+--- a/src/storage/storage.cc
++++ b/src/storage/storage.cc
+@@ -863,6 +863,9 @@ ObserverOrUniquePtr<rocksdb::WriteBatchBase> Storage::GetWriteBatchBase() {
+ }
+ 
+ Status Storage::WriteToPropagateCF(const std::string &key, const std::string &value) {
++  if (config_->IsSlave()) {
++    return {Status::NotOK, "cannot write to propagate column family in slave mode"};
++  }
+   auto batch = GetWriteBatchBase();
+   auto cf = GetCFHandle(kPropagateColumnFamilyName);
+   batch->Put(cf, key, value);

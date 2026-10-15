@@ -2,6 +2,7 @@ name: kvrocks-3208-replication-watermark
 project: kvrocks
 repo: https://github.com/apache/kvrocks.git
 buggy_commit: "54929cd01603f9a19cd3b700b8b4da1683e4eda9~1"
+fix_commit: "54929cd01603f9a19cd3b700b8b4da1683e4eda9"
 resolve_time:
   date: "2025-11-02"
   source: issue_close_date

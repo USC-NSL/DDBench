@@ -13,7 +13,7 @@ import (
 	"github.com/apache/kvrocks/tests/gocase/util"
 )
 
-func TestNamespaceReplicateWithFullSync(t *testing.T) {
+func TestDDBenchOracleNamespaceFullSync(t *testing.T) {
 	config := map[string]string{
 		"rocksdb.write_buffer_size":       "4",
 		"rocksdb.target_file_size_base":   "16",

@@ -2,6 +2,7 @@ name: kvrocks-3356-replication-wal
 project: kvrocks
 repo: https://github.com/apache/kvrocks.git
 buggy_commit: "559a667bef223a07fea350a27168e91fe0a74601~1"
+fix_commit: "559a667bef223a07fea350a27168e91fe0a74601"
 resolve_time:
   date: "2026-02-04"
   source: issue_close_date

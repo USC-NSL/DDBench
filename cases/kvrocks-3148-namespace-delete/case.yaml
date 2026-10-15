@@ -2,6 +2,7 @@ name: kvrocks-3148-namespace-delete
 project: kvrocks
 repo: https://github.com/apache/kvrocks.git
 buggy_commit: "833ae36aa1d17e87be494724689b87e5234286ec~1"
+fix_commit: "833ae36aa1d17e87be494724689b87e5234286ec"
 resolve_time:
   date: "2025-08-28"
   source: issue_close_date

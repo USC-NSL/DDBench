@@ -2,6 +2,7 @@ name: kvrocks-2214-slave-sync-gap
 project: kvrocks
 repo: https://github.com/apache/kvrocks.git
 buggy_commit: "7e1b797920517edf9c798cd4b440789b524d7956~1"
+fix_commit: "7e1b797920517edf9c798cd4b440789b524d7956"
 resolve_time:
   date: "2024-04-05"
   source: issue_close_date

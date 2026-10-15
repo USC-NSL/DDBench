@@ -1,37 +1,53 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for kvrocks-2214-slave-sync-gap
-# Starts a Kvrocks cluster (master + replica) with repl-namespace-enabled,
-# writes keys, restarts the replica, and checks if keys written during
-# downtime are correctly replicated. Reports PASS/FAIL.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Cluster mode with repl-namespace-enabled on the replica: replicate k0, stop
+# the replica, update k0 and add a hash k2 on the master, restart the replica,
+# and check that the replica has the updates made while it was down.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/kvrocks-2214-slave-sync-gap"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+
 BINARY="$WORK_DIR/build/kvrocks"
 MASTER_PORT=12214
 SLAVE_PORT=12215
-MASTER_DIR="$WORK_DIR/kvrocks-2214-master"
-SLAVE_DIR="$WORK_DIR/kvrocks-2214-slave"
-MASTER_CONF="$WORK_DIR/kvrocks-2214-master.conf"
-SLAVE_CONF="$WORK_DIR/kvrocks-2214-slave.conf"
+MASTER_DIR="$RUN_DIR/master"
+SLAVE_DIR="$RUN_DIR/slave"
+MASTER_CONF="$RUN_DIR/master.conf"
+SLAVE_CONF="$RUN_DIR/slave.conf"
 
 MASTER_NODE_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx00"
 SLAVE_NODE_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01"
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+rebuild_worktree
 
 # Verify setup
 if [ ! -x "$BINARY" ]; then
-    echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 1
+    error "binary not found at $BINARY (run setup first)"
 fi
 
 cleanup() {
@@ -133,7 +149,7 @@ echo "Step 1: Starting master on port $MASTER_PORT (cluster mode)..."
 MASTER_PID=$!
 
 if ! wait_for_port "$MASTER_PORT" "Master"; then
-    exit 1
+    fail "master did not start serving"
 fi
 
 # Set master node ID
@@ -146,7 +162,7 @@ echo "Step 2: Starting slave on port $SLAVE_PORT (cluster mode + repl-namespace-
 SLAVE_PID=$!
 
 if ! wait_for_port "$SLAVE_PORT" "Slave"; then
-    exit 1
+    fail "replica did not start serving"
 fi
 
 # Set slave node ID
@@ -162,7 +178,7 @@ redis-cli -p "$MASTER_PORT" clusterx SETNODES "$CLUSTER_NODES" "1" 2>/dev/null
 redis-cli -p "$SLAVE_PORT" clusterx SETNODES "$CLUSTER_NODES" "1" 2>/dev/null
 
 if ! wait_for_replication; then
-    exit 1
+    fail "replication link did not come up"
 fi
 
 # ── Helper: read from slave in cluster mode (READONLY must be in same connection) ──
@@ -187,8 +203,7 @@ wait_for_offset_sync
 SLAVE_K0=$(slave_get k0)
 echo "Slave GET k0 = '$SLAVE_K0'"
 if [ "$SLAVE_K0" != "v0" ]; then
-    echo "ERROR: Initial replication failed (got '$SLAVE_K0')."
-    exit 1
+    fail "initial replication failed (replica GET k0 = '$SLAVE_K0')"
 fi
 echo "Initial replication verified."
 
@@ -214,11 +229,11 @@ echo "Step 7: Restarting slave..."
 SLAVE_PID=$!
 
 if ! wait_for_port "$SLAVE_PORT" "Slave"; then
-    exit 1
+    fail "replica did not start serving"
 fi
 
 if ! wait_for_replication; then
-    exit 1
+    fail "replication link did not come up"
 fi
 
 wait_for_offset_sync
@@ -246,11 +261,5 @@ if [ "$SLAVE_K2_F0" != "v0" ] || [ "$SLAVE_K2_F1" != "v1" ]; then
     BUGS_FOUND=1
 fi
 
-echo ""
-if [ "$BUGS_FOUND" -eq 1 ]; then
-    echo "FAIL: Bug is present — slave lost key updates that occurred during its downtime"
-    exit 1
-else
-    echo "PASS: Bug is fixed — slave correctly received all key updates after restart"
-    exit 0
-fi
+[ "$BUGS_FOUND" -eq 1 ] && fail "Bug is present — the replica lost key updates made while it was down"
+pass "Bug is fixed — the replica received all key updates made while it was down"

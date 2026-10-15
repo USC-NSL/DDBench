@@ -2,6 +2,7 @@ name: kvrocks-2520-namespace-fullsync
 project: kvrocks
 repo: https://github.com/apache/kvrocks.git
 buggy_commit: "a29df097dd23c36a749e5c616f4d1cae1051e853~1"
+fix_commit: "a29df097dd23c36a749e5c616f4d1cae1051e853"
 resolve_time:
   date: "2024-09-08"
   source: issue_close_date

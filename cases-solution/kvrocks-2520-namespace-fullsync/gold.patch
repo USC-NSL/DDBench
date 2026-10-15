@@ -1,0 +1,54 @@
+diff --git a/src/cluster/replication.cc b/src/cluster/replication.cc
+index 3de51a94..29da2941 100644
+--- a/src/cluster/replication.cc
++++ b/src/cluster/replication.cc
+@@ -732,6 +732,13 @@ ReplicationThread::CBState ReplicationThread::fullSyncReadCB(bufferevent *bev) {
+       LOG(INFO) << "[replication] Succeeded restoring the backup, fullsync was finish";
+       post_fullsync_cb_();
+ 
++      // It needs to reload namespaces from DB after the full sync is done,
++      // or namespaces are not visible in the replica.
++      s = srv_->GetNamespace()->LoadAndRewrite();
++      if (!s.IsOK()) {
++        LOG(ERROR) << "[replication] Failed to load and rewrite namespace: " << s.Msg();
++      }
++
+       // Switch to psync state machine again
+       psync_steps_.Start();
+       return CBState::QUIT;
+diff --git a/src/server/namespace.cc b/src/server/namespace.cc
+index e10c08dc..d1f7c228 100644
+--- a/src/server/namespace.cc
++++ b/src/server/namespace.cc
+@@ -54,7 +54,8 @@ bool Namespace::IsAllowModify() const {
+ Status Namespace::loadFromDB(std::map<std::string, std::string>* db_tokens) const {
+   std::string value;
+   engine::Context ctx(storage_);
+-  auto s = storage_->Get(ctx, ctx.GetReadOptions(), cf_, kNamespaceDBKey, &value);
++  auto cf = storage_->GetCFHandle(ColumnFamilyID::Propagate);
++  auto s = storage_->Get(ctx, ctx.GetReadOptions(), cf, kNamespaceDBKey, &value);
+   if (!s.ok()) {
+     if (s.IsNotFound()) return Status::OK();
+     return {Status::NotOK, s.ToString()};
+diff --git a/src/server/namespace.h b/src/server/namespace.h
+index 3e22d382..d2b45cf3 100644
+--- a/src/server/namespace.h
++++ b/src/server/namespace.h
+@@ -26,8 +26,7 @@ constexpr const char *kNamespaceDBKey = "__namespace_keys__";
+ 
+ class Namespace {
+  public:
+-  explicit Namespace(engine::Storage *storage)
+-      : storage_(storage), cf_(storage_->GetCFHandle(ColumnFamilyID::Propagate)) {}
++  explicit Namespace(engine::Storage *storage) : storage_(storage) {}
+ 
+   ~Namespace() = default;
+   Namespace(const Namespace &) = delete;
+@@ -45,7 +44,6 @@ class Namespace {
+ 
+  private:
+   engine::Storage *storage_;
+-  rocksdb::ColumnFamilyHandle *cf_ = nullptr;
+ 
+   std::shared_mutex tokens_mu_;
+   // mapping from token to namespace name
