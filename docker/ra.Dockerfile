@@ -1,4 +1,4 @@
-FROM erlang:26-slim
+FROM erlang:26-slim@sha256:074686197a59e6681158ce50ed9d855fe35437aec574e0170c50a4faf32e7686
 
 ENV DEBIAN_FRONTEND=noninteractive
 

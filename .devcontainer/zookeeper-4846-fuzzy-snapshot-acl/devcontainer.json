@@ -1,17 +1,30 @@
 {
-  "name": "Bug Bench - zookeeper-4846-fuzzy-snapshot-acl",
-  "build": {
-    "dockerfile": "../../docker/zookeeper.Dockerfile"
-  },
+  "name": "DDBench - zookeeper-4846-fuzzy-snapshot-acl",
+  "image": "bug-bench/zookeeper",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
   "mounts": [
-    "source=bug-bench-case-zookeeper-4846-fuzzy-snapshot-acl-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-fcad91f254db,target=/workspace,type=volume",
+    "source=bug-bench-deps-fcad91f254db,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/zookeeper-4846-fuzzy-snapshot-acl,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/zookeeper-4846-fuzzy-snapshot-acl",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/zookeeper-4846-fuzzy-snapshot-acl ~/bug-bench/zookeeper-4846-fuzzy-snapshot-acl",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["vscjava.vscode-java-pack", "vscjava.vscode-maven"]
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-maven"
+      ]
     }
   }
 }

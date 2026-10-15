@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - etcd-20221-watch-restore-revision",
-  "build": {
-    "dockerfile": "../../docker/etcd.Dockerfile"
-  },
+  "name": "DDBench - etcd-20221-watch-restore-revision",
+  "image": "bug-bench/etcd",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-etcd-20221-watch-restore-revision-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-facaa805b452,target=/workspace,type=volume",
+    "source=bug-bench-deps-facaa805b452,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/etcd-20221-watch-restore-revision,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/etcd-20221-watch-restore-revision",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/etcd-20221-watch-restore-revision ~/bug-bench/etcd-20221-watch-restore-revision",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["golang.go"]
+      "extensions": [
+        "golang.go"
+      ]
     }
   }
 }

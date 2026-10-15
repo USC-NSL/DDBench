@@ -1,17 +1,31 @@
 {
-  "name": "Bug Bench - kafka-15170-endless-rebalance-loop",
-  "build": {
-    "dockerfile": "../../docker/kafka.Dockerfile"
-  },
+  "name": "DDBench - kafka-15170-endless-rebalance-loop",
+  "image": "bug-bench/kafka",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
   "mounts": [
-    "source=bug-bench-case-kafka-15170-endless-rebalance-loop-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-08cd5e409fe6,target=/workspace,type=volume",
+    "source=bug-bench-deps-08cd5e409fe6,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/kafka-15170-endless-rebalance-loop,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/kafka-15170-endless-rebalance-loop",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kafka-15170-endless-rebalance-loop ~/bug-bench/kafka-15170-endless-rebalance-loop",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["vscjava.vscode-java-pack", "vscjava.vscode-gradle"]
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle",
+        "scalameta.metals"
+      ]
     }
   }
 }

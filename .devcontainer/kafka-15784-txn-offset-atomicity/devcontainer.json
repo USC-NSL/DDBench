@@ -1,20 +1,31 @@
 {
-  "name": "Bug Bench - kafka-15784-txn-offset-atomicity",
-  "build": {
-    "dockerfile": "../../docker/kafka.Dockerfile"
-  },
+  "name": "DDBench - kafka-15784-txn-offset-atomicity",
+  "image": "bug-bench/kafka",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-kafka-15784-txn-offset-atomicity-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-7984defa9fef,target=/workspace,type=volume",
+    "source=bug-bench-deps-7984defa9fef,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/kafka-15784-txn-offset-atomicity,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/kafka-15784-txn-offset-atomicity",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kafka-15784-txn-offset-atomicity ~/bug-bench/kafka-15784-txn-offset-atomicity",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["scala-lang.scala"]
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle",
+        "scalameta.metals"
+      ]
     }
   }
 }

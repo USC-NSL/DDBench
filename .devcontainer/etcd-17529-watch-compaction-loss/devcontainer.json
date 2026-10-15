@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - etcd-17529-watch-compaction-loss",
-  "build": {
-    "dockerfile": "../../docker/etcd.Dockerfile"
-  },
+  "name": "DDBench - etcd-17529-watch-compaction-loss",
+  "image": "bug-bench/etcd",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-etcd-17529-watch-compaction-loss-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-31cc6ad3be33,target=/workspace,type=volume",
+    "source=bug-bench-deps-31cc6ad3be33,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/etcd-17529-watch-compaction-loss,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/etcd-17529-watch-compaction-loss",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/etcd-17529-watch-compaction-loss ~/bug-bench/etcd-17529-watch-compaction-loss",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["golang.go"]
+      "extensions": [
+        "golang.go"
+      ]
     }
   }
 }

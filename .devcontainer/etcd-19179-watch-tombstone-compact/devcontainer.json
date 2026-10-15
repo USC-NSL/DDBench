@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - etcd-19179-watch-tombstone-compact",
-  "build": {
-    "dockerfile": "../../docker/etcd.Dockerfile"
-  },
+  "name": "DDBench - etcd-19179-watch-tombstone-compact",
+  "image": "bug-bench/etcd",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-etcd-19179-watch-tombstone-compact-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-53397ef3ffd2,target=/workspace,type=volume",
+    "source=bug-bench-deps-53397ef3ffd2,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/etcd-19179-watch-tombstone-compact,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/etcd-19179-watch-tombstone-compact",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/etcd-19179-watch-tombstone-compact ~/bug-bench/etcd-19179-watch-tombstone-compact",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["golang.go"]
+      "extensions": [
+        "golang.go"
+      ]
     }
   }
 }

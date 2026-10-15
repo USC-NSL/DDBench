@@ -1,0 +1,29 @@
+{
+  "name": "DDBench - etcd-17158-delete-linearizability",
+  "image": "bug-bench/etcd",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-ws-b19706c94b92,target=/workspace,type=volume",
+    "source=bug-bench-deps-b19706c94b92,target=/deps,type=volume",
+    "source=${localWorkspaceFolder}/cases/etcd-17158-delete-linearizability,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go"
+      ]
+    }
+  }
+}

@@ -1,20 +1,30 @@
 {
-  "name": "Bug Bench - bookkeeper-2614-recovery-fencing-gap",
-  "build": {
-    "dockerfile": "../../docker/bookkeeper.Dockerfile"
-  },
+  "name": "DDBench - bookkeeper-2614-recovery-fencing-gap",
+  "image": "bug-bench/bookkeeper",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-bookkeeper-2614-recovery-fencing-gap-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-25001a7d5236,target=/workspace,type=volume",
+    "source=bug-bench-deps-25001a7d5236,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/bookkeeper-2614-recovery-fencing-gap,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/bookkeeper-2614-recovery-fencing-gap",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/bookkeeper-2614-recovery-fencing-gap ~/bug-bench/bookkeeper-2614-recovery-fencing-gap",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["redhat.java", "vscjava.vscode-java-pack"]
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-maven"
+      ]
     }
   }
 }

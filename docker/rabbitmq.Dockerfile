@@ -1,4 +1,4 @@
-FROM elixir:1.17-otp-26
+FROM elixir:1.17-otp-26@sha256:da40e6b31466a81ccca58ea730e479c87834c741168d5ce397a2d9b3cc6ecb52
 
 ENV DEBIAN_FRONTEND=noninteractive
 

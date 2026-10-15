@@ -7,7 +7,10 @@
 #   ensure_uv      — Install uv (Python package manager) into TOOL_DIR
 #
 # All runtimes are installed into the persistent tool volume so they survive
-# across container restarts and are shared across all 31 bug cases.
+# across container restarts and are shared across all cases.
+#
+# Versions are pinned for reproducibility. Override them by setting the
+# variables below in a custom addon (addons/<name>.sh) before sourcing this file.
 
 TOOL_DIR="${ADDON_TOOL_DIR:-/opt/tools}"
 mkdir -p "$TOOL_DIR/bin"
@@ -19,6 +22,7 @@ export UV_TOOL_DIR="$TOOL_DIR/uv-tools"
 export UV_TOOL_BIN_DIR="$TOOL_DIR/bin"
 
 NODE_VERSION="${NODE_VERSION:-22.12.0}"
+UV_VERSION="${UV_VERSION:-0.11.3}"
 
 # Install Node.js from official tarball (not apt-get) into TOOL_DIR.
 # Provides: node, npm, npx — all persistent.
@@ -42,10 +46,12 @@ ensure_node() {
 # Install uv (Astral's Python package manager) as a single static binary.
 # Provides: uv, uvx — can install Python, create venvs, manage tools.
 ensure_uv() {
-    if [ -x "$TOOL_DIR/bin/uv" ]; then
+    if [ -x "$TOOL_DIR/bin/uv" ] && "$TOOL_DIR/bin/uv" --version 2>/dev/null | grep -q "^uv ${UV_VERSION}\b"; then
         return 0
     fi
-    echo "[runtime] installing uv ..."
-    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$TOOL_DIR/bin" sh >/dev/null 2>&1
+    echo "[runtime] installing uv $UV_VERSION ..."
+    # Versioned installer (installs exactly $UV_VERSION).
+    curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" \
+        | env UV_INSTALL_DIR="$TOOL_DIR/bin" UV_NO_MODIFY_PATH=1 sh >/dev/null 2>&1
     echo "[runtime] uv ready at $TOOL_DIR/bin/uv"
 }

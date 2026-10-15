@@ -1,12 +1,29 @@
 {
-  "name": "raft-rs-221-campaign-conf-change",
-  "build": {
-    "dockerfile": "../../docker/raft-rs.Dockerfile"
-  },
-  "workspaceMount": "source=bug-bench-case-raft-rs-221-campaign-conf-change-src,target=/workspace,type=volume",
-  "workspaceFolder": "/workspace/worktrees/raft-rs-221-campaign-conf-change",
-  "mounts": [
-    "source=bug-bench-tools,target=/bench-tools,type=volume"
+  "name": "DDBench - raft-rs-221-campaign-conf-change",
+  "image": "bug-bench/raft-rs",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
   ],
-  "postStartCommand": "git config --global --add safe.directory /workspace && git config --global --add safe.directory /workspace/worktrees/raft-rs-221-campaign-conf-change"
+  "mounts": [
+    "source=bug-bench-ws-1686c42e42a0,target=/workspace,type=volume",
+    "source=bug-bench-deps-1686c42e42a0,target=/deps,type=volume",
+    "source=${localWorkspaceFolder}/cases/raft-rs-221-campaign-conf-change,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer"
+      ]
+    }
+  }
 }

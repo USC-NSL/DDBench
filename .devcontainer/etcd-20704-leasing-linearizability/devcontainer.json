@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - etcd-20704-leasing-linearizability",
-  "build": {
-    "dockerfile": "../../docker/etcd.Dockerfile"
-  },
+  "name": "DDBench - etcd-20704-leasing-linearizability",
+  "image": "bug-bench/etcd",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-etcd-20704-leasing-linearizability-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-1a56936e6415,target=/workspace,type=volume",
+    "source=bug-bench-deps-1a56936e6415,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/etcd-20704-leasing-linearizability,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/etcd-20704-leasing-linearizability",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/etcd-20704-leasing-linearizability ~/bug-bench/etcd-20704-leasing-linearizability",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["golang.go"]
+      "extensions": [
+        "golang.go"
+      ]
     }
   }
 }

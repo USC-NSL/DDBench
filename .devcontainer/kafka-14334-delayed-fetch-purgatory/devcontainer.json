@@ -1,20 +1,31 @@
 {
-  "name": "Bug Bench - kafka-14334-delayed-fetch-purgatory",
-  "build": {
-    "dockerfile": "../../docker/kafka.Dockerfile"
-  },
+  "name": "DDBench - kafka-14334-delayed-fetch-purgatory",
+  "image": "bug-bench/kafka",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-kafka-14334-delayed-fetch-purgatory-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-0e7355e2441f,target=/workspace,type=volume",
+    "source=bug-bench-deps-0e7355e2441f,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/kafka-14334-delayed-fetch-purgatory,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/kafka-14334-delayed-fetch-purgatory",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kafka-14334-delayed-fetch-purgatory ~/bug-bench/kafka-14334-delayed-fetch-purgatory",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["scalameta.metals", "vscjava.vscode-java"]
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle",
+        "scalameta.metals"
+      ]
     }
   }
 }

@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - nats-7707-wq-consumer-map-crash",
-  "build": {
-    "dockerfile": "../../docker/nats.Dockerfile"
-  },
+  "name": "DDBench - nats-7707-wq-consumer-map-crash",
+  "image": "bug-bench/nats",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-nats-7707-wq-consumer-map-crash-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-56eaccf67f96,target=/workspace,type=volume",
+    "source=bug-bench-deps-56eaccf67f96,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/nats-7707-wq-consumer-map-crash,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/nats-7707-wq-consumer-map-crash",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/nats-7707-wq-consumer-map-crash ~/bug-bench/nats-7707-wq-consumer-map-crash",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["golang.go"]
+      "extensions": [
+        "golang.go"
+      ]
     }
   }
 }

@@ -1,20 +1,30 @@
 {
-  "name": "Bug Bench - dragonfly-6907-ftsearch-vector-crash",
-  "build": {
-    "dockerfile": "../../docker/dragonfly.Dockerfile"
-  },
+  "name": "DDBench - dragonfly-6907-ftsearch-vector-crash",
+  "image": "bug-bench/dragonfly",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-dragonfly-6907-ftsearch-vector-crash-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-3cf1f4fd379a,target=/workspace,type=volume",
+    "source=bug-bench-deps-3cf1f4fd379a,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/dragonfly-6907-ftsearch-vector-crash,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/dragonfly-6907-ftsearch-vector-crash",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/dragonfly-6907-ftsearch-vector-crash ~/bug-bench/dragonfly-6907-ftsearch-vector-crash",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+      ]
     }
   }
 }

@@ -1,0 +1,29 @@
+{
+  "name": "DDBench - consul-9772-streaming-snapshot-cache",
+  "image": "bug-bench/consul",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-ws-8fdb1033073e,target=/workspace,type=volume",
+    "source=bug-bench-deps-8fdb1033073e,target=/deps,type=volume",
+    "source=${localWorkspaceFolder}/cases/consul-9772-streaming-snapshot-cache,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go"
+      ]
+    }
+  }
+}

@@ -1,20 +1,30 @@
 {
-  "name": "Bug Bench - dragonfly-6856-flushslots-oob",
-  "build": {
-    "dockerfile": "../../docker/dragonfly.Dockerfile"
-  },
+  "name": "DDBench - dragonfly-6856-flushslots-oob",
+  "image": "bug-bench/dragonfly",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-dragonfly-6856-flushslots-oob-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-7aa9aca21055,target=/workspace,type=volume",
+    "source=bug-bench-deps-7aa9aca21055,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/dragonfly-6856-flushslots-oob,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/dragonfly-6856-flushslots-oob",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/dragonfly-6856-flushslots-oob ~/bug-bench/dragonfly-6856-flushslots-oob",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+      ]
     }
   }
 }

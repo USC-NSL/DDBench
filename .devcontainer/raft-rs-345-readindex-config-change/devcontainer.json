@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - raft-rs-345-readindex-config-change",
-  "build": {
-    "dockerfile": "../../docker/raft-rs.Dockerfile"
-  },
+  "name": "DDBench - raft-rs-345-readindex-config-change",
+  "image": "bug-bench/raft-rs",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-raft-rs-345-readindex-config-change-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-21430722080b,target=/workspace,type=volume",
+    "source=bug-bench-deps-21430722080b,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/raft-rs-345-readindex-config-change,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/raft-rs-345-readindex-config-change",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/raft-rs-345-readindex-config-change ~/bug-bench/raft-rs-345-readindex-config-change",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["rust-lang.rust-analyzer"]
+      "extensions": [
+        "rust-lang.rust-analyzer"
+      ]
     }
   }
 }

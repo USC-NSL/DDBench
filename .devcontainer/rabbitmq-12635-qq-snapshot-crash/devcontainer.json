@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - rabbitmq-12635-qq-snapshot-crash",
-  "build": {
-    "dockerfile": "../../docker/rabbitmq.Dockerfile"
-  },
+  "name": "DDBench - rabbitmq-12635-qq-snapshot-crash",
+  "image": "bug-bench/rabbitmq",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-rabbitmq-12635-qq-snapshot-crash-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-6f2e4a17f87e,target=/workspace,type=volume",
+    "source=bug-bench-deps-6f2e4a17f87e,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/rabbitmq-12635-qq-snapshot-crash,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/rabbitmq-12635-qq-snapshot-crash",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/rabbitmq-12635-qq-snapshot-crash ~/bug-bench/rabbitmq-12635-qq-snapshot-crash",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["erlang-ls.erlang-ls"]
+      "extensions": [
+        "erlang-ls.erlang-ls"
+      ]
     }
   }
 }

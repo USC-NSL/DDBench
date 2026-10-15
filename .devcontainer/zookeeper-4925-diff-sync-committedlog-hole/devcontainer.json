@@ -1,17 +1,30 @@
 {
-  "name": "Bug Bench - zookeeper-4925-diff-sync-committedlog-hole",
-  "build": {
-    "dockerfile": "../../docker/zookeeper.Dockerfile"
-  },
+  "name": "DDBench - zookeeper-4925-diff-sync-committedlog-hole",
+  "image": "bug-bench/zookeeper",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
   "mounts": [
-    "source=bug-bench-case-zookeeper-4925-diff-sync-committedlog-hole-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-19cc8eee8326,target=/workspace,type=volume",
+    "source=bug-bench-deps-19cc8eee8326,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/zookeeper-4925-diff-sync-committedlog-hole,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/zookeeper-4925-diff-sync-committedlog-hole",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/zookeeper-4925-diff-sync-committedlog-hole ~/bug-bench/zookeeper-4925-diff-sync-committedlog-hole",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["vscjava.vscode-java-pack", "vscjava.vscode-maven"]
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-maven"
+      ]
     }
   }
 }

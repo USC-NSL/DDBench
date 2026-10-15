@@ -1,0 +1,29 @@
+{
+  "name": "DDBench - nats-6374-consumer-stuck-redelivery",
+  "image": "bug-bench/nats",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE"
+  ],
+  "mounts": [
+    "source=bug-bench-ws-930368f532e6,target=/workspace,type=volume",
+    "source=bug-bench-deps-930368f532e6,target=/deps,type=volume",
+    "source=${localWorkspaceFolder}/cases/nats-6374-consumer-stuck-redelivery,target=/bench,type=bind,readonly"
+  ],
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go"
+      ]
+    }
+  }
+}

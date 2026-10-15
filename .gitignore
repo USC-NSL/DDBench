@@ -21,3 +21,6 @@ cmake_install.cmake
 .DS_Store
 Thumbs.db
 __pycache__
+
+# Default results directory of the harness (harness/run_agent.sh, eval runs)
+results/

@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - raft-358-negative-log-range",
-  "build": {
-    "dockerfile": "../../docker/raft.Dockerfile"
-  },
+  "name": "DDBench - raft-358-negative-log-range",
+  "image": "bug-bench/raft",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-raft-358-negative-log-range-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-4bf3eeb310bd,target=/workspace,type=volume",
+    "source=bug-bench-deps-4bf3eeb310bd,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/raft-358-negative-log-range,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/raft-358-negative-log-range",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/raft-358-negative-log-range ~/bug-bench/raft-358-negative-log-range",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["golang.go"]
+      "extensions": [
+        "golang.go"
+      ]
     }
   }
 }

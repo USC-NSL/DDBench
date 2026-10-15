@@ -1,20 +1,30 @@
 {
-  "name": "Bug Bench - dragonfly-6619-evalsha-empty",
-  "build": {
-    "dockerfile": "../../docker/dragonfly.Dockerfile"
-  },
+  "name": "DDBench - dragonfly-6619-evalsha-empty",
+  "image": "bug-bench/dragonfly",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-dragonfly-6619-evalsha-empty-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-40ba400a7779,target=/workspace,type=volume",
+    "source=bug-bench-deps-40ba400a7779,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/dragonfly-6619-evalsha-empty,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/dragonfly-6619-evalsha-empty",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/dragonfly-6619-evalsha-empty ~/bug-bench/dragonfly-6619-evalsha-empty",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+      ]
     }
   }
 }

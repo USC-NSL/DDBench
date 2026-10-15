@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - nats-7718-subscription-leak",
-  "build": {
-    "dockerfile": "../../docker/nats.Dockerfile"
-  },
+  "name": "DDBench - nats-7718-subscription-leak",
+  "image": "bug-bench/nats",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-nats-7718-subscription-leak-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-4c51480015e9,target=/workspace,type=volume",
+    "source=bug-bench-deps-4c51480015e9,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/nats-7718-subscription-leak,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/nats-7718-subscription-leak",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/nats-7718-subscription-leak ~/bug-bench/nats-7718-subscription-leak",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["golang.go"]
+      "extensions": [
+        "golang.go"
+      ]
     }
   }
 }

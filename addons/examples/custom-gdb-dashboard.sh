@@ -8,7 +8,9 @@
 set -euo pipefail
 
 TOOL_DIR="${ADDON_TOOL_DIR:-/opt/tools}"
-CACHE_DIR="$TOOL_DIR/share/gdb-dashboard"
+# Pinned gdb-dashboard commit (override with GDB_DASHBOARD_REF).
+GDB_DASHBOARD_REF="${GDB_DASHBOARD_REF:-7b9b1260a8b3e9dd57b6cbf302bdfba71cec4014}"
+CACHE_DIR="$TOOL_DIR/share/gdb-dashboard/$GDB_DASHBOARD_REF"
 TARGET="$HOME/.gdbinit"
 
 if ! command -v gdb &>/dev/null; then
@@ -21,7 +23,7 @@ if [ ! -f "$CACHE_DIR/.gdbinit" ]; then
     echo "[addon:custom-gdb-dashboard] downloading ..."
     mkdir -p "$CACHE_DIR"
     curl -fsSL -o "$CACHE_DIR/.gdbinit" \
-        https://raw.githubusercontent.com/cyrus-and/gdb-dashboard/master/.gdbinit
+        "https://raw.githubusercontent.com/cyrus-and/gdb-dashboard/${GDB_DASHBOARD_REF}/.gdbinit"
 fi
 
 # Copy from cache to $HOME (fast, needed each container since $HOME is ephemeral)

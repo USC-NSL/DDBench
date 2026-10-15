@@ -1,20 +1,31 @@
 {
-  "name": "Bug Bench - kvrocks-2214-slave-sync-gap",
-  "build": {
-    "dockerfile": "../../docker/kvrocks.Dockerfile"
-  },
+  "name": "DDBench - kvrocks-2214-slave-sync-gap",
+  "image": "bug-bench/kvrocks",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-kvrocks-2214-slave-sync-gap-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-4a3ebc40e56f,target=/workspace,type=volume",
+    "source=bug-bench-deps-4a3ebc40e56f,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/kvrocks-2214-slave-sync-gap,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/kvrocks-2214-slave-sync-gap",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-2214-slave-sync-gap ~/bug-bench/kvrocks-2214-slave-sync-gap",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "golang.go"
+      ]
     }
   }
 }

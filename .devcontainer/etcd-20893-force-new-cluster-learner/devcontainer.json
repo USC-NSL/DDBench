@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - etcd-20893-force-new-cluster-learner",
-  "build": {
-    "dockerfile": "../../docker/etcd.Dockerfile"
-  },
+  "name": "DDBench - etcd-20893-force-new-cluster-learner",
+  "image": "bug-bench/etcd",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-etcd-20893-force-new-cluster-learner-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-730fa6d7a24d,target=/workspace,type=volume",
+    "source=bug-bench-deps-730fa6d7a24d,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/etcd-20893-force-new-cluster-learner,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/etcd-20893-force-new-cluster-learner",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/etcd-20893-force-new-cluster-learner ~/bug-bench/etcd-20893-force-new-cluster-learner",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["golang.go"]
+      "extensions": [
+        "golang.go"
+      ]
     }
   }
 }

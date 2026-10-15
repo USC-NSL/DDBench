@@ -1,20 +1,30 @@
 {
-  "name": "Bug Bench - dragonfly-6614-monitor-multiexec",
-  "build": {
-    "dockerfile": "../../docker/dragonfly.Dockerfile"
-  },
+  "name": "DDBench - dragonfly-6614-monitor-multiexec",
+  "image": "bug-bench/dragonfly",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-dragonfly-6614-monitor-multiexec-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-4de15e0a7996,target=/workspace,type=volume",
+    "source=bug-bench-deps-4de15e0a7996,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/dragonfly-6614-monitor-multiexec,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/dragonfly-6614-monitor-multiexec",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/dragonfly-6614-monitor-multiexec ~/bug-bench/dragonfly-6614-monitor-multiexec",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+      ]
     }
   }
 }

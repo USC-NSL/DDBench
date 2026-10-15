@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - ra-439-election-livelock",
-  "build": {
-    "dockerfile": "../../docker/ra.Dockerfile"
-  },
+  "name": "DDBench - ra-439-election-livelock",
+  "image": "bug-bench/ra",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-ra-439-election-livelock-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-24073e4a24e8,target=/workspace,type=volume",
+    "source=bug-bench-deps-24073e4a24e8,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/ra-439-election-livelock,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/ra-439-election-livelock",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/ra-439-election-livelock ~/bug-bench/ra-439-election-livelock",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["erlang-ls.erlang-ls"]
+      "extensions": [
+        "erlang-ls.erlang-ls"
+      ]
     }
   }
 }

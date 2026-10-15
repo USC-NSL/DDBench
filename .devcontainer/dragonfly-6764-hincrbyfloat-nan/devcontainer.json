@@ -1,20 +1,30 @@
 {
-  "name": "Bug Bench - dragonfly-6764-hincrbyfloat-nan",
-  "build": {
-    "dockerfile": "../../docker/dragonfly.Dockerfile"
-  },
+  "name": "DDBench - dragonfly-6764-hincrbyfloat-nan",
+  "image": "bug-bench/dragonfly",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-dragonfly-6764-hincrbyfloat-nan-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-19383f905c78,target=/workspace,type=volume",
+    "source=bug-bench-deps-19383f905c78,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/dragonfly-6764-hincrbyfloat-nan,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/dragonfly-6764-hincrbyfloat-nan",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/dragonfly-6764-hincrbyfloat-nan ~/bug-bench/dragonfly-6764-hincrbyfloat-nan",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+      ]
     }
   }
 }

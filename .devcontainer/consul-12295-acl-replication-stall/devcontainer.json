@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - consul-12295-acl-replication-stall",
-  "build": {
-    "dockerfile": "../../docker/consul.Dockerfile"
-  },
+  "name": "DDBench - consul-12295-acl-replication-stall",
+  "image": "bug-bench/consul",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-consul-12295-acl-replication-stall-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-4703a5fa8a3b,target=/workspace,type=volume",
+    "source=bug-bench-deps-4703a5fa8a3b,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/consul-12295-acl-replication-stall,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/consul-12295-acl-replication-stall",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/consul-12295-acl-replication-stall ~/bug-bench/consul-12295-acl-replication-stall",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["golang.go"]
+      "extensions": [
+        "golang.go"
+      ]
     }
   }
 }

@@ -1,20 +1,31 @@
 {
-  "name": "Bug Bench - kvrocks-3208-replication-watermark",
-  "build": {
-    "dockerfile": "../../docker/kvrocks.Dockerfile"
-  },
+  "name": "DDBench - kvrocks-3208-replication-watermark",
+  "image": "bug-bench/kvrocks",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-kvrocks-3208-replication-watermark-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-a57b99c12d0d,target=/workspace,type=volume",
+    "source=bug-bench-deps-a57b99c12d0d,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/kvrocks-3208-replication-watermark,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/kvrocks-3208-replication-watermark",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-3208-replication-watermark ~/bug-bench/kvrocks-3208-replication-watermark",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "golang.go"
+      ]
     }
   }
 }

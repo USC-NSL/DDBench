@@ -1,20 +1,31 @@
 {
-  "name": "Bug Bench - kvrocks-3339-xreadgroup-double",
-  "build": {
-    "dockerfile": "../../docker/kvrocks.Dockerfile"
-  },
+  "name": "DDBench - kvrocks-3339-xreadgroup-double",
+  "image": "bug-bench/kvrocks",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-case-kvrocks-3339-xreadgroup-double-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-4cbe8d47794d,target=/workspace,type=volume",
+    "source=bug-bench-deps-4cbe8d47794d,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/kvrocks-3339-xreadgroup-double,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/kvrocks-3339-xreadgroup-double",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/kvrocks-3339-xreadgroup-double ~/bug-bench/kvrocks-3339-xreadgroup-double",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools"]
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "golang.go"
+      ]
     }
   }
 }
