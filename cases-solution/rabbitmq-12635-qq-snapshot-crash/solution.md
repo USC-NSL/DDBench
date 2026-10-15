@@ -1,5 +1,9 @@
 # Solution: RabbitMQ #12635
 
+- **Issue:** https://github.com/rabbitmq/rabbitmq-server/issues/12635
+- **Fix commit:** [`94e677987f1452980a0692e431a6c813fb244833`](https://github.com/rabbitmq/rabbitmq-server/commit/94e677987f1452980a0692e431a6c813fb244833) — PR head commit; merged upstream as ef2c8dfbdafb4e47beab0d3cb9d64b0a2f56fbaf.
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/rabbitmq/rabbitmq-server/pull/12636
 - **Commit:** `94e677987f1452980a0692e431a6c813fb244833` (merged as `ef2c8dfbdafb4e47beab0d3cb9d64b0a2f56fbaf`)

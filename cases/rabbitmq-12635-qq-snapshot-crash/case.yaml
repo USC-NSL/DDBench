@@ -2,6 +2,8 @@ name: rabbitmq-12635-qq-snapshot-crash
 project: rabbitmq
 repo: https://github.com/rabbitmq/rabbitmq-server.git
 buggy_commit: "889fdc9163a43207f80a578769486bcce909f129"
+fix_commit: "94e677987f1452980a0692e431a6c813fb244833"
+fix_commit_note: "PR head commit; merged upstream as ef2c8dfbdafb4e47beab0d3cb9d64b0a2f56fbaf."
 resolve_time:
   date: "2024-11-01"
   source: issue_close_date
