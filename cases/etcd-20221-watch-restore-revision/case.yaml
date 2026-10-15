@@ -2,6 +2,7 @@ name: etcd-20221-watch-restore-revision
 project: etcd
 repo: https://github.com/etcd-io/etcd.git
 buggy_commit: "9fb8c3685fd4573e39470a5451d3f85c0f29bfb1~1"
+fix_commit: "9fb8c3685fd4573e39470a5451d3f85c0f29bfb1"
 resolve_time:
   date: "2025-07-04"
   source: confirmed_fix_commit_date

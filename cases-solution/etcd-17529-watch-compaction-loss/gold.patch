@@ -1,0 +1,37 @@
+diff --git a/server/etcdserver/api/v3rpc/watch.go b/server/etcdserver/api/v3rpc/watch.go
+index 9b2831980..06e1fa8eb 100644
+--- a/server/etcdserver/api/v3rpc/watch.go
++++ b/server/etcdserver/api/v3rpc/watch.go
+@@ -449,6 +449,7 @@ func (sws *serverWatchStream) sendLoop() {
+ 			sws.mu.RUnlock()
+ 
+ 			var serr error
++			// gofail: var beforeSendWatchResponse struct{}
+ 			if !fragmented && !ok {
+ 				serr = sws.gRPCStream.Send(wr)
+ 			} else {
+diff --git a/server/storage/mvcc/watchable_store.go b/server/storage/mvcc/watchable_store.go
+index ae5c551fd..ad17b2be7 100644
+--- a/server/storage/mvcc/watchable_store.go
++++ b/server/storage/mvcc/watchable_store.go
+@@ -39,6 +39,8 @@ var (
+ 	maxWatchersPerSync = 512
+ )
+ 
++func ChanBufLen() int { return chanBufLen }
++
+ type watchable interface {
+ 	watch(key, end []byte, startRev int64, id WatchID, ch chan<- WatchResponse, fcs ...FilterFunc) (*watcher, cancelFunc)
+ 	progress(w *watcher)
+@@ -370,6 +372,11 @@ func (s *watchableStore) syncWatchers() int {
+ 	victims := make(watcherBatch)
+ 	wb := newWatcherBatch(wg, evs)
+ 	for w := range wg.watchers {
++		if w.minRev < compactionRev {
++			// Skip the watcher that failed to send compacted watch response due to w.ch is full.
++			// Next retry of syncWatchers would try to resend the compacted watch response to w.ch
++			continue
++		}
+ 		w.minRev = curRev + 1
+ 
+ 		eb, ok := wb[w]

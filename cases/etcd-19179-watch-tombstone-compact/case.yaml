@@ -2,6 +2,7 @@ name: etcd-19179-watch-tombstone-compact
 project: etcd
 repo: https://github.com/etcd-io/etcd.git
 buggy_commit: "83cf7bb4fc621f017fcaa9a735194fcec23420b8~1"
+fix_commit: "83cf7bb4fc621f017fcaa9a735194fcec23420b8"
 resolve_time:
   date: "2025-01-20"
   source: confirmed_fix_commit_date

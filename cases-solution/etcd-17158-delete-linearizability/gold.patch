@@ -1,0 +1,77 @@
+diff --git a/server/go.mod b/server/go.mod
+index 0af58699b..548a738c4 100644
+--- a/server/go.mod
++++ b/server/go.mod
+@@ -11,6 +11,7 @@ require (
+ 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
+ 	github.com/golang/protobuf v1.5.3
+ 	github.com/google/btree v1.1.2
++	github.com/google/go-cmp v0.6.0
+ 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+ 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
+ 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0
+diff --git a/server/storage/backend/batch_tx.go b/server/storage/backend/batch_tx.go
+index 60be4ce6d..c62d2af86 100644
+--- a/server/storage/backend/batch_tx.go
++++ b/server/storage/backend/batch_tx.go
+@@ -288,7 +288,8 @@ func (t *batchTx) commit(stop bool) {
+ 
+ type batchTxBuffered struct {
+ 	batchTx
+-	buf txWriteBuffer
++	buf                     txWriteBuffer
++	pendingDeleteOperations int
+ }
+ 
+ func newBatchTxBuffered(backend *backend) *batchTxBuffered {
+@@ -310,7 +311,27 @@ func (t *batchTxBuffered) Unlock() {
+ 		t.buf.writeback(&t.backend.readTx.buf)
+ 		// gofail: var afterWritebackBuf struct{}
+ 		t.backend.readTx.Unlock()
+-		if t.pending >= t.backend.batchLimit {
++		// We commit the transaction when the number of pending operations
++		// reaches the configured limit(batchLimit) to prevent it from
++		// becoming excessively large.
++		//
++		// But we also need to commit the transaction immediately if there
++		// is any pending deleting operation, otherwise etcd might run into
++		// a situation that it haven't finished committing the data into backend
++		// storage (note: etcd periodically commits the bbolt transactions
++		// instead of on each request) when it applies next request. Accordingly,
++		// etcd may still read the stale data from bbolt when processing next
++		// request. So it breaks the linearizability.
++		//
++		// Note we don't need to commit the transaction for put requests if
++		// it doesn't exceed the batch limit, because there is a buffer on top
++		// of the bbolt. Each time when etcd reads data from backend storage,
++		// it will read data from both bbolt and the buffer. But there is no
++		// such a buffer for delete requests.
++		//
++		// Please also refer to
++		// https://github.com/etcd-io/etcd/pull/17119#issuecomment-1857547158
++		if t.pending >= t.backend.batchLimit || t.pendingDeleteOperations > 0 {
+ 			t.commit(false)
+ 		}
+ 	}
+@@ -356,6 +377,7 @@ func (t *batchTxBuffered) unsafeCommit(stop bool) {
+ 	}
+ 
+ 	t.batchTx.commit(stop)
++	t.pendingDeleteOperations = 0
+ 
+ 	if !stop {
+ 		t.backend.readTx.tx = t.backend.begin(false)
+@@ -371,3 +393,13 @@ func (t *batchTxBuffered) UnsafeSeqPut(bucket Bucket, key []byte, value []byte)
+ 	t.batchTx.UnsafeSeqPut(bucket, key, value)
+ 	t.buf.putSeq(bucket, key, value)
+ }
++
++func (t *batchTxBuffered) UnsafeDelete(bucketType Bucket, key []byte) {
++	t.batchTx.UnsafeDelete(bucketType, key)
++	t.pendingDeleteOperations++
++}
++
++func (t *batchTxBuffered) UnsafeDeleteBucket(bucket Bucket) {
++	t.batchTx.UnsafeDeleteBucket(bucket)
++	t.pendingDeleteOperations++
++}

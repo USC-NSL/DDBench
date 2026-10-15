@@ -2,6 +2,7 @@ name: etcd-20893-force-new-cluster-learner
 project: etcd
 repo: https://github.com/etcd-io/etcd.git
 buggy_commit: "c58e6f1caf7dfe07da002230a2b61d664ab21a34~1"
+fix_commit: "c58e6f1caf7dfe07da002230a2b61d664ab21a34"
 resolve_time:
   date: "2025-11-06"
   source: issue_close_date

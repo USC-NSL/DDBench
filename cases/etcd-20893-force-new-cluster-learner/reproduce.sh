@@ -1,164 +1,127 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for etcd-20893-force-new-cluster-learner
-# Starts a 3-member cluster, adds a learner, triggers snapshot, recovers with
-# --force-new-cluster, and checks if the learner is still in the member list.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Starts a 3-member etcd cluster with a low snapshot count, adds a learner,
+# writes enough keys to trigger a snapshot, stops everything, restarts member 1
+# with --force-new-cluster, and checks that only member 1 remains.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/etcd-20893-force-new-cluster-learner"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
 ETCD="$WORK_DIR/bin/etcd"
 ETCDCTL="$WORK_DIR/bin/etcdctl"
-DATA_DIR="$WORK_DIR/etcd-20893-data"
+DATA_DIR="$RUN_DIR/data"
+CLUSTER="m1=http://127.0.0.1:12380,m2=http://127.0.0.1:12382,m3=http://127.0.0.1:12384"
+EP=http://127.0.0.1:12379
 
-export PATH="$PATH:/usr/local/go/bin"
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
-
-# Verify setup
-if [ ! -x "$ETCD" ]; then
-    echo "ERROR: Binary not found at $ETCD. Run ./setup.sh first."
-    exit 1
-fi
-if [ ! -x "$ETCDCTL" ]; then
-    echo "ERROR: Binary not found at $ETCDCTL. Run ./setup.sh first."
-    exit 1
-fi
-
-# Cleanup from previous runs
-pkill -f "etcd.*etcd-20893" 2>/dev/null || true
-sleep 2
-rm -rf "$DATA_DIR"
-mkdir -p "$DATA_DIR"
+rebuild_worktree
+[ -x "$ETCD" ] || error "etcd binary not found at $ETCD (run setup first)"
+[ -x "$ETCDCTL" ] || error "etcdctl binary not found at $ETCDCTL (run setup first)"
 
 echo "=== Reproducing etcd-20893-force-new-cluster-learner ==="
 
 cleanup() {
-    [ -n "${M1_PID:-}" ] && kill "$M1_PID" 2>/dev/null && wait "$M1_PID" 2>/dev/null
-    [ -n "${M2_PID:-}" ] && kill "$M2_PID" 2>/dev/null && wait "$M2_PID" 2>/dev/null
-    [ -n "${M3_PID:-}" ] && kill "$M3_PID" 2>/dev/null && wait "$M3_PID" 2>/dev/null
-    [ -n "${RECOVERED_PID:-}" ] && kill "$RECOVERED_PID" 2>/dev/null && wait "$RECOVERED_PID" 2>/dev/null
-    rm -rf "$DATA_DIR"
+    local p
+    for p in ${M1_PID:-} ${M2_PID:-} ${M3_PID:-} ${RECOVERED_PID:-}; do
+        kill "$p" 2>/dev/null && wait "$p" 2>/dev/null
+    done
 }
 trap cleanup EXIT
 
-# Step 1: Start a 3-member cluster with low snapshot count
+start_member() {  # <name> <client-port> <peer-port>
+    "$ETCD" --name "$1" --data-dir "$DATA_DIR/$1" \
+        --listen-client-urls "http://127.0.0.1:$2" --advertise-client-urls "http://127.0.0.1:$2" \
+        --listen-peer-urls "http://127.0.0.1:$3" --initial-advertise-peer-urls "http://127.0.0.1:$3" \
+        --initial-cluster "$CLUSTER" --initial-cluster-token ddbench-cluster \
+        --snapshot-count=2 > "$RUN_DIR/$1.log" 2>&1 &
+}
+
+# Step 1: 3-member cluster with a low snapshot count
 echo "Starting 3-member etcd cluster..."
+start_member m1 12379 12380; M1_PID=$!
+start_member m2 12381 12382; M2_PID=$!
+start_member m3 12383 12384; M3_PID=$!
+healthy=false
+for _ in $(seq 1 60); do
+    if "$ETCDCTL" --endpoints="$EP" endpoint health >/dev/null 2>&1; then healthy=true; break; fi
+    sleep 1
+done
+[ "$healthy" = true ] || { tail -5 "$RUN_DIR"/m1.log; fail "the 3-member cluster did not become healthy"; }
 
-"$ETCD" --name m1 \
-  --data-dir "$DATA_DIR/m1" \
-  --listen-client-urls http://127.0.0.1:12379 \
-  --advertise-client-urls http://127.0.0.1:12379 \
-  --listen-peer-urls http://127.0.0.1:12380 \
-  --initial-advertise-peer-urls http://127.0.0.1:12380 \
-  --initial-cluster "m1=http://127.0.0.1:12380,m2=http://127.0.0.1:12382,m3=http://127.0.0.1:12384" \
-  --initial-cluster-token test-20893 \
-  --snapshot-count=2 &>/dev/null &
-M1_PID=$!
-
-"$ETCD" --name m2 \
-  --data-dir "$DATA_DIR/m2" \
-  --listen-client-urls http://127.0.0.1:12381 \
-  --advertise-client-urls http://127.0.0.1:12381 \
-  --listen-peer-urls http://127.0.0.1:12382 \
-  --initial-advertise-peer-urls http://127.0.0.1:12382 \
-  --initial-cluster "m1=http://127.0.0.1:12380,m2=http://127.0.0.1:12382,m3=http://127.0.0.1:12384" \
-  --initial-cluster-token test-20893 \
-  --snapshot-count=2 &>/dev/null &
-M2_PID=$!
-
-"$ETCD" --name m3 \
-  --data-dir "$DATA_DIR/m3" \
-  --listen-client-urls http://127.0.0.1:12383 \
-  --advertise-client-urls http://127.0.0.1:12383 \
-  --listen-peer-urls http://127.0.0.1:12384 \
-  --initial-advertise-peer-urls http://127.0.0.1:12384 \
-  --initial-cluster "m1=http://127.0.0.1:12380,m2=http://127.0.0.1:12382,m3=http://127.0.0.1:12384" \
-  --initial-cluster-token test-20893 \
-  --snapshot-count=2 &>/dev/null &
-M3_PID=$!
-
-sleep 15
-
-# Verify cluster is healthy
-if ! "$ETCDCTL" --endpoints=http://127.0.0.1:12379 endpoint health &>/dev/null; then
-    echo "ERROR: Cluster failed to start."
-    kill $M1_PID $M2_PID $M3_PID 2>/dev/null
-    wait $M1_PID $M2_PID $M3_PID 2>/dev/null
-    rm -rf "$DATA_DIR"
-    exit 1
-fi
-
-# Step 2: Add a learner member (with retry loop)
+# Step 2: add a learner (retry while the cluster settles)
 echo "Adding learner member..."
+added=false
 for attempt in $(seq 1 10); do
-    if "$ETCDCTL" --endpoints=http://127.0.0.1:12379 member add learner1 \
-      --peer-urls=http://127.0.0.1:12386 \
-      --learner 2>/dev/null; then
-        echo "Learner added on attempt $attempt"
-        break
+    if "$ETCDCTL" --endpoints="$EP" member add learner1 --peer-urls=http://127.0.0.1:12386 --learner; then
+        added=true; break
     fi
     echo "Attempt $attempt failed, retrying in 3s..."
     sleep 3
 done
+[ "$added" = true ] || error "could not add the learner member (trigger not established)"
+# (An unstarted member is listed without a name; match its peer URL.)
+"$ETCDCTL" --endpoints="$EP" member list 2>/dev/null | grep -q "127.0.0.1:12386" \
+    || error "the learner is not in the member list after member add"
 
-# Step 3: Write enough keys to trigger a snapshot
-echo "Writing keys to trigger snapshot..."
+# Step 3: write enough keys to trigger a snapshot
+echo "Writing keys to trigger a snapshot..."
 for i in $(seq 1 10); do
-  "$ETCDCTL" --endpoints=http://127.0.0.1:12379 put "key$i" "val$i" &>/dev/null
+    "$ETCDCTL" --endpoints="$EP" put "key$i" "val$i" >/dev/null || fail "put key$i failed"
 done
 sleep 3
 
-# Step 4: Stop all members
+# Step 4: stop all members
 echo "Stopping all members..."
-kill $M1_PID $M2_PID $M3_PID 2>/dev/null
-wait $M1_PID $M2_PID $M3_PID 2>/dev/null
+kill "$M1_PID" "$M2_PID" "$M3_PID" 2>/dev/null
+wait "$M1_PID" "$M2_PID" "$M3_PID" 2>/dev/null
+M1_PID= M2_PID= M3_PID=
 sleep 2
 
-# Step 5: Restart member 1 with --force-new-cluster
+# Step 5: restart member 1 with --force-new-cluster
 echo "Restarting m1 with --force-new-cluster..."
-"$ETCD" --name m1 \
-  --data-dir "$DATA_DIR/m1" \
-  --listen-client-urls http://127.0.0.1:12379 \
-  --advertise-client-urls http://127.0.0.1:12379 \
-  --listen-peer-urls http://127.0.0.1:12380 \
-  --initial-advertise-peer-urls http://127.0.0.1:12380 \
-  --force-new-cluster &>/dev/null &
+"$ETCD" --name m1 --data-dir "$DATA_DIR/m1" \
+    --listen-client-urls "$EP" --advertise-client-urls "$EP" \
+    --listen-peer-urls http://127.0.0.1:12380 --initial-advertise-peer-urls http://127.0.0.1:12380 \
+    --force-new-cluster > "$RUN_DIR/recovered.log" 2>&1 &
 RECOVERED_PID=$!
-sleep 5
+ok=false
+for _ in $(seq 1 30); do
+    kill -0 "$RECOVERED_PID" 2>/dev/null || break
+    if "$ETCDCTL" --endpoints="$EP" endpoint health >/dev/null 2>&1; then ok=true; break; fi
+    sleep 1
+done
+[ "$ok" = true ] || { tail -20 "$RUN_DIR/recovered.log"; fail "the member restarted with --force-new-cluster did not come up"; }
 
-# Verify recovered node is healthy
-if ! kill -0 "$RECOVERED_PID" 2>/dev/null; then
-    echo "ERROR: Recovered etcd failed to start."
-    rm -rf "$DATA_DIR"
-    exit 1
-fi
-
-# Step 6: Check the member list
+# Step 6: the member list must contain exactly m1
 echo "Checking member list..."
-MEMBER_OUTPUT=$("$ETCDCTL" --endpoints=http://127.0.0.1:12379 member list 2>&1)
+MEMBER_OUTPUT=$("$ETCDCTL" --endpoints="$EP" member list 2>&1) || { echo "$MEMBER_OUTPUT"; fail "member list failed on the recovered member"; }
 echo "$MEMBER_OUTPUT"
-
-MEMBER_COUNT=$(echo "$MEMBER_OUTPUT" | grep -c "," || true)
-HAS_LEARNER=$(echo "$MEMBER_OUTPUT" | grep -ci "learner" || true)
-
-# Cleanup
-kill "$RECOVERED_PID" 2>/dev/null
-wait "$RECOVERED_PID" 2>/dev/null
-rm -rf "$DATA_DIR"
-
-echo ""
-if [ "$HAS_LEARNER" -gt 0 ] || [ "$MEMBER_COUNT" -gt 1 ]; then
-    echo "FAIL: Bug is present — learner still in member list after --force-new-cluster (found $MEMBER_COUNT members, $HAS_LEARNER learner entries)"
-    exit 1
-else
-    echo "PASS: Bug is fixed — only m1 in member list after --force-new-cluster"
-    exit 0
+MEMBER_COUNT=$(printf '%s\n' "$MEMBER_OUTPUT" | grep -c ',')
+if [ "$MEMBER_COUNT" -eq 1 ] && printf '%s\n' "$MEMBER_OUTPUT" | grep -q ', m1,'; then
+    pass "Bug is fixed — only m1 is in the member list after --force-new-cluster"
 fi
+fail "Bug is present — the member list after --force-new-cluster still has $MEMBER_COUNT members"

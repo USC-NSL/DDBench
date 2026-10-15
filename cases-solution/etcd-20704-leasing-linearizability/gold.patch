@@ -1,0 +1,15 @@
+diff --git a/client/v3/leasing/cache.go b/client/v3/leasing/cache.go
+--- a/client/v3/leasing/cache.go
++++ b/client/v3/leasing/cache.go
+@@ -142,6 +142,11 @@
+ 		return
+ 	}
+ 	cacheResp := li.response
++	if cacheResp.Header != nil && respHeader.Revision < cacheResp.Header.Revision {
++		// A newer modification of the key (e.g. a concurrent Delete) is already
++		// reflected in the cache; applying this older Put would resurrect the key.
++		return
++	}
+ 	if len(cacheResp.Kvs) == 0 {
+ 		kv := &mvccpb.KeyValue{
+ 			Key:            key,

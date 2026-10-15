@@ -1,0 +1,194 @@
+diff --git a/server/embed/etcd.go b/server/embed/etcd.go
+index f5fa2c2c6..fb610e0f4 100644
+--- a/server/embed/etcd.go
++++ b/server/embed/etcd.go
+@@ -79,12 +79,23 @@ type Etcd struct {
+ 
+ 	Server *etcdserver.EtcdServer
+ 
+-	cfg   Config
+-	stopc chan struct{}
+-	errc  chan error
++	cfg Config
+ 
++	// closeOnce is to ensure `stopc` is closed only once, no matter
++	// how many times the Close() method is called.
+ 	closeOnce sync.Once
+-	wg        sync.WaitGroup
++	// stopc is used to notify the sub goroutines not to send
++	// any errors to `errc`.
++	stopc chan struct{}
++	// errc is used to receive error from sub goroutines (including
++	// client handler, peer handler and metrics handler). It's closed
++	// after all these sub goroutines exit (checked via `wg`). Writers
++	// should avoid writing after `stopc` is closed by selecting on
++	// reading from `stopc`.
++	errc chan error
++
++	// wg is used to track the lifecycle of all sub goroutines created by `StartEtcd`.
++	wg sync.WaitGroup
+ }
+ 
+ type peerListener struct {
+@@ -388,6 +399,24 @@ func (e *Etcd) Config() Config {
+ // Close gracefully shuts down all servers/listeners.
+ // Client requests will be terminated with request timeout.
+ // After timeout, enforce remaning requests be closed immediately.
++//
++// The rough workflow to shut down etcd:
++//  1. close the `stopc` channel, so that all error handlers (child
++//     goroutines) won't send back any errors anymore;
++//  2. stop the http and grpc servers gracefully, within request timeout;
++//  3. close all client and metrics listeners, so that etcd server
++//     stops receiving any new connection;
++//  4. call the cancel function to close the gateway context, so that
++//     all gateway connections are closed.
++//  5. stop etcd server gracefully, and ensure the main raft loop
++//     goroutine is stopped;
++//  6. stop all peer listeners, so that it stops receiving peer connections
++//     and messages (wait up to 1-second);
++//  7. wait for all child goroutines (i.e. client handlers, peer handlers
++//     and metrics handlers) to exit;
++//  8. close the `errc` channel to release the resource. Note that it's only
++//     safe to close the `errc` after step 7 above is done, otherwise the
++//     child goroutines may send errors back to already closed `errc` channel.
+ func (e *Etcd) Close() {
+ 	fields := []zap.Field{
+ 		zap.String("name", e.cfg.Name),
+@@ -607,7 +636,9 @@ func (e *Etcd) servePeers() {
+ 
+ 	// start peer servers in a goroutine
+ 	for _, pl := range e.Peers {
++		e.wg.Add(1)
+ 		go func(l *peerListener) {
++			defer e.wg.Done()
+ 			u := l.Addr().String()
+ 			e.cfg.logger.Info(
+ 				"serving peer traffic",
+@@ -774,7 +805,9 @@ func (e *Etcd) serveClients() {
+ 
+ 	// start client servers in each goroutine
+ 	for _, sctx := range e.sctxs {
++		e.wg.Add(1)
+ 		go func(s *serveCtx) {
++			defer e.wg.Done()
+ 			e.errHandler(s.serve(e.Server, &e.cfg.ClientTLSInfo, mux, e.errHandler, e.grpcGatewayDial(splitHTTP), splitHTTP, gopts...))
+ 		}(sctx)
+ 	}
+@@ -859,7 +892,9 @@ func (e *Etcd) serveMetrics() (err error) {
+ 				return err
+ 			}
+ 			e.metricsListeners = append(e.metricsListeners, ml)
++			e.wg.Add(1)
+ 			go func(u url.URL, ln net.Listener) {
++				defer e.wg.Done()
+ 				e.cfg.logger.Info(
+ 					"serving metrics",
+ 					zap.String("address", u.String()),
+@@ -872,9 +907,6 @@ func (e *Etcd) serveMetrics() (err error) {
+ }
+ 
+ func (e *Etcd) errHandler(err error) {
+-	e.wg.Add(1)
+-	defer e.wg.Done()
+-
+ 	if err != nil {
+ 		e.GetLogger().Error("setting up serving from embedded etcd failed.", zap.Error(err))
+ 	}
+diff --git a/server/embed/serve.go b/server/embed/serve.go
+index c888e3b1c..ad7307666 100644
+--- a/server/embed/serve.go
++++ b/server/embed/serve.go
+@@ -61,13 +61,23 @@ type serveCtx struct {
+ 	insecure bool
+ 	httpOnly bool
+ 
++	// ctx is used to control the grpc gateway. Terminate the grpc gateway
++	// by calling `cancel` when shutting down the etcd.
+ 	ctx    context.Context
+ 	cancel context.CancelFunc
+ 
+ 	userHandlers    map[string]http.Handler
+ 	serviceRegister func(*grpc.Server)
+-	serversC        chan *servers
+-	closeOnce       sync.Once
++
++	// serversC is used to receive the http and grpc server objects (created
++	// in `serve`), both of which will be closed when shutting down the etcd.
++	// Close it when `serve` returns or when etcd fails to bootstrap.
++	serversC chan *servers
++	// closeOnce is to ensure `serversC` is closed only once.
++	closeOnce sync.Once
++
++	// wg is used to track the lifecycle of all sub goroutines created by `serve`.
++	wg sync.WaitGroup
+ }
+ 
+ type servers struct {
+@@ -182,13 +192,17 @@ func (sctx *serveCtx) serve(
+ 			server = m.Serve
+ 
+ 			httpl := m.Match(cmux.HTTP1())
++			sctx.wg.Add(1)
+ 			go func(srvhttp *http.Server, tlsLis net.Listener) {
++				defer sctx.wg.Done()
+ 				errHandler(srvhttp.Serve(tlsLis))
+ 			}(srv, httpl)
+ 
+ 			if grpcEnabled {
+ 				grpcl := m.Match(cmux.HTTP2())
++				sctx.wg.Add(1)
+ 				go func(gs *grpc.Server, l net.Listener) {
++					defer sctx.wg.Done()
+ 					errHandler(gs.Serve(l))
+ 				}(gs, grpcl)
+ 			}
+@@ -237,7 +251,7 @@ func (sctx *serveCtx) serve(
+ 				TLSConfig: tlscfg,
+ 				ErrorLog:  logger, // do not log user error
+ 			}
+-			if err := configureHTTPServer(srv, s.Cfg); err != nil {
++			if err = configureHTTPServer(srv, s.Cfg); err != nil {
+ 				sctx.lg.Error("Configure https server failed", zap.Error(err))
+ 				return err
+ 			}
+@@ -248,11 +262,13 @@ func (sctx *serveCtx) serve(
+ 		} else {
+ 			server = m.Serve
+ 
+-			tlsl, err := transport.NewTLSListener(m.Match(cmux.Any()), tlsinfo)
+-			if err != nil {
+-				return err
++			tlsl, tlsErr := transport.NewTLSListener(m.Match(cmux.Any()), tlsinfo)
++			if tlsErr != nil {
++				return tlsErr
+ 			}
++			sctx.wg.Add(1)
+ 			go func(srvhttp *http.Server, tlsl net.Listener) {
++				defer sctx.wg.Done()
+ 				errHandler(srvhttp.Serve(tlsl))
+ 			}(srv, tlsl)
+ 		}
+@@ -265,7 +281,11 @@ func (sctx *serveCtx) serve(
+ 		)
+ 	}
+ 
+-	return server()
++	err = server()
++	sctx.close()
++	// ensure all goroutines, which are created by this method, to complete before this method returns.
++	sctx.wg.Wait()
++	return err
+ }
+ 
+ func configureHTTPServer(srv *http.Server, cfg config.ServerConfig) error {
+@@ -334,7 +354,9 @@ func (sctx *serveCtx) registerGateway(dial func(ctx context.Context) (*grpc.Clie
+ 			return nil, err
+ 		}
+ 	}
++	sctx.wg.Add(1)
+ 	go func() {
++		defer sctx.wg.Done()
+ 		<-ctx.Done()
+ 		if cerr := conn.Close(); cerr != nil {
+ 			sctx.lg.Warn(

@@ -1,5 +1,9 @@
 # Solution: etcd #17158
 
+- **Issue:** https://github.com/etcd-io/etcd/issues/17158
+- **Fix commit:** [`b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d`](https://github.com/etcd-io/etcd/commit/b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/etcd-io/etcd/pull/17195
 - **Commit:** `b3bf59a3557ce81fb9d4615df667b4cacc6a4f6d`

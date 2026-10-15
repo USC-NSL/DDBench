@@ -1,54 +1,90 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for etcd-19179-watch-tombstone-compact
-# Injects a regression test into the mvcc package that demonstrates the missing
-# tombstone in the key index after restore. After compaction removes all put
-# revisions for a key but keeps the tombstone, restoring the store from the
-# backend fails to reconstruct the key index for that tombstone. A subsequent
-# re-compaction then deletes the tombstone from bolt too, permanently losing
-# the delete event.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Injects a test into package server/storage/mvcc: put keys, delete one, compact at
+# the delete revision, restore the store from the backend, and check that the
+# deleted key's tombstone is still indexed.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/etcd-19179-watch-tombstone-compact"
-TEST_FILE="$WORK_DIR/server/storage/mvcc/restore_tombstone_compact_bug_test.go"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
 
-export PATH="$PATH:/usr/local/go/bin"
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
 
-# Verify setup
-if [ ! -d "$WORK_DIR" ]; then
-    echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."
-    exit 1
-fi
+# ── Go test verdicts ──
+# Decided from `go test -json` events for the exact oracle test, never from free
+# text (code under test can print anything). A test that did not run is no pass.
+go_test_result() {  # <json-log> <TestName> -> pass | fail | skip | norun
+    local pre='^\{("Time":"[^"]*",)?"Action":"' post="\",\"Package\":\"[^\"]*\",\"Test\":\"$2\"[,}]"
+    if   grep -qE "${pre}fail${post}" "$1"; then echo fail
+    elif grep -qE "${pre}pass${post}" "$1"; then echo pass
+    elif grep -qE "${pre}skip${post}" "$1"; then echo skip
+    else echo norun; fi
+}
+go_test_transcript() {  # human-readable form of a -json log
+    sed -n -e '/^{/!p' -e 's/^{.*"Action":"output".*"Output":"\(.*\)"}$/\1/p' "$1" \
+        | sed -e 's/\\n$//' -e 's/\\t/	/g' -e 's/\\"/"/g' -e 's/\\u003c/</g' \
+              -e 's/\\u003e/>/g' -e 's/\\u0026/\&/g' -e 's/\\\\/\\/g'
+}
+# go_oracle <TestName> <package> [go test flags...]: run exactly one test from
+# the current directory. Sets GO_RESULT (pass|fail|skip|norun) and GO_LOG.
+go_oracle() {
+    local name="$1" pkg="$2"; shift 2
+    GO_LOG="$RUN_DIR/go-test-$name-$RANDOM.json"
+    go test -json -count=1 -run "^${name}\$" "$@" "$pkg" > "$GO_LOG" 2>&1
+    go_test_transcript "$GO_LOG" | tail -n 40
+    GO_RESULT=$(go_test_result "$GO_LOG" "$name")
+}
+# Verdict when the oracle test produced no result.
+go_norun_verdict() {  # <json-log>
+    if grep -qE 'dial tcp|i/o timeout|TLS handshake timeout|no such host|connection reset by peer' "$1" \
+       && ! grep -qE '\.go:[0-9]+:[0-9]+: ' "$1"; then
+        error "the oracle test did not run: Go module download failed (network)"
+    fi
+    fail "the oracle test did not run (the package or the injected oracle test does not compile)"
+}
+# Exit with the verdict for GO_RESULT.
+go_verdict() {  # <pass-message> <fail-message>
+    case "$GO_RESULT" in
+        pass) pass "$1" ;;
+        fail) fail "$2" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)    go_norun_verdict "$GO_LOG" ;;
+    esac
+}
+
+
+rebuild_worktree
+[ -d "$WORK_DIR/server" ] || error "etcd source not found in $WORK_DIR (run setup first)"
 
 echo "=== Reproducing etcd-19179-watch-tombstone-compact ==="
 
-cleanup() {
-    rm -f "$TEST_FILE"
-}
+ORACLE=TestDDBenchOracleRestoreTombstoneAfterCompaction
+ORACLE_FILE="$WORK_DIR/server/storage/mvcc/zz_ddbench_oracle_test.go"
+cleanup() { rm -f "$ORACLE_FILE"; }
 trap cleanup EXIT
 
-# Inject regression test into the mvcc package.
-# This test follows the scenario from etcd issue #19179:
-#   1. Put keys, delete one key, compact at the delete revision
-#   2. Close and restore from backend (simulates restart)
-#   3. After restore, check whether the key index contains an entry for the
-#      deleted key's tombstone
-#
-# On the buggy code, restoreIntoIndex skips tombstones that are the only
-# remaining revision for a key. The key index lacks the tombstone entry,
-# so if compaction re-runs (as happens after a crash mid-compaction),
-# the tombstone is deleted from bolt and the delete event is permanently lost.
-cat > "$TEST_FILE" << 'GOEOF'
+cat > "$ORACLE_FILE" << 'GOEOF'
 package mvcc
 
 import (
@@ -70,7 +106,7 @@ import (
 // etcd resumes an incomplete compaction after crash), the tombstone is
 // deleted from bolt because it's not in the key index's "keep" set.
 // The delete event is permanently lost.
-func TestRestoreTombstoneAfterCompaction(t *testing.T) {
+func TestDDBenchOracleRestoreTombstoneAfterCompaction(t *testing.T) {
 	compactBatchLimit := 5
 
 	b, _ := betesting.NewDefaultTmpBackend(t)
@@ -133,22 +169,8 @@ func TestRestoreTombstoneAfterCompaction(t *testing.T) {
 }
 GOEOF
 
-echo "Injected regression test: $TEST_FILE"
-echo "Running go test in server/storage/mvcc..."
-
 cd "$WORK_DIR/server"
-OUTPUT=$(go test -v -run "^TestRestoreTombstoneAfterCompaction$" -count=1 -timeout 120s ./storage/mvcc/ 2>&1)
-TEST_EXIT=$?
-echo "$OUTPUT"
-
-# Clean up the injected test
-rm -f "$TEST_FILE"
-
-echo ""
-if [ "$TEST_EXIT" -ne 0 ]; then
-    echo "FAIL: Bug is present — tombstone not restored after compaction; delete event lost on restart"
-    exit 1
-else
-    echo "PASS: Bug is fixed — tombstone correctly restored after compaction and restart"
-    exit 0
-fi
+echo "Running $ORACLE ..."
+go_oracle "$ORACLE" ./storage/mvcc/ -timeout 120s
+go_verdict "Bug is fixed — the tombstone is restored after compaction and restart" \
+           "Bug is present — the tombstone is missing from the index after restore"

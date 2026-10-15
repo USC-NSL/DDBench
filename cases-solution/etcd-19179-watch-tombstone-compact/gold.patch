@@ -1,0 +1,39 @@
+diff --git a/server/storage/mvcc/key_index.go b/server/storage/mvcc/key_index.go
+index 27b22fd48..140351974 100644
+--- a/server/storage/mvcc/key_index.go
++++ b/server/storage/mvcc/key_index.go
+@@ -116,6 +116,15 @@ func (ki *keyIndex) restore(lg *zap.Logger, created, modified Revision, ver int6
+ 	keysGauge.Inc()
+ }
+ 
++// restoreTombstone is used to restore a tombstone revision, which is the only
++// revision so far for a key. We don't know the creating revision (i.e. already
++// compacted) of the key, so set it empty.
++func (ki *keyIndex) restoreTombstone(lg *zap.Logger, main, sub int64) {
++	ki.restore(lg, Revision{}, Revision{main, sub}, 1)
++	ki.generations = append(ki.generations, generation{})
++	keysGauge.Dec()
++}
++
+ // tombstone puts a revision, pointing to a tombstone, to the keyIndex.
+ // It also creates a new empty generation in the keyIndex.
+ // It returns ErrRevisionNotFound when tombstone on an empty generation.
+diff --git a/server/storage/mvcc/kvstore.go b/server/storage/mvcc/kvstore.go
+index 3e1226c91..44c2a6252 100644
+--- a/server/storage/mvcc/kvstore.go
++++ b/server/storage/mvcc/kvstore.go
+@@ -473,8 +473,12 @@ func restoreIntoIndex(lg *zap.Logger, idx index) (chan<- revKeyValue, <-chan int
+ 					continue
+ 				}
+ 				ki.put(lg, rev.Main, rev.Sub)
+-			} else if !isTombstone(rkv.key) {
+-				ki.restore(lg, Revision{Main: rkv.kv.CreateRevision}, rev, rkv.kv.Version)
++			} else {
++				if isTombstone(rkv.key) {
++					ki.restoreTombstone(lg, rev.Main, rev.Sub)
++				} else {
++					ki.restore(lg, Revision{Main: rkv.kv.CreateRevision}, rev, rkv.kv.Version)
++				}
+ 				idx.Insert(ki)
+ 				kiCache[rkv.kstr] = ki
+ 			}

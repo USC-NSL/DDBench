@@ -1,53 +1,91 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for etcd-17158-delete-linearizability
-# Injects a regression test into the backend package that puts a key, commits,
-# deletes the key, then reads via both BatchTx and ReadTx. On the buggy commit,
-# ReadTx still returns the deleted key because the delete bypasses the read buffer
-# and the bbolt transaction is not committed immediately.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Injects a test into server/storage/backend (package backend_test): after a key is
+# deleted through a batch transaction, reads through BatchTx and ReadTx must agree
+# that it is gone.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/etcd-17158-delete-linearizability"
-TEST_FILE="$WORK_DIR/server/storage/backend/delete_linearizability_bug_test.go"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
 
-export PATH="$PATH:/usr/local/go/bin"
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
 
-# Verify setup
-if [ ! -d "$WORK_DIR" ]; then
-    echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."
-    exit 1
-fi
+# ── Go test verdicts ──
+# Decided from `go test -json` events for the exact oracle test, never from free
+# text (code under test can print anything). A test that did not run is no pass.
+go_test_result() {  # <json-log> <TestName> -> pass | fail | skip | norun
+    local pre='^\{("Time":"[^"]*",)?"Action":"' post="\",\"Package\":\"[^\"]*\",\"Test\":\"$2\"[,}]"
+    if   grep -qE "${pre}fail${post}" "$1"; then echo fail
+    elif grep -qE "${pre}pass${post}" "$1"; then echo pass
+    elif grep -qE "${pre}skip${post}" "$1"; then echo skip
+    else echo norun; fi
+}
+go_test_transcript() {  # human-readable form of a -json log
+    sed -n -e '/^{/!p' -e 's/^{.*"Action":"output".*"Output":"\(.*\)"}$/\1/p' "$1" \
+        | sed -e 's/\\n$//' -e 's/\\t/	/g' -e 's/\\"/"/g' -e 's/\\u003c/</g' \
+              -e 's/\\u003e/>/g' -e 's/\\u0026/\&/g' -e 's/\\\\/\\/g'
+}
+# go_oracle <TestName> <package> [go test flags...]: run exactly one test from
+# the current directory. Sets GO_RESULT (pass|fail|skip|norun) and GO_LOG.
+go_oracle() {
+    local name="$1" pkg="$2"; shift 2
+    GO_LOG="$RUN_DIR/go-test-$name-$RANDOM.json"
+    go test -json -count=1 -run "^${name}\$" "$@" "$pkg" > "$GO_LOG" 2>&1
+    go_test_transcript "$GO_LOG" | tail -n 40
+    GO_RESULT=$(go_test_result "$GO_LOG" "$name")
+}
+# Verdict when the oracle test produced no result.
+go_norun_verdict() {  # <json-log>
+    if grep -qE 'dial tcp|i/o timeout|TLS handshake timeout|no such host|connection reset by peer' "$1" \
+       && ! grep -qE '\.go:[0-9]+:[0-9]+: ' "$1"; then
+        error "the oracle test did not run: Go module download failed (network)"
+    fi
+    fail "the oracle test did not run (the package or the injected oracle test does not compile)"
+}
+# Exit with the verdict for GO_RESULT.
+go_verdict() {  # <pass-message> <fail-message>
+    case "$GO_RESULT" in
+        pass) pass "$1" ;;
+        fail) fail "$2" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)    go_norun_verdict "$GO_LOG" ;;
+    esac
+}
+
+
+rebuild_worktree
+[ -d "$WORK_DIR/server" ] || error "etcd source not found in $WORK_DIR (run setup first)"
 
 echo "=== Reproducing etcd-17158-delete-linearizability ==="
 
-INJECTED=false
-cleanup() {
-    [ "$INJECTED" = true ] && rm -f "$TEST_FILE"
-}
+ORACLE=TestDDBenchOracleRangeAfterDelete
+ORACLE_FILE="$WORK_DIR/server/storage/backend/zz_ddbench_oracle_test.go"
+cleanup() { rm -f "$ORACLE_FILE"; }
 trap cleanup EXIT
 
-# Inject regression test into the backend package (skip if fix commit already includes it).
-# This test follows the pattern from the fix PR (etcd/pull/17195).
-# It uses the exported Backend, BatchTx, and ReadTx interfaces, which are
-# accessible from the backend_test package. The test creates a backend with
-# a long batch interval so automatic commits never fire, then demonstrates
-# that a delete followed by a read returns inconsistent results.
-TEST_NAME="TestRangeAfterDeleteMatch"
-if grep -rq "func ${TEST_NAME}" "$WORK_DIR/server/storage/backend/"*_test.go 2>/dev/null; then
-    echo "Test $TEST_NAME already exists in source (fix commit) — skipping injection"
-else
-    INJECTED=true
-    cat > "$TEST_FILE" << 'GOEOF'
+# Always inject fresh, under a ddbench-only name and file (never skipped).
+cat > "$ORACLE_FILE" << 'GOEOF'
 package backend_test
 
 import (
@@ -73,7 +111,7 @@ import (
 //
 // The fix (etcd/pull/17195) forces an immediate bbolt commit when there
 // are pending delete operations, ensuring the read path reflects deletions.
-func TestRangeAfterDeleteMatch(t *testing.T) {
+func TestDDBenchOracleRangeAfterDelete(t *testing.T) {
 	// Use a long batch interval and high batch limit so automatic commits
 	// never trigger during this test. This isolates the delete buffering bug.
 	b, _ := betesting.NewTmpBackend(t, time.Hour, 10000)
@@ -136,7 +174,7 @@ func TestRangeAfterDeleteMatch(t *testing.T) {
 			"This is the linearizability violation described in etcd#17158:\n"+
 			"  UnsafeDelete bypasses the read buffer, so a read after delete\n"+
 			"  returns the deleted key from the stale buffer.",
-			formatKeys(ksAfterBatch), formatKeys(ksAfterRead))
+			ddbenchFormatKeys(ksAfterBatch), ddbenchFormatKeys(ksAfterRead))
 	}
 
 	// Also verify via ForEach that the key is gone from both paths.
@@ -160,7 +198,7 @@ func TestRangeAfterDeleteMatch(t *testing.T) {
 		t.Errorf("FAIL: ForEach inconsistency after delete\n"+
 			"  BatchTx ForEach keys: %v\n"+
 			"  ReadTx ForEach keys:  %v",
-			formatKeys(batchKeys), formatKeys(readKeys))
+			ddbenchFormatKeys(batchKeys), ddbenchFormatKeys(readKeys))
 	}
 
 	if len(ksAfterRead) > 0 || len(readKeys) > 0 {
@@ -171,7 +209,7 @@ func TestRangeAfterDeleteMatch(t *testing.T) {
 	t.Log("OK: deleted key is correctly invisible via both BatchTx and ReadTx")
 }
 
-func formatKeys(keys [][]byte) []string {
+func ddbenchFormatKeys(keys [][]byte) []string {
 	var result []string
 	for _, k := range keys {
 		result = append(result, string(k))
@@ -179,21 +217,9 @@ func formatKeys(keys [][]byte) []string {
 	return result
 }
 GOEOF
-    echo "Injected regression test: $TEST_FILE"
-fi
-
-echo "Running go test in server/storage/backend..."
 
 cd "$WORK_DIR/server"
-OUTPUT=$(go test -v -run "^${TEST_NAME}$" -count=1 -timeout 60s ./storage/backend/ 2>&1)
-TEST_EXIT=$?
-echo "$OUTPUT"
-
-echo ""
-if [ "$TEST_EXIT" -ne 0 ]; then
-    echo "FAIL: Bug is present -- UnsafeDelete bypasses the read buffer, causing stale reads that violate linearizability"
-    exit 1
-else
-    echo "PASS: Bug is fixed -- delete operations are correctly reflected in the read path"
-    exit 0
-fi
+echo "Running $ORACLE ..."
+go_oracle "$ORACLE" ./storage/backend/ -timeout 60s
+go_verdict "Bug is fixed — delete operations are reflected in the read path" \
+           "Bug is present — a deleted key is still visible through ReadTx"

@@ -1,7 +1,9 @@
 name: etcd-20704-leasing-linearizability
 project: etcd
 repo: https://github.com/etcd-io/etcd.git
-buggy_commit: "main"
+buggy_commit: "f0c0ca05c102203e17da685c8375fdafc37ed4d5"
+fix_commit: null
+fix_commit_note: "No upstream fix (the issue was closed as not planned); gold.patch was written for this benchmark."
 resolve_time:
   date: "2025-11-30"
   source: issue_close_date

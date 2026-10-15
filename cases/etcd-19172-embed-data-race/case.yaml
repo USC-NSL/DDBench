@@ -2,6 +2,8 @@ name: etcd-19172-embed-data-race
 project: etcd
 repo: https://github.com/etcd-io/etcd.git
 buggy_commit: "43431bd6f83b60d13a29ef9df53d7f04fe63fcfd~1"
+fix_commit: "43431bd6f83b60d13a29ef9df53d7f04fe63fcfd"
+fix_commit_note: "Mainline fix (PR #19221); release-3.5 backport: 3c04b6c7fc1d8a46f1f3e96794060c8d06526a33."
 resolve_time:
   date: "2025-01-22"
   source: issue_close_date
