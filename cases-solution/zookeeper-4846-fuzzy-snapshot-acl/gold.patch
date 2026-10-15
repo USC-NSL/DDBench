@@ -1,0 +1,16 @@
+diff --git a/zookeeper-server/src/main/java/org/apache/zookeeper/server/DataTree.java b/zookeeper-server/src/main/java/org/apache/zookeeper/server/DataTree.java
+index 012a10e54..45bbde4f0 100644
+--- a/zookeeper-server/src/main/java/org/apache/zookeeper/server/DataTree.java
++++ b/zookeeper-server/src/main/java/org/apache/zookeeper/server/DataTree.java
+@@ -462,8 +462,9 @@ public void createNode(final String path, byte[] data, List<ACL> acl, long ephem
+             // we did for the global sessions.
+             Long acls = aclCache.convertAcls(acl);
+ 
+-            Set<String> children = parent.getChildren();
+-            if (children.contains(childName)) {
++            DataNode existingChild = nodes.get(path);
++            if (existingChild != null) {
++                existingChild.acl = acls;
+                 throw new NodeExistsException();
+             }
+ 

@@ -2,13 +2,14 @@ name: zookeeper-4925-diff-sync-committedlog-hole
 project: zookeeper
 repo: https://github.com/apache/zookeeper.git
 buggy_commit: "e5dd60bf0512ccc1e090d99410a8da48623219da~1"
+fix_commit: "e5dd60bf0512ccc1e090d99410a8da48623219da"
 resolve_time:
   date: "2025-06-10"
   source: issue_close_date
   reference: "https://issues.apache.org/jira/browse/ZOOKEEPER-4925"
 submodules: false
 build:
-  command: "mvn -pl zookeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -Dmaven.repo.local=/workspace/.m2 -q"
+  command: "mvn -pl zookeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q"
   binary: ""
 docker:
   caps: []

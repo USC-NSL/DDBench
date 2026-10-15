@@ -1,45 +1,92 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for zookeeper-4643-sync-epoch-ordering
-# Injects a standalone regression test that verifies the ordering of epoch
-# updates vs transaction persistence during ZAB synchronization.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Injects a test (extending Zab1_0Test's follower conversation framework) that
+# checks that, while a follower processes NEWLEADER, only committed transactions
+# are persisted before its epoch is updated.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/zookeeper-4643-sync-epoch-ordering"
-TEST_DIR="$WORK_DIR/zookeeper-server/src/test/java/org/apache/zookeeper/server/quorum"
-INJECT_TEST="$TEST_DIR/Zk4643RegressionTest.java"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+# ── JUnit XML verdicts ──
+# Decided from the JUnit XML report for the exact oracle test case: it must
+# exist and contain no <failure>, <error> or <skipped>. Never from console text.
+junit_result() {  # <xml-file> <test-method> -> pass | fail | skip | norun
+    [ -f "$1" ] || { echo norun; return; }
+    awk -v m="$2" '
+        /<testcase[ >]/ {
+            inc = ($0 ~ ("name=\"" m "([({[][^\"]*)?\""))
+            if (inc) { found = 1
+                if ($0 ~ /<(failure|error)[ >\/]/) bad = 1
+                if ($0 ~ /<skipped/) skip = 1
+                if ($0 ~ /\/>[[:space:]]*$/ || $0 ~ /<\/testcase>/) inc = 0 }
+            next }
+        inc && /<(failure|error)[ >\/]/ { bad = 1 }
+        inc && /<skipped/ { skip = 1 }
+        inc && /<\/testcase>/ { inc = 0 }
+        END { if (!found) print "norun"; else if (bad) print "fail"; else if (skip) print "skip"; else print "pass" }
+    ' "$1"
+}
+# Exit with the verdict for the oracle test case.
+junit_verdict() {  # <xml> <method> <console-log> <pass-message> <fail-message>
+    case "$(junit_result "$1" "$2")" in
+        pass) pass "$4" ;;
+        fail) fail "$5" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)
+            if grep -qE "COMPILATION ERROR|Compilation failure|compilation failed|Compilation failed|error: |cannot find symbol" "$3"; then
+                fail "the oracle test did not run: the worktree or the injected oracle test does not compile"
+            fi
+            error "the oracle test did not run and no compilation error was found (see output above)" ;;
+    esac
+}
+
+TEST_CLASS=DDBenchOracleSyncEpochTest
+TEST_FILE="$WORK_DIR/zookeeper-server/src/test/java/org/apache/zookeeper/server/quorum/$TEST_CLASS.java"
+TEST_METHOD=testOnlyCommittedTxnsPersistedBeforeEpochUpdate
+REPORT="$WORK_DIR/zookeeper-server/target/surefire-reports/TEST-org.apache.zookeeper.server.quorum.$TEST_CLASS.xml"
+LOG="$RUN_DIR/mvn-test.log"
 
 export JAVA_HOME=${JAVA_HOME:-/usr/lib/jvm/java-11-openjdk-amd64}
 export PATH="$JAVA_HOME/bin:$PATH"
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
-
-# Verify setup
-if [ ! -d "$WORK_DIR" ]; then
-    echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."
-    exit 1
-fi
+rebuild_worktree
+[ -d "$WORK_DIR/zookeeper-server" ] || error "zookeeper-server not found in $WORK_DIR (run setup first)"
 
 echo "=== Reproducing zookeeper-4643-sync-epoch-ordering ==="
 
 cleanup() {
-    rm -f "$INJECT_TEST"
+    rm -f "$TEST_FILE"
+    # Reports and classes compiled from the injected test must not outlive the run.
+    rm -rf "$WORK_DIR/zookeeper-server/target/surefire-reports"
+    find "$WORK_DIR/zookeeper-server/target/test-classes" -name 'DDBenchOracle*.class' -delete 2>/dev/null
 }
 trap cleanup EXIT
 
-# Inject a standalone regression test.
-# This test extends Zab1_0Test to reuse its testFollowerConversation framework.
-# It verifies that during NEWLEADER processing, only committed transactions are
-# persisted to disk, and the epoch is updated after persistence.
-cat > "$INJECT_TEST" << 'JAVAEOF'
+cat > "$TEST_FILE" << 'JAVAEOF'
 package org.apache.zookeeper.server.quorum;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,7 +121,7 @@ import org.junit.jupiter.api.io.TempDir;
  * which means a follower that crashes after epoch update can later become
  * leader with stale history, issuing improper TRUNC commands.
  */
-public class Zk4643RegressionTest extends Zab1_0Test {
+public class DDBenchOracleSyncEpochTest extends Zab1_0Test {
 
     @Test
     public void testOnlyCommittedTxnsPersistedBeforeEpochUpdate(@TempDir File testData) throws Exception {
@@ -180,10 +227,13 @@ public class Zk4643RegressionTest extends Zab1_0Test {
                     assertEquals(Leader.ACK, qp.getType());
                     assertEquals(proposalZxid, qp.getZxid());
 
-                    // Verify data is now updated
-                    TrackerWatcher watcher = new TrackerWatcher();
-                    assertEquals("data1", new String(f.fzk.getZKDatabase().getData("/foo", stat, watcher)));
-                    watcher.waitForChange();
+                    // Verify the committed proposal is applied (poll: whether it is
+                    // already applied at this point depends on scheduling).
+                    long deadline = System.currentTimeMillis() + 10000;
+                    while (!"data2".equals(new String(f.fzk.getZKDatabase().getData("/foo", stat, null)))
+                            && System.currentTimeMillis() < deadline) {
+                        Thread.sleep(50);
+                    }
                     assertEquals("data2", new String(f.fzk.getZKDatabase().getData("/foo", stat, null)));
 
                     // Final verification: data persisted correctly
@@ -212,19 +262,11 @@ public class Zk4643RegressionTest extends Zab1_0Test {
 }
 JAVAEOF
 
-echo "Injected regression test: $INJECT_TEST"
-echo "Running Maven test..."
-
 cd "$WORK_DIR/zookeeper-server"
-OUTPUT=$(mvn test -Dmaven.repo.local=/workspace/.m2 -Dtest="Zk4643RegressionTest#testOnlyCommittedTxnsPersistedBeforeEpochUpdate" -DfailIfNoTests=false -q 2>&1)
-TEST_EXIT=$?
-echo "$OUTPUT"
-
-echo ""
-if [ "$TEST_EXIT" -ne 0 ]; then
-    echo "FAIL: Bug is present — follower persists uncommitted proposals before updating epoch during NEWLEADER processing"
-    exit 1
-else
-    echo "PASS: Bug is fixed — only committed transactions are persisted before epoch update"
-    exit 0
-fi
+rm -rf target/surefire-reports
+echo "Running $TEST_CLASS#$TEST_METHOD ..."
+mvn test -Dtest="$TEST_CLASS#$TEST_METHOD" -DfailIfNoTests=false -q > "$LOG" 2>&1
+tail -40 "$LOG"
+junit_verdict "$REPORT" "$TEST_METHOD" "$LOG" \
+    "Bug is fixed — only committed transactions are persisted before the epoch update" \
+    "Bug is present — the follower persisted uncommitted proposals before updating its epoch"

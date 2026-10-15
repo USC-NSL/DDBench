@@ -1,5 +1,9 @@
 # Solution: ZooKeeper #4925
 
+- **Issue:** https://issues.apache.org/jira/browse/ZOOKEEPER-4925
+- **Fix commit:** [`e5dd60bf0512ccc1e090d99410a8da48623219da`](https://github.com/apache/zookeeper/commit/e5dd60bf0512ccc1e090d99410a8da48623219da)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/apache/zookeeper/pull/2254
 - **Commit:** `e5dd60bf0512ccc1e090d99410a8da48623219da`

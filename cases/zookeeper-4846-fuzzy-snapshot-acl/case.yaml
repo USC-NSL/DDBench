@@ -2,13 +2,14 @@ name: zookeeper-4846-fuzzy-snapshot-acl
 project: zookeeper
 repo: https://github.com/apache/zookeeper.git
 buggy_commit: "8532163df198466913f26141c0278dc11dbf53ab~1"
+fix_commit: "8532163df198466913f26141c0278dc11dbf53ab"
 resolve_time:
   date: "2025-08-29"
   source: issue_close_date
   reference: "https://issues.apache.org/jira/browse/ZOOKEEPER-4846"
 submodules: false
 build:
-  command: "mvn -pl zookeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -Dmaven.repo.local=/workspace/.m2 -q"
+  command: "mvn -pl zookeeper-server -am install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q"
   binary: ""
 docker:
   caps: []

@@ -1,44 +1,91 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for zookeeper-4846-fuzzy-snapshot-acl
-# Injects a regression test that simulates the fuzzy snapshot ACL race:
-# A node exists with a purged ACL. When createNode is called for the same path
-# (simulating fastForwardFromEdits replay), the buggy code throws
-# NodeExistsException without restoring the ACL. The fix sets the ACL on the
-# existing node before throwing.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Injects a DataTree test: replaying a create for a node whose ACL was purged
+# from the ACL cache during a fuzzy snapshot must leave a usable node.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/zookeeper-4846-fuzzy-snapshot-acl"
-INJECT_TEST="$WORK_DIR/zookeeper-server/src/test/java/org/apache/zookeeper/server/Zk4846Test.java"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+# ── JUnit XML verdicts ──
+# Decided from the JUnit XML report for the exact oracle test case: it must
+# exist and contain no <failure>, <error> or <skipped>. Never from console text.
+junit_result() {  # <xml-file> <test-method> -> pass | fail | skip | norun
+    [ -f "$1" ] || { echo norun; return; }
+    awk -v m="$2" '
+        /<testcase[ >]/ {
+            inc = ($0 ~ ("name=\"" m "([({[][^\"]*)?\""))
+            if (inc) { found = 1
+                if ($0 ~ /<(failure|error)[ >\/]/) bad = 1
+                if ($0 ~ /<skipped/) skip = 1
+                if ($0 ~ /\/>[[:space:]]*$/ || $0 ~ /<\/testcase>/) inc = 0 }
+            next }
+        inc && /<(failure|error)[ >\/]/ { bad = 1 }
+        inc && /<skipped/ { skip = 1 }
+        inc && /<\/testcase>/ { inc = 0 }
+        END { if (!found) print "norun"; else if (bad) print "fail"; else if (skip) print "skip"; else print "pass" }
+    ' "$1"
+}
+# Exit with the verdict for the oracle test case.
+junit_verdict() {  # <xml> <method> <console-log> <pass-message> <fail-message>
+    case "$(junit_result "$1" "$2")" in
+        pass) pass "$4" ;;
+        fail) fail "$5" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)
+            if grep -qE "COMPILATION ERROR|Compilation failure|compilation failed|Compilation failed|error: |cannot find symbol" "$3"; then
+                fail "the oracle test did not run: the worktree or the injected oracle test does not compile"
+            fi
+            error "the oracle test did not run and no compilation error was found (see output above)" ;;
+    esac
+}
+
+TEST_CLASS=DDBenchOracleFuzzySnapshotAclTest
+TEST_FILE="$WORK_DIR/zookeeper-server/src/test/java/org/apache/zookeeper/server/$TEST_CLASS.java"
+TEST_METHOD=testCreateNodeRecoversPurgedACL
+REPORT="$WORK_DIR/zookeeper-server/target/surefire-reports/TEST-org.apache.zookeeper.server.$TEST_CLASS.xml"
+LOG="$RUN_DIR/mvn-test.log"
 
 export JAVA_HOME=${JAVA_HOME:-/usr/lib/jvm/java-11-openjdk-amd64}
 export PATH="$JAVA_HOME/bin:$PATH"
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
-
-# Verify setup
-if [ ! -d "$WORK_DIR" ]; then
-    echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."
-    exit 1
-fi
+rebuild_worktree
+[ -d "$WORK_DIR/zookeeper-server" ] || error "zookeeper-server not found in $WORK_DIR (run setup first)"
 
 echo "=== Reproducing zookeeper-4846-fuzzy-snapshot-acl ==="
 
 cleanup() {
-    rm -f "$INJECT_TEST"
+    rm -f "$TEST_FILE"
+    # Reports and classes compiled from the injected test must not outlive the run.
+    rm -rf "$WORK_DIR/zookeeper-server/target/surefire-reports"
+    find "$WORK_DIR/zookeeper-server/target/test-classes" -name 'DDBenchOracle*.class' -delete 2>/dev/null
 }
 trap cleanup EXIT
 
-# Inject a standalone regression test
-cat > "$INJECT_TEST" << 'JAVAEOF'
+cat > "$TEST_FILE" << 'JAVAEOF'
 package org.apache.zookeeper.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -62,7 +109,7 @@ import org.junit.jupiter.api.Test;
  * Fixed code: sets the ACL on the existing node before throwing
  *   NodeExistsException, so the node has a valid ACL reference.
  */
-public class Zk4846Test {
+public class DDBenchOracleFuzzySnapshotAclTest {
 
     @Test
     public void testCreateNodeRecoversPurgedACL() throws Exception {
@@ -114,19 +161,11 @@ public class Zk4846Test {
 }
 JAVAEOF
 
-echo "Injected regression test: $INJECT_TEST"
-echo "Running Maven test..."
-
 cd "$WORK_DIR/zookeeper-server"
-OUTPUT=$(mvn test -Dmaven.repo.local=/workspace/.m2 -Dtest="Zk4846Test#testCreateNodeRecoversPurgedACL" -DfailIfNoTests=false -q 2>&1)
-TEST_EXIT=$?
-echo "$OUTPUT"
-
-echo ""
-if [ "$TEST_EXIT" -ne 0 ]; then
-    echo "FAIL: Bug is present -- createNode does not defensively recover missing ACL reference, causing RuntimeException when accessing a node whose ACL was purged during fuzzy snapshot"
-    exit 1
-else
-    echo "PASS: Bug is fixed -- createNode defensively recovers missing ACL reference during fastForwardFromEdits"
-    exit 0
-fi
+rm -rf target/surefire-reports
+echo "Running $TEST_CLASS#$TEST_METHOD ..."
+mvn test -Dtest="$TEST_CLASS#$TEST_METHOD" -DfailIfNoTests=false -q > "$LOG" 2>&1
+tail -40 "$LOG"
+junit_verdict "$REPORT" "$TEST_METHOD" "$LOG" \
+    "Bug is fixed — nodes replayed with a purged ACL reference remain usable" \
+    "Bug is present — a node replayed with a purged ACL reference breaks later operations"
