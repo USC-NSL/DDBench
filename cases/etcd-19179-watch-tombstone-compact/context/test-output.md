@@ -217,5 +217,3 @@ Obtained by running `cd server && go test -v -timeout 60s ./storage/mvcc/` again
 PASS
 ok  	go.etcd.io/etcd/server/v3/storage/mvcc	13.497s
 ```
-
-All existing mvcc tests pass. No test covers the scenario where compaction removes the put revision, leaving only a tombstone, and then the server restarts and must restore the index from the remaining tombstone-only entry.

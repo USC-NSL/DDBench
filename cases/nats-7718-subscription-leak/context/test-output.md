@@ -24,5 +24,3 @@ Obtained by running `go test -v -run "TestJetStream.*Import|TestJetStream.*Sub.*
 PASS
 ok  	github.com/nats-io/nats-server/v2/server	13.173s
 ```
-
-Note: Existing import-related tests pass. None of them set up overlapping stream imports with rapid consumer lifecycle churn and then verify subscription counts. The leak is cumulative — each consumer create/destroy cycle leaks route map entries, but this is only observable over many cycles via monitoring endpoints.

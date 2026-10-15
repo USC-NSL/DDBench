@@ -54,5 +54,3 @@ Obtained by running `cd server && go test -v -timeout 60s ./storage/backend/` ag
 PASS
 ok  	go.etcd.io/etcd/server/v3/storage/backend	1.348s
 ```
-
-All existing backend tests pass. No test covers the interaction between `UnsafeDelete` and the buffered read path — the `TestBatchTxDelete` test only verifies that deletes succeed, not that the read buffer reflects them.

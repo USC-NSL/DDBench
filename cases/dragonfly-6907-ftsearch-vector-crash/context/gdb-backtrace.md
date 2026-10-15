@@ -1,4 +1,4 @@
-# GDB Backtrace: dragonfly-6907-ftsearch-vector-crash
+# GDB Backtrace
 
 ## How this was obtained
 

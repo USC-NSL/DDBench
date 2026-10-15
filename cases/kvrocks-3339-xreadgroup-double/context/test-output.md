@@ -12,6 +12,4 @@ DOUBLE_RESPONSE_ERRORS=41
   consumer3 round 0: double response detected
   consumer2 round 1: double response detected
   consumer1 round 1: double response detected
-
-FAIL: Bug is present — 41 double responses detected across consumers
 ```

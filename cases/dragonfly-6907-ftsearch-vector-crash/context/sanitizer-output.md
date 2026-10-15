@@ -1,4 +1,4 @@
-# AddressSanitizer Output: dragonfly-6907-ftsearch-vector-crash
+# AddressSanitizer Output
 
 ## How this was obtained
 

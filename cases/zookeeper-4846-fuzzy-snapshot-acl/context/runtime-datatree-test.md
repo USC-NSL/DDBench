@@ -9,5 +9,3 @@ Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.363 s - in or
 Tests run: 19, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
-
-The existing DataTreeTest suite passes but does not cover the fuzzy snapshot recovery scenario where a `createNode` replay encounters a `NodeExistsException` for a node whose ACL reference has become stale after `aclCache.purgeUnused()`.

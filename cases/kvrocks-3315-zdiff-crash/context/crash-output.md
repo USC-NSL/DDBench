@@ -7,6 +7,4 @@ Obtained by starting `./build/kvrocks --port 6666 --dir /tmp/kvrocks_data --log-
 ```
 Sending: ZDIFF 0 a
 Segmentation fault      (core dumped)
-
-FAIL: Bug is present — process crashed (exit code 139)
 ```

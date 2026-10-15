@@ -32,5 +32,3 @@ Obtained by running `go test -race -v -run "TestJetStream.*WorkQueue.*Consumer|T
 PASS
 ok  	github.com/nats-io/nats-server/v2/server	28.082s
 ```
-
-Note: Existing tests pass even with -race and -count=3. The race condition requires multiple clients on separate connections performing rapid concurrent consumer create/update/delete operations on the same WorkQueue stream. The existing tests use sequential consumer operations or single connections, which serializes requests and avoids the race window. The bug is timing-dependent and requires specific concurrency patterns not covered by the test suite.

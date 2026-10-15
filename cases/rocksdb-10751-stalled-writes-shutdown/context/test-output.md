@@ -10,6 +10,4 @@ Writing data to trigger stall condition...
 Writes stalled. Calling Close()...
 
 [process killed by timeout after 60 seconds — Close() never returned]
-
-FAIL: Bug is present — DB::Close() hung for 60+ seconds (killed by timeout)
 ```

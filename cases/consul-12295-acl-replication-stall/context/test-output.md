@@ -28,5 +28,3 @@ Obtained by running `go test -v -timeout 30s ./lib/routine/` against the buggy b
 PASS
 ok  	github.com/hashicorp/consul/lib/routine	0.054s
 ```
-
-All existing routine manager tests pass. No test covers the scenario where `Start` is called for a routine whose context was just cancelled but whose goroutine hasn't exited yet (the race window between context cancellation and `stoppedCh` closing).

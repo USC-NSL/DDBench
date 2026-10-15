@@ -44,5 +44,3 @@ Obtained by running `cd server && go test -v -timeout 120s -run "TestWatch" ./st
 PASS
 ok  	go.etcd.io/etcd/server/v3/storage/mvcc	6.949s
 ```
-
-All existing watch tests pass, including `TestWatchCompacted` and `TestWatchVictims`. This indicates no existing test covers the scenario where multiple watchers compete for a full channel buffer during compaction notification.

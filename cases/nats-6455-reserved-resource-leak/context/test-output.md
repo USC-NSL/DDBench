@@ -20,5 +20,3 @@ Obtained by running `go test -v -run "TestJetStream.*Resource|TestJetStream.*Res
 PASS
 ok  	github.com/nats-io/nats-server/v2/server	27.706s
 ```
-
-Note: Existing tests pass. None of the reset tests verify that reserved resource counters are properly decremented after a non-delete reset cycle. The resource leak only manifests after multiple reset cycles accumulate.

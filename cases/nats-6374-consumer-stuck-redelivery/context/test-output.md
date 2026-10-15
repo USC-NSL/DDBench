@@ -60,5 +60,3 @@ Obtained by running `go test -v -run "TestJetStream.*Deliver|TestJetStream.*Rede
 === RUN   TestJetStreamStreamPurgeWithConsumerAndRedelivery
 --- PASS: TestJetStreamStreamPurgeWithConsumerAndRedelivery (0.11s)
 ```
-
-Note: Existing tests all pass. The bug scenarios (leader step-down with inflight acks, and redelivery of deleted messages) are not covered by the existing test suite. The `TestJetStreamClusterDoubleAckRedelivery` test shows timeout warnings during execution (56.63s), hinting at fragile timing in the redelivery/ack path.

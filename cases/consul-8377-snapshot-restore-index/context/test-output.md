@@ -12,5 +12,3 @@ agent/consul/state/state_store_test.go:68:14: conversion from uint64 to string y
 agent/consul/state/state_store_test.go:95:21: conversion from uint64 to string yields a string of one rune, not a string of digits
 FAIL	github.com/hashicorp/consul/agent/consul/state [build failed]
 ```
-
-Tests fail to compile due to Go toolchain version incompatibility (`uint64` to `string` conversion). This is a toolchain issue unrelated to the bug. The test files have no coverage for snapshot restore index preservation regardless.

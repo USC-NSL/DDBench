@@ -21,5 +21,3 @@ Obtained by running `go test -v -run "TestJetStream.*WQ|TestJetStream.*WorkQueue
 --- PASS: TestJetStreamWorkQueueTerminateDelivery (0.21s)
 PASS
 ```
-
-Note: Existing WorkQueue tests pass. None of them test the specific scenario of R3 WorkQueue with max-deliver exceeded messages combined with periodic `checkStateForInterestStream` runs. The message loss requires the timing-dependent interaction between max-deliver removing from pending and the background interest-check loop treating those messages as fully acked.

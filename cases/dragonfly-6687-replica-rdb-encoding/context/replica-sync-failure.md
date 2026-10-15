@@ -32,7 +32,7 @@ redis-cli -p 6380 INFO replication
 # Replication
 role:slave
 master_host:localhost
-master_port:16687
+master_port:6379
 master_link_status:down
 master_last_io_seconds_ago:0
 master_sync_in_progress:0
@@ -46,12 +46,12 @@ psync_successes:0
 ### Replica log (first sync cycle showing the error)
 
 ```
-I20260403 20:31:57.371862    19 protocol_client.cc:153] Resolved endpoint localhost:16687 to 127.0.0.1:16687
-I20260403 20:31:57.839491    19 replica.cc:659] Started full sync with localhost:16687
+I20260403 20:31:57.371862    19 protocol_client.cc:153] Resolved endpoint localhost:6379 to 127.0.0.1:6379
+I20260403 20:31:57.839491    19 replica.cc:659] Started full sync with localhost:6379
 E20260403 20:31:57.882428    19 rdb_load.cc:1259] Unknown RDB string encoding 10
 W20260403 20:31:57.882637    19 execution_state.cc:93] ReportError: Internal error when loading RDB file 5: Error loading rdb format
-W20260403 20:31:57.882677    19 protocol_client.cc:256] Socket error: Internal error when loading RDB file 5: Error loading rdb format in localhost:16687, socket info: State: ESTABLISHED, Local: 127.0.0.1:39926, Remote: 127.0.0.1:16687, Inode: 214475955
-W20260403 20:31:57.887634    19 replica.cc:284] Error syncing with localhost:16687 (phase: INITIAL_SYNC): dragonfly.rdbload:5 Internal error when loading RDB file 5, socket state: socket not found in /proc/net/tcp or /proc/net/tcp6
+W20260403 20:31:57.882677    19 protocol_client.cc:256] Socket error: Internal error when loading RDB file 5: Error loading rdb format in localhost:6379, socket info: State: ESTABLISHED, Local: 127.0.0.1:39926, Remote: 127.0.0.1:6379, Inode: 214475955
+W20260403 20:31:57.887634    19 replica.cc:284] Error syncing with localhost:6379 (phase: INITIAL_SYNC): dragonfly.rdbload:5 Internal error when loading RDB file 5, socket state: socket not found in /proc/net/tcp or /proc/net/tcp6
 ```
 
 ### Replica log (retry loop continues indefinitely)
@@ -82,16 +82,16 @@ E20260403 20:32:08.907989    19 rdb_load.cc:1259] Unknown RDB string encoding 10
 ### Replica log (representative full sync cycle showing connect-error-retry pattern)
 
 ```
-I20260403 20:32:34.247363    19 protocol_client.cc:153] Resolved endpoint localhost:16687 to 127.0.0.1:16687
-I20260403 20:32:34.249608    19 replica.cc:659] Started full sync with localhost:16687
+I20260403 20:32:34.247363    19 protocol_client.cc:153] Resolved endpoint localhost:6379 to 127.0.0.1:6379
+I20260403 20:32:34.249608    19 replica.cc:659] Started full sync with localhost:6379
 E20260403 20:32:34.293881    19 rdb_load.cc:1259] Unknown RDB string encoding 10
 W20260403 20:32:34.294035    19 execution_state.cc:93] ReportError: Internal error when loading RDB file 5: Error loading rdb format
-W20260403 20:32:34.294137    19 protocol_client.cc:256] Socket error: Internal error when loading RDB file 5: Error loading rdb format in localhost:16687, socket info: State: ESTABLISHED, Local: 127.0.0.1:39932, Remote: 127.0.0.1:16687, Inode: 214475963
-W20260403 20:32:34.301040    19 replica.cc:284] Error syncing with localhost:16687 (phase: INITIAL_SYNC): dragonfly.rdbload:5 Internal error when loading RDB file 5, socket state: State: FIN_WAIT1, Local: 127.0.0.1:39932, Remote: 127.0.0.1:16687, Inode: 214475963
-I20260403 20:32:34.805164    19 protocol_client.cc:153] Resolved endpoint localhost:16687 to 127.0.0.1:16687
-I20260403 20:32:34.807209    19 replica.cc:659] Started full sync with localhost:16687
+W20260403 20:32:34.294137    19 protocol_client.cc:256] Socket error: Internal error when loading RDB file 5: Error loading rdb format in localhost:6379, socket info: State: ESTABLISHED, Local: 127.0.0.1:39932, Remote: 127.0.0.1:6379, Inode: 214475963
+W20260403 20:32:34.301040    19 replica.cc:284] Error syncing with localhost:6379 (phase: INITIAL_SYNC): dragonfly.rdbload:5 Internal error when loading RDB file 5, socket state: State: FIN_WAIT1, Local: 127.0.0.1:39932, Remote: 127.0.0.1:6379, Inode: 214475963
+I20260403 20:32:34.805164    19 protocol_client.cc:153] Resolved endpoint localhost:6379 to 127.0.0.1:6379
+I20260403 20:32:34.807209    19 replica.cc:659] Started full sync with localhost:6379
 E20260403 20:32:34.848076    19 rdb_load.cc:1259] Unknown RDB string encoding 10
 W20260403 20:32:34.848258    19 execution_state.cc:93] ReportError: Internal error when loading RDB file 5: Error loading rdb format
-W20260403 20:32:34.848349    19 protocol_client.cc:256] Socket error: Internal error when loading RDB file 5: Error loading rdb format in localhost:16687, socket info: State: ESTABLISHED, Local: 127.0.0.1:39950, Remote: 127.0.0.1:16687, Inode: 214475977
-W20260403 20:32:34.852624    19 replica.cc:284] Error syncing with localhost:16687 (phase: INITIAL_SYNC): dragonfly.rdbload:5 Internal error when loading RDB file 5, socket state: socket not found in /proc/net/tcp or /proc/net/tcp6
+W20260403 20:32:34.848349    19 protocol_client.cc:256] Socket error: Internal error when loading RDB file 5: Error loading rdb format in localhost:6379, socket info: State: ESTABLISHED, Local: 127.0.0.1:39950, Remote: 127.0.0.1:6379, Inode: 214475977
+W20260403 20:32:34.852624    19 replica.cc:284] Error syncing with localhost:6379 (phase: INITIAL_SYNC): dragonfly.rdbload:5 Internal error when loading RDB file 5, socket state: socket not found in /proc/net/tcp or /proc/net/tcp6
 ```

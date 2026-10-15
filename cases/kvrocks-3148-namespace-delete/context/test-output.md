@@ -25,6 +25,4 @@ ns1
 token2
 __namespace
 foobared
-
-FAIL: Bug is present — ns2 was deleted when ns1 took its token
 ```

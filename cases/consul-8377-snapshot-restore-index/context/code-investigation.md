@@ -1,66 +1,57 @@
 # Code Investigation
 
 ## What was searched
-The symptom describes different `CreateIndex`/`ModifyIndex` values across servers after restoring from snapshots. A developer would trace the snapshot restore path to see how catalog entries (nodes, services, checks) are re-created and whether their original index values are preserved.
+The symptom describes servers reporting different `CreateIndex`/`ModifyIndex` values for the same catalog entries after all servers restart from their local snapshots. Traced how catalog registrations are re-created by the FSM snapshot restore code.
 
 ## What was found
-
-The snapshot restore path passes the snapshot's `LastIndex` as the Raft index for all registration operations:
-
-```go
-// agent/consul/fsm/snapshot_oss.go:486-496
+```
+$ sed -n "486,496p" agent/consul/fsm/snapshot_oss.go
 func restoreRegistration(header *snapshotHeader, restore *state.Restore, decoder *codec.Decoder) error {
-    var req structs.RegisterRequest
-    if err := decoder.Decode(&req); err != nil {
-        return err
-    }
-    if err := restore.Registration(header.LastIndex, &req); err != nil {
-        return err
-    }
-    return nil
+	var req structs.RegisterRequest
+	if err := decoder.Decode(&req); err != nil {
+		return err
+	}
+	if err := restore.Registration(header.LastIndex, &req); err != nil {
+		return err
+	}
+	return nil
 }
+
 ```
 
-`Restore.Registration()` directly calls `ensureRegistrationTxn` with this index:
-
-```go
-// agent/consul/state/catalog.go:218-222
+```
+$ sed -n "215,244p" agent/consul/state/catalog.go
+// Registration is used to make sure a node, service, and check registration is
+// performed within a single transaction to avoid race conditions on state
+// updates.
 func (s *Restore) Registration(idx uint64, req *structs.RegisterRequest) error {
-    if err := s.store.ensureRegistrationTxn(s.tx, idx, req); err != nil {
-        return err
-    }
-    return nil
+	if err := s.store.ensureRegistrationTxn(s.tx, idx, req); err != nil {
+		return err
+	}
+	return nil
 }
-```
 
-`ensureRegistrationTxn` constructs a new node struct WITHOUT the original `CreateIndex`/`ModifyIndex`:
+// EnsureRegistration is used to make sure a node, service, and check
+// registration is performed within a single transaction to avoid race
+// conditions on state updates.
+func (s *Store) EnsureRegistration(idx uint64, req *structs.RegisterRequest) error {
+	tx := s.db.WriteTxn(idx)
+	defer tx.Abort()
 
-```go
-// agent/consul/state/catalog.go:259-267
-node := &structs.Node{
-    ID:              req.ID,
-    Node:            req.Node,
-    Address:         req.Address,
-    Datacenter:      req.Datacenter,
-    TaggedAddresses: req.TaggedAddresses,
-    Meta:            req.NodeMeta,
+	if err := s.ensureRegistrationTxn(tx, idx, req); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
-// Note: CreateIndex and ModifyIndex are NOT copied from req
+
+func (s *Store) ensureCheckIfNodeMatches(tx *txn, idx uint64, node string, check *structs.HealthCheck) error {
+	if check.Node != node {
+		return fmt.Errorf("check node %q does not match node %q",
+			check.Node, node)
+	}
+	if err := s.ensureCheckTxn(tx, idx, check); err != nil {
 ```
-
-Then `ensureNodeTxn` assigns indexes based on the passed `idx` parameter:
-
-```go
-// agent/consul/state/catalog.go:456-459
-} else {
-    node.CreateIndex = idx    // idx = header.LastIndex from the snapshot
-    node.ModifyIndex = idx
-}
-```
-
-Since the restore starts with an empty state store, the `n == nil` branch (line 458-459) is always taken during restore. The node's `CreateIndex` and `ModifyIndex` are both set to `header.LastIndex` — the Raft index at which the snapshot was taken.
-
-The same pattern applies to services (line 806-808) and health checks (line 1605-1606, 1680) in the same file.
 
 ## Developer hypothesis
-The `restoreRegistration` function's handling of index values during snapshot restore.
+Restored catalog registrations are re-applied through the same registration transaction that live registrations use, driven from the snapshot restore code. Worth checking how the index metadata of catalog entries is determined when they are re-created during a restore.

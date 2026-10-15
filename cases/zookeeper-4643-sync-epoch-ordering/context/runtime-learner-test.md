@@ -9,5 +9,3 @@ Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.648 s - in org
 Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
-
-The existing LearnerTest suite passes, but it does not cover the crash-during-sync scenario described in the symptom. The tests exercise normal learner synchronization paths but do not inject crashes between `startupWithoutServing()` and transaction persistence.
