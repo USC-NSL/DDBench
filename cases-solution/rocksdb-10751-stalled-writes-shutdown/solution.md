@@ -1,5 +1,9 @@
 # Solution: RocksDB #10751
 
+- **Issue:** https://github.com/facebook/rocksdb/issues/10751
+- **Fix commit:** [`a45e6878f39cdc777c54e5d6749d53c1f70e2b52`](https://github.com/facebook/rocksdb/commit/a45e6878f39cdc777c54e5d6749d53c1f70e2b52)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **Issue:** https://github.com/facebook/rocksdb/issues/10751
 - **Commit:** `a45e6878f39cdc777c54e5d6749d53c1f70e2b52`
