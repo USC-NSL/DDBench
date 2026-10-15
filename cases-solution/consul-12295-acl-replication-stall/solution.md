@@ -1,5 +1,9 @@
 # Solution: Consul #12295
 
+- **Issue:** https://github.com/hashicorp/consul/issues/12295
+- **Fix commit:** [`24245edfcc9d56eb1033908c607f56b19f7d1360`](https://github.com/hashicorp/consul/commit/24245edfcc9d56eb1033908c607f56b19f7d1360)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/hashicorp/consul/pull/12565
 - **Commit:** `24245edfcc9d56eb1033908c607f56b19f7d1360`

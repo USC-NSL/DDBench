@@ -1,5 +1,9 @@
 # Solution: Consul #9772 — Streaming Snapshot Cache Bug
 
+- **Issue:** 363d738fd2ee1ee25ad872a63894cffa8faf9df2
+- **Fix commit:** [`363d738fd2ee1ee25ad872a63894cffa8faf9df2`](https://github.com/hashicorp/consul/commit/363d738fd2ee1ee25ad872a63894cffa8faf9df2)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Root Cause
 
 In `agent/consul/stream/event_publisher.go`, the `Subscribe()` method has a code path for handling stale-index requests (`Index > 0`) when the topic buffer has moved past the requested index. In this path, the publisher:

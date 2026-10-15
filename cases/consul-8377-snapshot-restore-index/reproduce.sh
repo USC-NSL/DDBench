@@ -1,61 +1,93 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for consul-8377-snapshot-restore-index
+# Injects a test into agent/consul/state that runs a real Snapshot() -> Restore()
+# cycle and checks that a node's CreateIndex survives the restore.
 #
-# Bug: During FSM snapshot restore, ensureNodeTxn/ensureServiceTxn/ensureCheckTxn
-# unconditionally set CreateIndex = idx (the current Raft index) for new entries.
-# Since the restore operates on an empty store, ALL entries are "new" and get
-# their original CreateIndex overwritten with the restore Raft index.
-#
-# This test verifies the bug at the state store level by simulating a
-# snapshot restore: it creates a fresh store, inserts catalog entries with a
-# high restore index, and checks whether the original CreateIndex is preserved.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/consul-8377-snapshot-restore-index"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
 
-# Verify setup
-if [ ! -d "$WORK_DIR" ]; then
-    echo "ERROR: Work directory not found. Run ./setup.sh first."
-    exit 1
-fi
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+# ── Go test verdicts ──
+# Decided from `go test -json` events for the exact oracle test, never from free
+# text (code under test can print anything). A test that did not run is no pass.
+go_test_result() {  # <json-log> <TestName> -> pass | fail | skip | norun
+    local pre='^\{("Time":"[^"]*",)?"Action":"' post="\",\"Package\":\"[^\"]*\",\"Test\":\"$2\"[,}]"
+    if   grep -qE "${pre}fail${post}" "$1"; then echo fail
+    elif grep -qE "${pre}pass${post}" "$1"; then echo pass
+    elif grep -qE "${pre}skip${post}" "$1"; then echo skip
+    else echo norun; fi
+}
+go_test_transcript() {  # human-readable form of a -json log
+    sed -n -e '/^{/!p' -e 's/^{.*"Action":"output".*"Output":"\(.*\)"}$/\1/p' "$1" \
+        | sed -e 's/\\n$//' -e 's/\\t/	/g' -e 's/\\"/"/g' -e 's/\\u003c/</g' \
+              -e 's/\\u003e/>/g' -e 's/\\u0026/\&/g' -e 's/\\\\/\\/g'
+}
+# go_oracle <TestName> <package> [go test flags...]: run exactly one test from
+# the current directory. Sets GO_RESULT (pass|fail|skip|norun) and GO_LOG.
+go_oracle() {
+    local name="$1" pkg="$2"; shift 2
+    GO_LOG="$RUN_DIR/go-test-$name-$RANDOM.json"
+    go test -json -count=1 -run "^${name}\$" "$@" "$pkg" > "$GO_LOG" 2>&1
+    go_test_transcript "$GO_LOG" | tail -n 40
+    GO_RESULT=$(go_test_result "$GO_LOG" "$name")
+}
+# Verdict when the oracle test produced no result.
+go_norun_verdict() {  # <json-log>
+    if grep -qE 'dial tcp|i/o timeout|TLS handshake timeout|no such host|connection reset by peer' "$1" \
+       && ! grep -qE '\.go:[0-9]+:[0-9]+: ' "$1"; then
+        error "the oracle test did not run: Go module download failed (network)"
+    fi
+    fail "the oracle test did not run (the package or the injected oracle test does not compile)"
+}
+# Exit with the verdict for GO_RESULT.
+go_verdict() {  # <pass-message> <fail-message>
+    case "$GO_RESULT" in
+        pass) pass "$1" ;;
+        fail) fail "$2" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)    go_norun_verdict "$GO_LOG" ;;
+    esac
+}
+
+ORACLE="TestDDBenchOracleSnapshotRestoreCreateIndex"
+ORACLE_FILE="$WORK_DIR/agent/consul/state/zz_ddbench_oracle_test.go"
+
+
+rebuild_worktree
+[ -d "$WORK_DIR/agent/consul/state" ] || error "package agent/consul/state not found in $WORK_DIR (run setup first)"
 
 echo "=== Reproducing consul-8377-snapshot-restore-index ==="
 
-TEST_FILE="$WORK_DIR/agent/consul/state/snapshot_index_bug_test.go"
-
-INJECTED=false
-cleanup() {
-    [ "$INJECTED" = true ] && rm -f "$TEST_FILE"
-}
+cleanup() { rm -f "$ORACLE_FILE"; }
 trap cleanup EXIT
 
-TEST_NAME="TestSnapshotRestoreOverwritesCreateIndex"
-
-# Skip injection if the fix commit already has this test
-if grep -rq "func ${TEST_NAME}" "$WORK_DIR/agent/consul/state/"*_test.go 2>/dev/null; then
-    echo "Test $TEST_NAME already exists in source (fix commit) — skipping injection"
-else
-    INJECTED=true
-    # Inject a test that exercises the actual Snapshot() → Restore() cycle.
-    # On the buggy code, Restore.Registration() calls ensureRegistrationTxn
-    # which unconditionally sets CreateIndex = restore raft index.
-    # On the fix code, Restore.Registration() passes preserveIndexes=true
-    # and RegisterRequest carries RaftIndex from the snapshot data.
-    #
-    # The test uses reflection to conditionally set RaftIndex on RegisterRequest
-    # (only present on the fix commit), so the same test compiles on both versions.
-    cat > "$TEST_FILE" << 'GOEOF'
+# Always inject fresh, under a ddbench-only name and file (never skipped).
+# RaftIndex is set on the restore request via reflection only when that field
+# exists, so the same test compiles on the buggy and on the fixed tree.
+cat > "$ORACLE_FILE" << 'GOEOF'
 package state
 
 import (
@@ -65,7 +97,7 @@ import (
 	"github.com/hashicorp/consul/agent/structs"
 )
 
-func TestSnapshotRestoreOverwritesCreateIndex(t *testing.T) {
+func TestDDBenchOracleSnapshotRestoreCreateIndex(t *testing.T) {
 	// Step 1: Create a store with entries at known raft indexes.
 	s1 := testStateStore(t)
 
@@ -167,20 +199,9 @@ func TestSnapshotRestoreOverwritesCreateIndex(t *testing.T) {
 	}
 }
 GOEOF
-fi
-
-echo "Running go test in agent/consul/state..."
 
 cd "$WORK_DIR"
-OUTPUT=$(go test -v -vet=off -run "^${TEST_NAME}$" -count=1 -timeout 120s ./agent/consul/state/ 2>&1)
-TEST_EXIT=$?
-echo "$OUTPUT" | tail -30
-
-echo ""
-if [ "$TEST_EXIT" -ne 0 ]; then
-    echo "FAIL: Bug is present — CreateIndex overwritten with restore raft index during snapshot restore"
-    exit 1
-else
-    echo "PASS: Bug is fixed — CreateIndex preserved during snapshot restore"
-    exit 0
-fi
+echo "Running $ORACLE ..."
+go_oracle "$ORACLE" ./agent/consul/state/ -vet=off -timeout 120s
+go_verdict "Bug is fixed — CreateIndex preserved during snapshot restore" \
+           "Bug is present — CreateIndex overwritten with the restore raft index"

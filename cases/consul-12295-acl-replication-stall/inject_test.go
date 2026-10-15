@@ -21,7 +21,7 @@ import (
 // IsRunning() returns true for a cancelled-but-blocking routine, the ACL
 // replication routines are never restarted and the secondary DC accumulates
 // permanently stale ACL state.
-func TestManager_IsRunningAfterParentContextCancel(t *testing.T) {
+func TestDDBenchOracleIsRunningAfterParentCancel(t *testing.T) {
 	t.Parallel()
 
 	var running uint32

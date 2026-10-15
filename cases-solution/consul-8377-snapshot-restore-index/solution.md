@@ -1,5 +1,9 @@
 # Solution: Consul #8377
 
+- **Issue:** https://github.com/hashicorp/consul/issues/8377
+- **Fix commit:** [`9bc9d3014d2d8f48c4c87926bfb98c8536364532`](https://github.com/hashicorp/consul/commit/9bc9d3014d2d8f48c4c87926bfb98c8536364532)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/hashicorp/consul/pull/8474
 - **Commit:** `9bc9d3014d2d8f48c4c87926bfb98c8536364532`
@@ -34,3 +38,11 @@ make dev-build
 
 ## How to verify
 Run `reproduce.sh` — should print `PASS: Bug is fixed`.
+
+## Gold patch
+`gold.patch` in this directory is the upstream fix commit, *including* its edits to
+`agent/consul/state/catalog_test.go` and `agent/consul/fsm/snapshot_oss_test.go`. The fix
+changes the signature of an internal function (`ensureCheckTxn`) that existing tests in
+package `state` call. Without those test edits the package's tests, and with them the
+oracle test injected into that package, do not compile. A correct agent fix has to keep
+the package's tests compiling, too.

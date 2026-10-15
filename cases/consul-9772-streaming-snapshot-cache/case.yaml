@@ -2,6 +2,7 @@ name: consul-9772-streaming-snapshot-cache
 project: consul
 repo: https://github.com/hashicorp/consul.git
 buggy_commit: "363d738fd2ee1ee25ad872a63894cffa8faf9df2~1"
+fix_commit: "363d738fd2ee1ee25ad872a63894cffa8faf9df2"
 resolve_time:
   date: "2021-02-16"
   source: confirmed_fix_commit_date

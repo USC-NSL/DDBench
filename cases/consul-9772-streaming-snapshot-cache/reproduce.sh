@@ -1,54 +1,105 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for consul-9772-streaming-snapshot-cache
-# Injects a test into agent/consul/stream/event_publisher_test.go that exercises
-# the snapshot cache after a stale-index resume, then checks if a fresh subscriber
-# (Index=0) incorrectly receives a newSnapshotToFollow framing event.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Injects a test into package agent/consul/stream that exercises the snapshot
+# cache after a stale-index resume, then checks that a fresh subscriber
+# (Index=0) gets the snapshot data first and no newSnapshotToFollow framing event.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/consul-9772-streaming-snapshot-cache"
-TEST_FILE="agent/consul/stream/event_publisher_test.go"
-TEST_NAME="TestEventPublisher_SubscribeWithIndexNotZero_NewSnapshot_WithCache"
+CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
 
-export PATH=$PATH:/usr/local/go/bin
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
 
+# ── Go test verdicts ──
+# Decided from `go test -json` events for the exact oracle test, never from free
+# text (code under test can print anything). A test that did not run is no pass.
+go_test_result() {  # <json-log> <TestName> -> pass | fail | skip | norun
+    local pre='^\{("Time":"[^"]*",)?"Action":"' post="\",\"Package\":\"[^\"]*\",\"Test\":\"$2\"[,}]"
+    if   grep -qE "${pre}fail${post}" "$1"; then echo fail
+    elif grep -qE "${pre}pass${post}" "$1"; then echo pass
+    elif grep -qE "${pre}skip${post}" "$1"; then echo skip
+    else echo norun; fi
+}
+go_test_transcript() {  # human-readable form of a -json log
+    sed -n -e '/^{/!p' -e 's/^{.*"Action":"output".*"Output":"\(.*\)"}$/\1/p' "$1" \
+        | sed -e 's/\\n$//' -e 's/\\t/	/g' -e 's/\\"/"/g' -e 's/\\u003c/</g' \
+              -e 's/\\u003e/>/g' -e 's/\\u0026/\&/g' -e 's/\\\\/\\/g'
+}
+# go_oracle <TestName> <package> [go test flags...]: run exactly one test from
+# the current directory. Sets GO_RESULT (pass|fail|skip|norun) and GO_LOG.
+go_oracle() {
+    local name="$1" pkg="$2"; shift 2
+    GO_LOG="$RUN_DIR/go-test-$name-$RANDOM.json"
+    go test -json -count=1 -run "^${name}\$" "$@" "$pkg" > "$GO_LOG" 2>&1
+    go_test_transcript "$GO_LOG" | tail -n 40
+    GO_RESULT=$(go_test_result "$GO_LOG" "$name")
+}
+# Verdict when the oracle test produced no result.
+go_norun_verdict() {  # <json-log>
+    if grep -qE 'dial tcp|i/o timeout|TLS handshake timeout|no such host|connection reset by peer' "$1" \
+       && ! grep -qE '\.go:[0-9]+:[0-9]+: ' "$1"; then
+        error "the oracle test did not run: Go module download failed (network)"
+    fi
+    fail "the oracle test did not run (the package or the injected oracle test does not compile)"
+}
+# Exit with the verdict for GO_RESULT.
+go_verdict() {  # <pass-message> <fail-message>
+    case "$GO_RESULT" in
+        pass) pass "$1" ;;
+        fail) fail "$2" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)    go_norun_verdict "$GO_LOG" ;;
+    esac
+}
+
+ORACLE="TestDDBenchOracleSnapshotCacheFreshSubscriber"
+ORACLE_FILE="$WORK_DIR/agent/consul/stream/zz_ddbench_oracle_test.go"
+
+
+rebuild_worktree
+[ -d "$WORK_DIR/agent/consul/stream" ] || error "package agent/consul/stream not found in $WORK_DIR (run setup first)"
 cd "$WORK_DIR"
 
 echo "=== Reproducing consul-9772-streaming-snapshot-cache ==="
 
-INJECTED=false
-cleanup() {
-    [ "$INJECTED" = true ] && [ -f "${TEST_FILE}.bak" ] && mv "${TEST_FILE}.bak" "$TEST_FILE"
-}
+cleanup() { rm -f "$ORACLE_FILE"; }
 trap cleanup EXIT
 
-# Inject the test function (skip if fix commit already includes it).
-# This test:
-# 1. Creates a publisher with a snapshot handler returning 2 events and cache TTL=1s
-# 2. Publishes those events to the topic buffer
-# 3. Subscribes with Index=1 (stale), which triggers a snapshot build with
-#    newSnapshotToFollow prepended -- this gets cached (the bug)
-# 4. Replaces the snapshot handler with one that errors (to prove cache is used)
-# 5. Subscribes with Index=0 (fresh) and checks that the first event is NOT
-#    newSnapshotToFollow but rather the actual snapshot data
-if grep -q "func ${TEST_NAME}" "$TEST_FILE" 2>/dev/null; then
-    echo "Test $TEST_NAME already exists in source (fix commit) — skipping injection"
-else
-    INJECTED=true
-    # Back up the original test file
-    cp "$TEST_FILE" "${TEST_FILE}.bak"
-    cat >> "$TEST_FILE" << 'TESTEOF'
+# The oracle test is always injected fresh, under a ddbench-only name and file,
+# so a same-named test in the worktree can neither replace nor collide with it.
+cat > "$ORACLE_FILE" << 'TESTEOF'
+package stream
 
-func TestEventPublisher_SubscribeWithIndexNotZero_NewSnapshot_WithCache(t *testing.T) {
+import (
+	"context"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+)
+func TestDDBenchOracleSnapshotCacheFreshSubscriber(t *testing.T) {
 	req := &SubscribeRequest{
 		Topic: testTopic,
 		Key:   "sub-key",
@@ -126,19 +177,8 @@ func TestEventPublisher_SubscribeWithIndexNotZero_NewSnapshot_WithCache(t *testi
 	})
 }
 TESTEOF
-fi
 
-# Run the test
-echo "Running test $TEST_NAME..."
-OUTPUT=$(go test -v -run "^${TEST_NAME}$" -count=1 -timeout 60s ./agent/consul/stream/ 2>&1) || true
-
-echo "$OUTPUT" | tail -30
-
-echo ""
-if echo "$OUTPUT" | grep -q "^--- PASS:"; then
-    echo "PASS: Bug is fixed — $TEST_NAME passed"
-    exit 0
-else
-    echo "FAIL: Bug is present — $TEST_NAME failed"
-    exit 1
-fi
+echo "Running $ORACLE ..."
+go_oracle "$ORACLE" ./agent/consul/stream/ -timeout 60s
+go_verdict "Bug is fixed — a fresh subscriber receives snapshot data first" \
+           "Bug is present — a fresh subscriber received the cached newSnapshotToFollow framing event"
