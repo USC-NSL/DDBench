@@ -10,7 +10,7 @@
     "all_g4_achievable": true,
     "hybrid_yes_count": 29,
     "hybrid_probable_count": 2,
-    "notes": "tier1 = previous FS23 + 6 Kafka/ZooKeeper rows + 4 promoted cases (bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635). Clickhouse removed from corpus."
+    "notes": "tier1 = previous FS23 + 6 Kafka/ZooKeeper rows + 4 promoted cases (bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635)."
   },
   "borderline_included": [
     {

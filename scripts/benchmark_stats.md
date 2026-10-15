@@ -1,6 +1,6 @@
 # Benchmark Shape and Basic Metrics
 
-Source: `registry/case_registry.json` (version 1.0.0, generated 2026-03-30T22:12:16Z).
+Source: `registry/case_registry.json` (version 2.0.0, generated 2026-10-15T03:06:10Z).
 
 ## Totals
 
@@ -14,9 +14,9 @@ Source: `registry/case_registry.json` (version 1.0.0, generated 2026-03-30T22:12
 | bug categories | 5 |
 | oracle types | 6 |
 | cases with solution | 60 |
-| cases with gold complete | 0 |
-| cases with context dir | 60 |
-| cases with inject test | 1 |
+| cases with gold complete | 60 |
+| cases with context dir | 57 |
+| cases with oracle harness files | 13 |
 | cases with submodules | 22 |
 
 ## Distribution: Projects
@@ -131,15 +131,14 @@ Source: `registry/case_registry.json` (version 1.0.0, generated 2026-03-30T22:12
 
 | Artifact | n | min | p25 | median | mean | p75 | max | total |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| symptom_md_lines | 60 | 5 | 8.0 | 10.0 | 10.57 | 12.0 | 22 | 634 |
-| reproduce_md_lines | 60 | 14 | 28.0 | 48.0 | 51.12 | 70.25 | 125 | 3067 |
-| verification_md_lines | 60 | 9 | 20.0 | 27.0 | 29.98 | 39.5 | 71 | 1799 |
-| readme_md_lines | 60 | 15 | 42.0 | 43.0 | 42.67 | 45.0 | 47 | 2560 |
-| reproduce_sh_lines | 60 | 37 | 75.25 | 106.5 | 127.38 | 159.25 | 432 | 7643 |
-| setup_sh_lines | 60 | 48 | 54.0 | 57.0 | 66.33 | 58.0 | 300 | 3980 |
-| solution_md_lines | 60 | 17 | 20.0 | 33.5 | 36.68 | 50.5 | 77 | 2201 |
-| context_files_per_case | 60 | 1 | 1.0 | 1.0 | 1.35 | 2.0 | 3 | 81 |
-| inject_test_files_per_case | 60 | 0 | 0.0 | 0.0 | 0.08 | 0.0 | 5 | 5 |
+| symptom_md_lines | 60 | 5 | 8.0 | 10.0 | 10.9 | 12.0 | 22 | 654 |
+| reproduce_md_lines | 60 | 22 | 36.0 | 58.0 | 61.98 | 78.75 | 141 | 3719 |
+| readme_md_lines | 60 | 20 | 39.0 | 39.0 | 40.53 | 43.0 | 46 | 2432 |
+| reproduce_sh_lines | 60 | 62 | 96.0 | 130.5 | 149 | 176.0 | 430 | 8940 |
+| gold_patch_lines | 60 | 12 | 18.25 | 37.0 | 86.1 | 62.25 | 909 | 5166 |
+| solution_md_lines | 60 | 22 | 24.25 | 40.5 | 41.85 | 54.5 | 85 | 2511 |
+| context_files_per_case | 60 | 0 | 1.0 | 1.0 | 1.28 | 2.0 | 3 | 77 |
+| oracle_harness_files_per_case | 60 | 0 | 0.0 | 0.0 | 0.33 | 0.0 | 5 | 20 |
 
 ## Cross-tab: surface tier × language
 

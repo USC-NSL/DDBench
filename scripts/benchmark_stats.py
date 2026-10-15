@@ -32,6 +32,11 @@ REGISTRY = REPO_ROOT / "registry" / "case_registry.json"
 CASES_DIR = REPO_ROOT / "cases"
 SOLUTIONS_DIR = REPO_ROOT / "cases-solution"
 
+# Files every case has; anything else at the top of a case dir is an oracle
+# harness file (injected test, test driver).
+STANDARD_CASE_FILES = {"case.yaml", "reproduce.sh", "README.md", "symptom.md",
+                       "reproduce.md"}
+
 TIER_FILES = {
     "tier1": REPO_ROOT / "registry" / "tier1_membership.json",
     "tier2": REPO_ROOT / "registry" / "tier2_membership.json",
@@ -112,15 +117,16 @@ def build_stats() -> dict:
                 "case_id": c["case_id"],
                 "symptom_lines": count_lines(case_dir / "symptom.md"),
                 "reproduce_md_lines": count_lines(case_dir / "reproduce.md"),
-                "verification_lines": count_lines(case_dir / "verification.md"),
                 "readme_lines": count_lines(case_dir / "README.md"),
                 "reproduce_sh_lines": count_lines(case_dir / "reproduce.sh"),
-                "setup_sh_lines": count_lines(case_dir / "setup.sh"),
+                "gold_patch_lines": count_lines(sol_dir / "gold.patch"),
                 "context_files": dir_file_count(case_dir / "context"),
-                "inject_test_files": dir_file_count(case_dir / "inject_test"),
+                "inject_test_files": dir_file_count(case_dir / "inject_test")
+                + sum(1 for p in case_dir.glob("*") if p.is_file() and p.name not in STANDARD_CASE_FILES),
                 "solution_lines": count_lines(sol_dir / "solution.md"),
                 "has_context": (case_dir / "context").is_dir(),
-                "has_inject_test": (case_dir / "inject_test").is_dir(),
+                "has_inject_test": (case_dir / "inject_test").is_dir()
+                or any(p.is_file() and p.name not in STANDARD_CASE_FILES for p in case_dir.glob("*")),
             }
         )
 
@@ -159,7 +165,7 @@ def build_stats() -> dict:
             "cases_with_solution": sum(1 for c in cases if c.get("has_solution")),
             "cases_with_gold_complete": sum(1 for c in cases if c.get("gold_complete")),
             "cases_with_context_dir": sum(1 for m in per_case_metrics if m["has_context"]),
-            "cases_with_inject_test": sum(1 for m in per_case_metrics if m["has_inject_test"]),
+            "cases_with_oracle_harness_files": sum(1 for m in per_case_metrics if m["has_inject_test"]),
             "cases_with_submodules": sum(1 for c in cases if c.get("submodules")),
         },
         "distributions": {
@@ -180,13 +186,12 @@ def build_stats() -> dict:
         "size_metrics": {
             "symptom_md_lines": summarize_numeric([m["symptom_lines"] for m in per_case_metrics]),
             "reproduce_md_lines": summarize_numeric([m["reproduce_md_lines"] for m in per_case_metrics]),
-            "verification_md_lines": summarize_numeric([m["verification_lines"] for m in per_case_metrics]),
             "readme_md_lines": summarize_numeric([m["readme_lines"] for m in per_case_metrics]),
             "reproduce_sh_lines": summarize_numeric([m["reproduce_sh_lines"] for m in per_case_metrics]),
-            "setup_sh_lines": summarize_numeric([m["setup_sh_lines"] for m in per_case_metrics]),
+            "gold_patch_lines": summarize_numeric([m["gold_patch_lines"] for m in per_case_metrics]),
             "solution_md_lines": summarize_numeric([m["solution_lines"] for m in per_case_metrics]),
             "context_files_per_case": summarize_numeric([m["context_files"] for m in per_case_metrics]),
-            "inject_test_files_per_case": summarize_numeric([m["inject_test_files"] for m in per_case_metrics]),
+            "oracle_harness_files_per_case": summarize_numeric([m["inject_test_files"] for m in per_case_metrics]),
         },
         "cross_tier_by_language": _cross(cases, "surface_membership", "language"),
         "cross_oracle_by_language": _cross(cases, "oracle_type", "language"),

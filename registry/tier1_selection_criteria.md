@@ -8,7 +8,7 @@ Corpus scope: 60 released cases under `cases/`
 
 Freeze a **31-case headline-plus-expansion subset (`tier1`)** that preserves the original FS23 core while incorporating the six newly added Kafka/ZooKeeper rows and four promoted cases as first-class benchmark members.
 
-`tier1 = FS23 + 6 Kafka/ZooKeeper rows + 4 promoted cases (bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635)`
+`tier1 = 21 retained FS23 rows + 6 Kafka/ZooKeeper rows + 4 promoted cases (bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635)`
 
 This object is meant to be broader than the old FS23 headline cut while still staying disciplined on replay quality, hybrid diagnosis value, and structured gold completeness.
 
@@ -26,7 +26,7 @@ A case is eligible for `tier1` only if all of the following hold.
 3. **Hybrid diagnosis value**
    - Preferred: `hybrid_necessity = yes`.
    - Allowed in `tier1`: `probable` rows **only when** they add clear system-family or failure-family value and still support strong structured gold.
-   - In the current frozen `tier1`, 30 rows are `yes` and 2 rows are `probable` (`kafka-14334-delayed-fetch-purgatory`, `zookeeper-4846-fuzzy-snapshot-acl`).
+   - In the current frozen `tier1`, 29 rows are `yes` and 2 rows are `probable` (`kafka-14334-delayed-fetch-purgatory`, `zookeeper-4846-fuzzy-snapshot-acl`).
 
 4. **Gold completeness**
    - target is `G4-achievable` across the set.
@@ -48,11 +48,10 @@ So the right move is not to churn the old 23, but to **promote the object to tie
 
 ## Frozen tier1 composition rule
 
-- existing `FS23`: **23** rows
+- retained from the earlier `FS23` cut: **21** rows (`raft-358-negative-log-range` was demoted to `tier2`, and one other FS23 candidate was dropped before release because its build dependencies became unavailable)
 - Kafka additions: **3** rows
 - ZooKeeper additions: **3** rows
 - Promoted cases: **4** rows (bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635)
-- Removed: clickhouse-98079-keeper-addwatch (unbuildable Docker image)
 
 Total = **31**
 

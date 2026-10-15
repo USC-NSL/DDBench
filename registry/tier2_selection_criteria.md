@@ -8,7 +8,7 @@ Corpus scope: 60 released cases under `cases/`
 
 Freeze a **46-case structured scored subset (`tier2`)** that extends the frozen `tier1` with all rows that should support full structured diagnosis scoring.
 
-`tier2 = tier1 + 14 structured-promotion rows`
+`tier2 = tier1 + 15 structured-promotion rows` (14 original structured promotions + `raft-358-negative-log-range`, demoted from tier1)
 
 This is the new middle tier:
 - broader than the headline package,

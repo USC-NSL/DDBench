@@ -4,8 +4,8 @@ The registry (``registry/case_registry.json``) labels each case with one of
 13 fine-grained ``bug_family`` values. For paper-facing reports we collapse
 those into 5 coarse categories, each with a plain-English description.
 
-Both ``benchmark_stats.py`` (here) and ``scan_pass_rates.py`` (in the parent
-ddbench repo) import from this module so the taxonomy stays consistent.
+``benchmark_stats.py`` (here) and any downstream analysis tooling import from
+this module so the taxonomy stays consistent.
 
 Exports
 -------

@@ -6,9 +6,9 @@ Corpus scope: 60 released cases under `cases/`
 
 ## Goal
 
-Freeze a **61-case core scored subset (`tier3`)** that extends `tier2` with the dense-system core-only promotion rows.
+Freeze a **60-case core scored subset (`tier3`)** that extends `tier2` with the dense-system core-only promotion rows.
 
-`tier3 = tier2 + 15 core-only promotion rows`
+`tier3 = tier2 + 14 core-only promotion rows`
 
 This is the package-wide core diagnosis denominator: it includes the structured rows plus the dense-system crash/parser/edge-case rows that are still valuable for component/locus/family scoring.
 
@@ -24,13 +24,13 @@ Unlike `tier2`, this tier explicitly allows `G2` core-only rows when they are us
 
 ## Composition rule
 
-`tier3 = tier2 + C15 core-only promotion rows`
+`tier3 = tier2 + core-only promotion rows`
 
 - `tier2`: **46** rows
-- `C15 core-only promotion`: **15** rows
-- Total: **61** rows
+- core-only promotion: **14** rows
+- Total: **60** rows
 
-The `C15` additions are:
+The core-only additions are:
 - `dragonfly-6614-monitor-multiexec`
 - `dragonfly-6619-evalsha-empty`
 - `dragonfly-6654-mc-reply-large`
@@ -49,8 +49,8 @@ The `C15` additions are:
 ## Peer-review summary
 
 ### Pass conditions met
-- exactly **61** cases
+- exactly **60** cases
 - includes all **46** tier2 rows
-- adds all **15** core-only dense-system rows
+- adds all **14** core-only dense-system rows
 - preserves the distinction between structured scoring and broader core localization scoring
-- all 61 corpus cases now covered (clickhouse removed from corpus)
+- all 60 released cases are covered; there is no release-only remainder

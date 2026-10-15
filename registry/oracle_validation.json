@@ -1,0 +1,2532 @@
+{
+  "schema": "ddbench.oracle-validation/v1",
+  "generated_at": "2026-10-15T03:06:01Z",
+  "generator": "scripts/oracle_validation_report.py",
+  "method": "bench.sh validate-oracle: the buggy worktree must FAIL in every run and cases-solution/<case>/gold.patch must PASS in every run (offline scoring).",
+  "environment": "2026-10-14; bench.sh validate-oracle --runs 3 (3 buggy + 3 gold runs per case), offline scoring; 64-core x86_64 host, Docker 29.9.0, 10 CPUs per case container, 6-9 cases validated concurrently.",
+  "counts": {
+    "SOUND": 60
+  },
+  "cases": [
+    {
+      "case": "bookkeeper-2614-recovery-fencing-gap",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          116,
+          112,
+          115
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          109,
+          103,
+          106
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 712,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "bookkeeper-4701-fencing-race",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          94,
+          99,
+          102
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          91,
+          95,
+          104
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 632,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "consul-12295-acl-replication-stall",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          4,
+          4,
+          3
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          5,
+          4,
+          4
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 31,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "consul-8377-snapshot-restore-index",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          11,
+          11,
+          11
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          21,
+          11,
+          13
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 86,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "consul-9772-streaming-snapshot-cache",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          4,
+          3,
+          4
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          4,
+          3,
+          3
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 26,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6614-monitor-multiexec",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          10,
+          9,
+          9
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          44,
+          18,
+          18
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 146,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6619-evalsha-empty",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          7,
+          9,
+          8
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          48,
+          7,
+          7
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 133,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6654-mc-reply-large",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          9,
+          10,
+          10
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          21,
+          8,
+          8
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 88,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6687-replica-rdb-encoding",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          40,
+          36,
+          35
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          127,
+          31,
+          29
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 382,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6738-pipeline-block",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          22,
+          22,
+          22
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          63,
+          7,
+          6
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 207,
+      "date": "2026-10-14",
+      "note": "Symptom and docs aligned with the fixed bug (pipelined blocking commands) on 2026-10-14; oracle extended with a pipelined BRPOPLPUSH wake-up check. Validated after `clean` + `setup`."
+    },
+    {
+      "case": "dragonfly-6753-populate-sigfpe",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          6,
+          7,
+          7
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          37,
+          6,
+          6
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 107,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6761-mc-pipeline-crash",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          9,
+          9,
+          9
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          42,
+          10,
+          10
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 134,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6764-hincrbyfloat-nan",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          9,
+          9,
+          7
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          31,
+          8,
+          7
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 107,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6819-stale-expiry",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          12,
+          10,
+          9
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          35,
+          9,
+          10
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 122,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6825-config-overflow",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          7,
+          8,
+          9
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          31,
+          8,
+          8
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 103,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6856-flushslots-oob",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          7,
+          6,
+          7
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          103,
+          7,
+          6
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 225,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6907-ftsearch-vector-crash",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          8,
+          7,
+          7
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          42,
+          8,
+          7
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 123,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6909-search-nonfinite",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          7,
+          8,
+          8
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          38,
+          7,
+          7
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 114,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "dragonfly-6912-rdb-encoding",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          8,
+          7,
+          7
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          53,
+          6,
+          6
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 146,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "etcd-17158-delete-linearizability",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          10,
+          9,
+          12
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          14,
+          10,
+          9
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 72,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "etcd-17529-watch-compaction-loss",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          10,
+          12,
+          10
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          14,
+          10,
+          10
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 74,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "etcd-19172-embed-data-race",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          112,
+          37,
+          26
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          567,
+          580,
+          599
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 1930,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "etcd-19179-watch-tombstone-compact",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          14,
+          14,
+          13
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          18,
+          13,
+          12
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 93,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "etcd-20221-watch-restore-revision",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          17,
+          16,
+          16
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          22,
+          16,
+          17
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 114,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "etcd-20704-leasing-linearizability",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          17,
+          19,
+          17
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          19,
+          19,
+          18
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 120,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "etcd-20893-force-new-cluster-learner",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          38,
+          37,
+          38
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          40,
+          36,
+          39
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 238,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "kafka-14334-delayed-fetch-purgatory",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          74,
+          76,
+          74
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          138,
+          64,
+          61
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 582,
+      "date": "2026-10-15",
+      "note": "Oracle redesigned on 2026-10-15: two in-process brokers with fetching from followers enabled; a consumer fetch waiting on the follower must be answered with the produced record within 10 s of its acknowledgement (replaces a mocked unit test whose verdict reduced to whether `ReplicaFetcherThread` overrides `doWork()`). Validated after `clean` + `setup`."
+    },
+    {
+      "case": "kafka-15170-endless-rebalance-loop",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          99,
+          58,
+          64
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          118,
+          57,
+          65
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 496,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "kafka-15784-txn-offset-atomicity",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          56,
+          52,
+          60
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          102,
+          58,
+          58
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 432,
+      "date": "2026-10-14",
+      "note": "Oracle redesigned on 2026-10-14 (transactional offset commit racing group deletion or an offsets-partition reload); build narrowed to `:core:jar`. Validated after `clean` + `setup`."
+    },
+    {
+      "case": "kvrocks-2214-slave-sync-gap",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          119,
+          112,
+          118
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          124,
+          117,
+          118
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 773,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "kvrocks-2512-slaveof-deadlock",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          288,
+          285,
+          282
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          213,
+          226,
+          250
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 1641,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "kvrocks-2520-namespace-fullsync",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          153,
+          146,
+          149
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          208,
+          143,
+          136
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 1056,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "kvrocks-3148-namespace-delete",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          140,
+          144,
+          138
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          143,
+          136,
+          128
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 911,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "kvrocks-3208-replication-watermark",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          149,
+          146,
+          145
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          155,
+          151,
+          152
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 994,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "kvrocks-3315-zdiff-crash",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          167,
+          163,
+          167
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          175,
+          156,
+          147
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 1058,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "kvrocks-3339-xreadgroup-double",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          154,
+          160,
+          162
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          175,
+          157,
+          134
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 1017,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "kvrocks-3356-replication-wal",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          212,
+          208,
+          210
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          238,
+          149,
+          147
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 1314,
+      "date": "2026-10-15",
+      "note": "Migrated to the standard oracle layout on 2026-10-14 (standard prelude, `rebuild_worktree`, `mktemp` run directory; verdict logic unchanged) and given a `gold.patch` (the `src/` part of the fix commit). Validated on 2026-10-15 after `clean` + `setup`, with no other validation running."
+    },
+    {
+      "case": "nats-6374-consumer-stuck-redelivery",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          14,
+          14,
+          14
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          40,
+          11,
+          10
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 109,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "nats-6455-reserved-resource-leak",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          8,
+          10,
+          10
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          46,
+          10,
+          15
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 112,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "nats-7308-delete-nonexistent-reset",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          20,
+          22,
+          20
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          41,
+          13,
+          14
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 136,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "nats-7707-wq-consumer-map-crash",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          6,
+          8,
+          8
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          131,
+          69,
+          69
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 296,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "nats-7718-subscription-leak",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          11,
+          9,
+          13
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          52,
+          8,
+          9
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 114,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "nats-7726-mixed-filter",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          10,
+          12,
+          11
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          46,
+          7,
+          6
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 99,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "nats-7760-filter-stepdown",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          17,
+          21,
+          18
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          19,
+          19,
+          15
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 115,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "nats-7817-workqueue-message-loss",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          11,
+          9,
+          8
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          46,
+          7,
+          10
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 100,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "nats-7852-filter-perf",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          6,
+          6,
+          6
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          41,
+          6,
+          7
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 80,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "ra-439-election-livelock",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          26,
+          37,
+          35
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          37,
+          36,
+          33
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 217,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "rabbitmq-12635-qq-snapshot-crash",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          46,
+          48,
+          46
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          55,
+          45,
+          47
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 309,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "raft-268-shutdown-deadlock",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          13,
+          13,
+          12
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          21,
+          20,
+          20
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 105,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "raft-358-negative-log-range",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          1,
+          1,
+          1
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          1,
+          1,
+          1
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 11,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "raft-460-logcache-store-order",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          2,
+          3,
+          2
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          3,
+          2,
+          1
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 16,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "raft-517-candidate-appendentries-race",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          44,
+          13,
+          10
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          59,
+          55,
+          57
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 243,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "raft-581-transfer-write-race",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          419,
+          415,
+          418
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          417,
+          416,
+          417
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 2505,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "raft-609-prevote-contact-liveness",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          11,
+          10,
+          10
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          11,
+          9,
+          13
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 68,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "raft-rs-221-campaign-conf-change",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          5,
+          5,
+          7
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          9,
+          14,
+          6
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 54,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "raft-rs-345-readindex-config-change",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          5,
+          5,
+          6
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          8,
+          6,
+          15
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 54,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "rocksdb-10751-stalled-writes-shutdown",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          40,
+          39,
+          38
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          20,
+          11,
+          11
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 173,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "zookeeper-4643-sync-epoch-ordering",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          54,
+          53,
+          56
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          59,
+          55,
+          54
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 359,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "zookeeper-4846-fuzzy-snapshot-acl",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          56,
+          51,
+          53
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          62,
+          53,
+          53
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 357,
+      "date": "2026-10-14",
+      "note": ""
+    },
+    {
+      "case": "zookeeper-4925-diff-sync-committedlog-hole",
+      "status": "SOUND",
+      "runs_per_side": 3,
+      "buggy": {
+        "expected": "FAIL",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          1,
+          1,
+          1
+        ],
+        "durations_s": [
+          52,
+          55,
+          64
+        ]
+      },
+      "gold": {
+        "expected": "PASS",
+        "matched": 3,
+        "runs": 3,
+        "errors": 0,
+        "exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "durations_s": [
+          63,
+          56,
+          55
+        ],
+        "patch_applied": true
+      },
+      "detail": "buggy FAIL 3/3, gold PASS 3/3",
+      "duration_s": 372,
+      "date": "2026-10-14",
+      "note": ""
+    }
+  ]
+}

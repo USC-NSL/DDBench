@@ -1,7 +1,12 @@
 # DDBench Tier Definitions
 
 Status: frozen 2026-03-30
-Corpus: 61 verified bug cases (60 active + 1 removed: `clickhouse-98079-keeper-addwatch`)
+Corpus: 60 released bug cases (the directories under `cases/`), 13 projects
+
+> **Scoring note.** The released benchmark scores every case by its oracle only
+> (PASS / FAIL / ERROR from `bench.sh reproduce`; see `docs/oracle-validation.md`).
+> The five-field structured-diagnosis gold described in §2.2 was used to assign
+> tiers when the corpus was frozen; it is not part of the released scoring.
 
 ## 1. Motivation
 
@@ -43,7 +48,7 @@ used for scoring: **component**, **code locus**, **bug family**,
 
 ## 3. Tier definitions
 
-Let `C` denote the 61-case corpus. Tiers are defined as nested subsets
+Let `C` denote the 60-case released corpus. Tiers are defined as nested subsets
 admitted by successively weaker `(H, G)` thresholds.
 
 ### 3.1 Tier 1 — *hybrid-required headline package* (|T₁| = 31)
@@ -91,7 +96,7 @@ Properties:
   T₂ \ T₁ reflect weakness in producing full five-field diagnoses when
   runtime evidence is unusually generous.
 
-### 3.3 Tier 3 — *core localization package* (|T₃| = 61)
+### 3.3 Tier 3 — *core localization package* (|T₃| = 60)
 
 ```
 T₃ = T₂ ∪ { c ∈ C \ T₂ :
@@ -105,8 +110,8 @@ Properties:
 - Admits `G2` core-only cases, primarily dense-system crash/parser/
   edge-case rows (e.g. Dragonfly command-parser crashes, float NaN
   handling, RocksDB shutdown stall).
-- All 61 corpus cases are T₃-eligible under the stated replay/checker
-  quality floor (D1 or D2).
+- Adds 14 cases (|T₃ \ T₂| = 14); all 60 released cases are T₃-eligible
+  under the stated replay/checker quality floor (D1 or D2).
 - **Interpretation:** the broadest localization denominator. T₃ \ T₂
   isolates *runtime-sufficient* bugs — they occur inside distributed
   services but the diagnostic challenge is largely local.

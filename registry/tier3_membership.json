@@ -4,11 +4,11 @@
   "corpus_scope": "60 released cases",
   "selection_source": "registry/tier3_selection_criteria.md",
   "peer_review_summary": {
-    "exact_case_count": 61,
+    "exact_case_count": 60,
     "inherits_tier2": true,
-    "added_core_only_count": 15,
+    "added_core_only_count": 14,
     "release_only_remainder_count": 0,
-    "notes": "tier3 = tier2 + C15 core-only promotion lane. All 61 corpus cases now covered (clickhouse removed)."
+    "notes": "tier3 = tier2 + 14 core-only promotions; covers all 60 released cases."
   },
   "release_only_remainder": [],
   "cases": [

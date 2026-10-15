@@ -1,8 +1,18 @@
-# tier1 Replay Validation Report
+# tier1 Replay Validation Report (historical)
+
+> **Historical record.** This report records the original M0 replay validation
+> of the tier1 cases (March 2026). It predates the current Docker layout: the
+> paths, volume names, build flags and commands below reflect that earlier
+> layout and are kept only as provenance. It checked only that each buggy build
+> reproduces the bug. The current soundness results for all 60 released cases
+> (buggy code must FAIL, `cases-solution/<case>/gold.patch` must PASS, via
+> `./bench.sh validate-oracle`) are in
+> [`docs/oracle-validation.md`](../docs/oracle-validation.md) and
+> [`registry/oracle_validation.json`](oracle_validation.json).
 
 **Generated:** 20260331T045200Z
 **Validator:** bench.sh setup + bench.sh reproduce (clean Docker volumes)
-**Total tier1 cases:** 31 (clickhouse removed; bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635 promoted; raft-358 demoted to tier2)
+**Total tier1 cases:** 31 as currently frozen (bookkeeper-4701, etcd-19179, ra-439, rabbitmq-12635 were promoted after this run; raft-358 was demoted to tier2)
 
 ## Summary
 
@@ -11,7 +21,7 @@
 | PASS (bug confirmed) | 27 |
 | FLAKY (partial pass) | 0 |
 | FAIL | 0 |
-| SKIP (not yet validated) | 4 |
+| SKIP (not covered by this run) | 4 |
 | **Total tier1** | **31** |
 
 ## Per-Case Results
@@ -46,25 +56,17 @@
 | zookeeper-4643-sync-epoch-ordering | ✅ PASS | ✅ bug confirmed | Fixed: `build-essential` in Dockerfile + persistent Maven cache |
 | zookeeper-4846-fuzzy-snapshot-acl | ✅ PASS | ✅ bug confirmed | Persistent Maven cache added |
 | zookeeper-4925-diff-sync-committedlog-hole | ✅ PASS | ✅ bug confirmed | Persistent Maven cache added |
-| bookkeeper-4701-fencing-race | ⏳ SKIP | ⏳ not yet validated | Promoted to tier1; pending validation |
-| etcd-19179-watch-tombstone-compact | ⏳ SKIP | ⏳ not yet validated | Promoted to tier1; pending validation |
-| ra-439-election-livelock | ⏳ SKIP | ⏳ not yet validated | Promoted to tier1; pending validation |
-| rabbitmq-12635-qq-snapshot-crash | ⏳ SKIP | ⏳ not yet validated | Promoted to tier1; pending validation |
+| bookkeeper-4701-fencing-race | ⏳ SKIP | ⏳ not covered by this run | Promoted to tier1 later; see the oracle validation |
+| etcd-19179-watch-tombstone-compact | ⏳ SKIP | ⏳ not covered by this run | Promoted to tier1 later; see the oracle validation |
+| ra-439-election-livelock | ⏳ SKIP | ⏳ not covered by this run | Promoted to tier1 later; see the oracle validation |
+| rabbitmq-12635-qq-snapshot-crash | ⏳ SKIP | ⏳ not covered by this run | Promoted to tier1 later; see the oracle validation |
 
 ## Removed Cases
 
-### clickhouse-98079-keeper-addwatch
-
-**Removed from corpus on 20260331.** The ClickHouse Docker image could not be built due to an
-unavailable LLVM apt repository (`llvm-toolchain-noble-23`). The case required clang-23 which
-is not available in any stable repository. All references removed from:
-- `cases/clickhouse-98079-keeper-addwatch/` (case directory)
-- `cases-solution/clickhouse-98079-keeper-addwatch/` (solution directory)
-- `docker/clickhouse.Dockerfile`
-- `registry/tier1_membership.json` (29→28)
-- `registry/tier2_membership.json` (43→42)
-- `registry/tier3_membership.json` (56→55)
-- `registry/case_registry.json` (62→61)
+One additional candidate in the original tier1 cut was dropped from the corpus during this
+validation because its Docker image could no longer be built (a required upstream toolchain
+repository became unavailable). It is not part of the released benchmark, and all counts in
+this report and in the registry exclude it.
 
 ## Fixes Applied
 
@@ -99,10 +101,13 @@ All cases validated from completely clean Docker volumes:
 2. `./bench.sh setup <case>` (clone repo, checkout buggy commit, build)
 3. `./bench.sh reproduce <case>` (run test oracle, confirm bug is present)
 
-Exit codes: `exit 1` = PASS (bug confirmed), `exit 0` = FAIL (bug not triggered), `exit 124` = TIMEOUT.
+In this report a case "passes" validation when the oracle confirms the bug on the buggy
+build. Under the current oracle convention (`./bench.sh reproduce`), exit `0` = PASS (bug
+absent), `1` = FAIL (bug present), `2` = ERROR; so "bug confirmed" here corresponds to oracle
+exit `1` (FAIL).
 
 ## Log Files
 
-- Initial validation: `validation-logs/20260330T233520Z/`
-- Revalidation (fixed cases): `validation-logs/revalidation-20260331T025429Z/`
-- Final clean validation: `validation-logs/final-check-20260331T042252Z/`
+The raw logs from this run (`validation-logs/20260330T233520Z/`,
+`validation-logs/revalidation-20260331T025429Z/`, `validation-logs/final-check-20260331T042252Z/`)
+are not included in the release.
