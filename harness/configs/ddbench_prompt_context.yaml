@@ -1,0 +1,195 @@
+# DDBench mini-swe-agent configuration (debug-context mode)
+# Used by: scripts/run_agent.sh --context
+# Based on ddbench_prompt.yaml with additional debug-context-aware prompting.
+#
+# This config merges ON TOP of mini.yaml (loaded first by bench.sh).
+# Do NOT set model_name/model_class here — those come from -m / MSWEA_MODEL_NAME.
+# Do NOT set environment_class/cwd — bench.sh manages Docker and working directory.
+
+agent:
+  system_template: |
+    You are a software debugging agent working on a distributed systems codebase.
+
+    You interact with the environment by calling the bash tool.
+    Think carefully before each command. Be systematic and precise.
+
+    Include a THOUGHT section before your command to explain your reasoning.
+    Failure to follow this format will cause your response to be rejected.
+
+  instance_template: |
+    <symptom_file>
+    A file called SYMPTOM.md in the current directory describes the bug you need to fix.
+    </symptom_file>
+
+    <debug_context>
+    The `context/` folder in the current directory contains debug context that
+    a developer has gathered during their debugging process. This debug context may provide
+    additional insights into the root cause of the bug.
+
+    **You MUST review the debug context early in your investigation:**
+    1. Run `ls context/` to see what files are available.
+    2. Read each file with `cat context/<filename>`.
+
+    Debug-context files may contain test outputs, log snippets, stack traces, crash reports,
+    or code-level observations that can help you narrow down the root cause more quickly.
+    However, treat this debug context critically: it reflects one developer's investigation
+    and may be incomplete.
+    </debug_context>
+
+    <instructions>
+    ## Task
+
+    You are debugging a distributed systems codebase. The bug is described in SYMPTOM.md.
+    Your goal is to identify and fix the root cause by modifying source files in place.
+
+    {{task}}
+
+    ## Constraints
+
+    - Read SYMPTOM.md first to understand the observable failure.
+    - Review the context/ folder to see what debug context is available.
+    - You may freely browse the codebase, build, and run tests.
+    - You may access the internet for API docs, language references, and general knowledge.
+    - You MUST NOT search for the specific GitHub issue, pull request, or known fix.
+      Do not search GitHub, Google, or any other source for the specific issue number or fix.
+    - You may look into ancenster commits, but not future commits in order to cheat.
+    - Make your fix by editing source files directly.
+    - You MUST ensure ./REBUILD.sh completes successfully after your changes.
+      A failing REBUILD.sh means your fix is incomplete.
+    - Your fix should address the root cause, not just mask symptoms.
+    - Your should never early declare your finish unless you have very strong evidence that the bug is fixed.
+
+    ## Workflow
+
+    1. Read SYMPTOM.md to understand the failure.
+    2. Run `ls context/` and `cat` each file to review the debugging clues the developer gathered.
+    3. Explore the relevant source code to understand the component architecture.
+    4. Form a hypothesis about the root cause, informed by the symptom and any debug context.
+    5. Implement a targeted fix (prefer minimal, correct changes).
+    6. If the fix doesn't solve the bug, go back to step 3. If you are confident that you have fixed the bug, go to step 7.
+    7. Before submitting the final output, you MUST run `./REBUILD.sh` and confirm it exits successfully.
+       Fix any compile errors before proceeding. (this is not related to your bug, it is just a sanity check)
+    8. When you are absolutely confident that the bug is fixed,
+       submit the job completion by running: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`
+       Do not combine it with any other command.
+       <important>After this command, you cannot continue working on this task.</important>
+
+    ## Command Execution Rules
+
+    Each response should include:
+
+    1. A **THOUGHT** section explaining your reasoning and plan
+    2. Other things.
+
+    **CRITICAL REQUIREMENTS:**
+
+    - Your response SHOULD include a THOUGHT section explaining your reasoning
+    - Directory or environment variable changes are not persistent across commands
+    - You can prefix any action with `cd /path/to/dir && ...` or write/load env vars from files
+    ## Editing Files
+
+    ### Create a new file:
+
+    ```bash
+    cat <<'EOF' > newfile.go
+    package main
+    import "fmt"
+    func main() { fmt.Println("hello") }
+    EOF
+    ```
+
+    ### Edit files with sed:
+
+    ```bash
+    # Replace all occurrences
+    sed -i 's/old_string/new_string/g' filename.go
+
+    # Replace only in specific line range
+    sed -i '10,20s/old_string/new_string/g' filename.go
+    ```
+
+    ### View file content:
+
+    ```bash
+    nl -ba filename.go | sed -n '10,20p'
+    ```
+    </instructions>
+
+  step_limit: 400
+  cost_limit: 30
+
+environment:
+  timeout: 300
+  env:
+    PAGER: cat
+    MANPAGER: cat
+    LESS: -R
+    PIP_PROGRESS_BAR: "off"
+    TQDM_DISABLE: "1"
+
+model:
+  observation_template: |
+    {%- if output.exception_info -%}
+    <exception>{{output.exception_info}}</exception>
+    {% endif -%}
+    <returncode>{{output.returncode}}</returncode>
+    {% if output.output | length < 10000 -%}
+    <output>
+    {{ output.output -}}
+    </output>
+    {%- else -%}
+    <warning>
+    The output of your last command was too long.
+    Try a different command that produces less output.
+    If viewing a file, use head, tail, or sed to view fewer lines.
+    If using grep/find, use a more selective pattern.
+    You can also redirect output to a file and search in it.
+    </warning>
+    {%- set elided_chars = output.output | length - 10000 -%}
+    <output_head>
+    {{ output.output[:5000] }}
+    </output_head>
+    <elided_chars>
+    {{ elided_chars }} characters elided
+    </elided_chars>
+    <output_tail>
+    {{ output.output[-5000:] }}
+    </output_tail>
+    {%- endif -%}
+  # action_regex: use LitellmTextbasedModel default (```mswea_bash_command blocks)
+  format_error_template: |
+    Format error: {{ error }}
+    Please use the bash tool to issue exactly one command.
+
+  model_class: litellm
+  model_kwargs:
+    temperature: 0.0
+    drop_params: true
+    # api_base: "https://openrouter.ai/api/v1"
+    # Gemini via Sub2Api
+    # custom_llm_provider: "gemini"
+    # api_base: "http://68.181.216.60:10808/v1beta"
+    # thinking:
+    #   type: "enabled"
+    #   budget_tokens: 24576
+    # Use Z-AI coding API
+    # custom_llm_provider: "openai"
+    # api_base: "https://api.z.ai/api/coding/paas/v4"
+    # Gemma 4
+    # custom_llm_provider: "openai"
+    # api_base: "http://localhost:9090/v1"
+    # custom_llm_provider: "openai"
+    # api_base: "http://localhost:3213/v1"
+    # Use GPT via Sub2Api
+    # custom_llm_provider: "openai"
+    # api_base: "http://68.181.216.60:10808/v1"
+    # reasoning_effort: "high"
+    custom_llm_provider: "anthropic"
+    api_base: "http://68.181.216.60:10808" # no /v1 — Anthropic's path is different
+    # Extended thinking disabled to match the original (pre-decontamination) runs:
+    # enabling it roughly doubled per-step latency and cost, so the 1800s budget
+    # no longer covered a full investigation.
+    # thinking:
+    #   type: "adaptive"
+    # output_config:
+    #   effort: "high" # low, medium, high, or max

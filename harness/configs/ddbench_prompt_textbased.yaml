@@ -1,0 +1,210 @@
+# DDBench mini-swe-agent text-based tool-call configuration
+# Used by: scripts/run_agent.sh, bench.sh agent --addon mini-swe-agent --config <this-file>
+# Docs: https://mini-swe-agent.com/latest/advanced/yaml_configuration/
+#
+# This config merges ON TOP of mini.yaml (loaded first by bench.sh).
+# Do NOT set model_name/model_class here — those come from -m / MSWEA_MODEL_NAME.
+# Do NOT set environment_class/cwd — bench.sh manages Docker and working directory.
+
+agent:
+  system_template: |
+    You are a software debugging agent working on a distributed systems codebase.
+
+    Your response must contain exactly ONE bash command in a ```mswea_bash_command block.
+    Include a THOUGHT section before your command to explain your reasoning.
+    Format your response as shown in the example below.
+
+    THOUGHT: Your reasoning and analysis here
+
+    ```mswea_bash_command
+    your_command_here
+    ```
+
+    Failure to follow this format will cause your response to be rejected.
+
+  instance_template: |
+    <symptom_file>
+    A file called SYMPTOM.md in the current directory describes the bug you need to fix.
+    </symptom_file>
+
+    <instructions>
+    ## Task
+
+    You are debugging a distributed systems codebase. The bug is described in SYMPTOM.md.
+    Your goal is to identify and fix the root cause by modifying source files in place.
+
+    {{task}}
+
+    ## Constraints
+
+    - Read SYMPTOM.md first to understand the observable failure.
+    - You may freely browse the codebase, build, and run tests.
+    - You may access the internet for API docs, language references, and general knowledge.
+    - You MUST NOT search for the specific GitHub issue, pull request, or known fix.
+      Do not search GitHub, Google, or any other source for the specific issue number or fix.
+    - You may look into ancenster commits, but not future commits in order to cheat.
+    - Make your fix by editing source files directly.
+    - You MUST ensure ./REBUILD.sh completes successfully after your changes.
+      A failing REBUILD.sh means your fix is incomplete.
+    - Your fix should address the root cause, not just mask symptoms.
+    - Your should never early declare your finish unless you have very strong evidence that the bug is fixed.
+
+    ## Workflow
+
+    1. Read SYMPTOM.md to understand the failure.
+    2. Explore the relevant source code to understand the component architecture.
+    3. Form a hypothesis about the root cause.
+    4. Implement a targeted fix (prefer minimal, correct changes).
+    5. If the fix doesn't solve the bug, go back to step 2. If you are confident that you have fixed the bug, go to step 6.
+    6. Before submitting the final output, you MUST run `./REBUILD.sh` and confirm it exits successfully. 
+       Fix any compile errors before proceeding. (this is not related to your bug, it is just a sanity check)
+    7. When you are absolutely confident that the bug is fixed, 
+       submit the job completion by running: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`
+       Do not combine it with any other command.
+       <important>After this command, you cannot continue working on this task.</important>
+
+    ## Command Execution Rules
+
+    You are operating in an environment where:
+
+    1. You write a single command
+    2. The system executes that command in a subshell
+    3. You see the result
+    4. You write your next command
+
+    Each response should include:
+
+    1. A **THOUGHT** section explaining your reasoning and plan
+    2. A single bash command in a ` ```mswea_bash_command ` block
+
+    **CRITICAL REQUIREMENTS:**
+
+    - Your response SHOULD include a THOUGHT section explaining your reasoning
+    - Your response MUST include EXACTLY ONE ```mswea_bash_command block
+    - The block MUST contain EXACTLY ONE command (or commands connected with && or ||)
+    - If you include zero or multiple blocks, YOUR RESPONSE WILL FAIL
+    - Directory or environment variable changes are not persistent across commands
+    - You can prefix any action with `cd /path/to/dir && ...` or write/load env vars from files
+
+    ## Editing Files
+
+    ### Create a new file:
+
+    ```bash
+    cat <<'EOF' > newfile.go
+    package main
+    import "fmt"
+    func main() { fmt.Println("hello") }
+    EOF
+    ```
+
+    ### Edit files with sed:
+
+    ```bash
+    # Replace all occurrences
+    sed -i 's/old_string/new_string/g' filename.go
+
+    # Replace only in specific line range
+    sed -i '10,20s/old_string/new_string/g' filename.go
+    ```
+
+    ### View file content:
+
+    ```bash
+    nl -ba filename.go | sed -n '10,20p'
+    ```
+    </instructions>
+
+  step_limit: 400
+  cost_limit: 50.0
+
+environment:
+  timeout: 300
+  env:
+    PAGER: cat
+    MANPAGER: cat
+    LESS: -R
+    PIP_PROGRESS_BAR: "off"
+    TQDM_DISABLE: "1"
+
+model:
+  observation_template: |
+    {%- if output.exception_info -%}
+    <exception>{{output.exception_info}}</exception>
+    {% endif -%}
+    <returncode>{{output.returncode}}</returncode>
+    {% if output.output | length < 10000 -%}
+    <output>
+    {{ output.output -}}
+    </output>
+    {%- else -%}
+    <warning>
+    The output of your last command was too long.
+    Try a different command that produces less output.
+    If viewing a file, use head, tail, or sed to view fewer lines.
+    If using grep/find, use a more selective pattern.
+    You can also redirect output to a file and search in it.
+    </warning>
+    {%- set elided_chars = output.output | length - 10000 -%}
+    <output_head>
+    {{ output.output[:5000] }}
+    </output_head>
+    <elided_chars>
+    {{ elided_chars }} characters elided
+    </elided_chars>
+    <output_tail>
+    {{ output.output[-5000:] }}
+    </output_tail>
+    {%- endif -%}
+  # action_regex: use LitellmTextbasedModel default (```mswea_bash_command blocks)
+  format_error_template: |
+    Format error:
+
+    <error>
+    {{error}}
+    </error>
+
+    Please provide EXACTLY ONE action in a ```mswea_bash_command block.
+    Found {{actions|length}} actions.
+
+    Example:
+    THOUGHT: Explanation of your reasoning.
+
+    ```mswea_bash_command
+    ls -la
+    ```
+
+    If you have completed your fix, submit with:
+    ```mswea_bash_command
+    echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+    ```
+  model_class: litellm_textbased
+  model_kwargs:
+    temperature: 0.0
+    drop_params: true
+    # api_base: "https://openrouter.ai/api/v1"
+    # Use Z-AI coding API
+    # custom_llm_provider: "openai"
+    # api_base: "https://api.z.ai/api/coding/paas/v4"
+    # Gemma 4
+    # custom_llm_provider: "openai"
+    # api_base: "http://localhost:9090/v1"
+    # custom_llm_provider: "openai"
+    # api_base: "http://localhost:3213/v1"
+    # Use GPT via Sub2Api
+    # custom_llm_provider: "openai"
+    # api_base: "http://68.181.216.60:10808/v1"
+    # reasoning_effort: "high"
+    # Use Claude via Sub2Api
+    # custom_llm_provider: "anthropic"
+    # api_base: "http://68.181.216.60:10808"  # no /v1 — Anthropic's path is different
+    # thinking:
+    #   type: "adaptive"
+    # output_config:
+    #   effort: "high"   # low, medium, high, or max
+    custom_llm_provider: "anthropic"
+    api_base: "http://68.181.216.60:10808" # no /v1 — Anthropic's path is different
+    thinking:
+      type: "adaptive"
+    output_config:
+      effort: "high" # low, medium, high, or max
