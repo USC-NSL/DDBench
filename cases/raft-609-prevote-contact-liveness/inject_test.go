@@ -30,7 +30,7 @@ import (
 // This test must live in the raft package because it accesses internal
 // APIs (localID, localAddr, getRPCHeader, getCurrentTerm, getLastIndex,
 // processHeartbeat) and requires the NetworkTransport heartbeat fast-path.
-func TestPreVoteLeaderSpamBlocksElection(t *testing.T) {
+func TestDDBenchOraclePreVoteSpamElection(t *testing.T) {
 	conf := DefaultConfig()
 	conf.LocalID = ServerID("first")
 	conf.HeartbeatTimeout = 50 * time.Millisecond

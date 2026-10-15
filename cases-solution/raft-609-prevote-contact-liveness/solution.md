@@ -1,5 +1,9 @@
 # Solution: hashicorp/raft PR#609
 
+- **Issue:** 42d34464b2d203e389e11ed6d43db698792c0604
+- **Fix commit:** [`42d34464b2d203e389e11ed6d43db698792c0604`](https://github.com/hashicorp/raft/commit/42d34464b2d203e389e11ed6d43db698792c0604)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/hashicorp/raft/pull/609
 - **Commit:** `42d34464b2d203e389e11ed6d43db698792c0604`

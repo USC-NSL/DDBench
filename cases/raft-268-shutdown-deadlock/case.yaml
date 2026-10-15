@@ -2,14 +2,15 @@ name: raft-268-shutdown-deadlock
 project: raft
 repo: https://github.com/hashicorp/raft.git
 buggy_commit: "2e997410f28efe8106fc606d21cb655be1b05dee~1"
+fix_commit: "2e997410f28efe8106fc606d21cb655be1b05dee"
 resolve_time:
   date: "2020-02-27"
   source: issue_close_date
   reference: "https://github.com/hashicorp/raft/issues/268"
 submodules: false
 build:
-  command: "mkdir -p test && ([ -f test/main.go ] || cp /bench/test_main.go test/main.go) && ([ -f test/go.mod ] || (cd test && go mod init raft-deadlock-test && go mod edit -replace github.com/hashicorp/raft=.. && go mod tidy)) && cd test && go build -o raft-deadlock-test . && cd .."
-  binary: test/raft-deadlock-test
+  command: ""
+  binary: ""
 docker:
   caps: []
   num_cpus: 10

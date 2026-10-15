@@ -7,11 +7,11 @@ import (
 	"testing"
 )
 
-// injectErrorStore wraps a LogStore and injects failures into StoreLogs.
+// ddbenchErrorStore wraps a LogStore and injects failures into StoreLogs.
 // After injectFailNext(n) is called, the next n StoreLogs calls return an error.
 // Named with "inject" prefix to avoid conflict with errorStore in log_cache_test.go
 // which is added by the fix commit (PR #460).
-type injectErrorStore struct {
+type ddbenchErrorStore struct {
 	LogStore
 	mu      sync.Mutex
 	fail    bool
@@ -19,7 +19,7 @@ type injectErrorStore struct {
 	failMax int
 }
 
-func (e *injectErrorStore) StoreLogs(logs []*Log) error {
+func (e *ddbenchErrorStore) StoreLogs(logs []*Log) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.fail {
@@ -32,7 +32,7 @@ func (e *injectErrorStore) StoreLogs(logs []*Log) error {
 	return e.LogStore.StoreLogs(logs)
 }
 
-func (e *injectErrorStore) injectFailNext(count int) {
+func (e *ddbenchErrorStore) injectFailNext(count int) {
 	e.mu.Lock()
 	e.fail = true
 	e.failed = 0
@@ -52,15 +52,15 @@ func (e *injectErrorStore) injectFailNext(count int) {
 // the backend store, causing a "log not found" panic in NewRaft().
 //
 // Detection strategy:
-//   - Create a LogCache wrapping an injectErrorStore that will fail once
+//   - Create a LogCache wrapping an ddbenchErrorStore that will fail once
 //   - Pre-populate the backend with 4 log entries (index 1..4)
 //   - Attempt to store log entry at index 5 via the cache -- backend fails
 //   - Verify that GetLog(5) does NOT return the entry from the cache
 //   - On buggy code: GetLog(5) succeeds (stale cache) -> test FAILS
 //   - On fixed code: GetLog(5) returns ErrLogNotFound -> test PASSES
-func TestLogCacheStaleDataOnStoreError(t *testing.T) {
+func TestDDBenchOracleLogCacheStoreError(t *testing.T) {
 	store := NewInmemStore()
-	errStore := &injectErrorStore{LogStore: store}
+	errStore := &ddbenchErrorStore{LogStore: store}
 	c, err := NewLogCache(16, errStore)
 	if err != nil {
 		t.Fatalf("NewLogCache: %v", err)

@@ -23,7 +23,7 @@ import (
 //     any cluster are detected.
 //   - Each cluster does 200 transfers with continuous write load.
 //   - Total: 5 clusters × 200 transfers = 1000 race windows per test run.
-func TestCandidateAppendEntriesRaceWithTCP(t *testing.T) {
+func TestDDBenchOracleCandidateAppendEntriesRace(t *testing.T) {
 	const numClusters = 5
 	const numNodes = 3
 	const transfers = 200
@@ -33,13 +33,13 @@ func TestCandidateAppendEntriesRaceWithTCP(t *testing.T) {
 		wg.Add(1)
 		go func(clusterID int) {
 			defer wg.Done()
-			runClusterWithTransfers(t, clusterID, numNodes, transfers)
+			ddbenchRunClusterWithTransfers(t, clusterID, numNodes, transfers)
 		}(c)
 	}
 	wg.Wait()
 }
 
-func runClusterWithTransfers(t *testing.T, clusterID, numNodes, transfers int) {
+func ddbenchRunClusterWithTransfers(t *testing.T, clusterID, numNodes, transfers int) {
 	conf := inmemConfig(t)
 	conf.Logger = hclog.New(&hclog.LoggerOptions{Level: hclog.Error})
 	conf.HeartbeatTimeout = 50 * time.Millisecond

@@ -1,0 +1,16 @@
+diff --git a/snapshot.go b/snapshot.go
+index 0d88fc9..f4c3945 100644
+--- a/snapshot.go
++++ b/snapshot.go
+@@ -228,6 +228,11 @@ func (r *Raft) compactLogs(snapIdx uint64) error {
+ 	// after the snapshot to be removed.
+ 	maxLog := min(snapIdx, lastLogIdx-r.conf.TrailingLogs)
+ 
++	if minLog > maxLog {
++		r.logger.Info("no logs to truncate")
++		return nil
++	}
++
+ 	r.logger.Info("compacting logs", "from", minLog, "to", maxLog)
+ 
+ 	// Compact the logs

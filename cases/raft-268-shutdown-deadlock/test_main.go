@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/raft"
@@ -17,8 +18,14 @@ import (
 // the chance that Shutdown() is called while takeSnapshot() is in flight.
 type MockFSM struct{}
 
+// snapshots counts FSM.Snapshot() calls across all attempts. If it stays 0, the
+// trigger (a snapshot in flight during Shutdown) never happened and the run
+// proves nothing.
+var snapshots int64
+
 func (m *MockFSM) Apply(l *raft.Log) interface{} { return nil }
 func (m *MockFSM) Snapshot() (raft.FSMSnapshot, error) {
+	atomic.AddInt64(&snapshots, 1)
 	// Sleep long enough that shutdown is likely to be called while
 	// takeSnapshot is between the FSM snapshot and the configurationsCh send.
 	time.Sleep(200 * time.Millisecond)
@@ -34,7 +41,16 @@ func (m *MockSnapshot) Persist(sink raft.SnapshotSink) error {
 }
 func (m *MockSnapshot) Release() {}
 
-func tryOnce() bool {
+type outcome int
+
+const (
+	clean    outcome = iota // Shutdown returned
+	deadlock                // Shutdown did not return within 10s
+	noLeader                // the node never became leader (code under test broken)
+	infra                   // harness could not set up the node
+)
+
+func tryOnce() outcome {
 	// Limit parallelism to increase goroutine interleaving on the
 	// scheduler, making the race window more likely to hit.
 	runtime.GOMAXPROCS(1)
@@ -58,13 +74,13 @@ func tryOnce() bool {
 	transport, err := raft.NewTCPTransport("127.0.0.1:0", nil, 3, 5*time.Second, io.Discard)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "transport error: %v\n", err)
-		return false
+		return infra
 	}
 
 	r, err := raft.NewRaft(config, &MockFSM{}, store, store, snapStore, transport)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "raft error: %v\n", err)
-		return false
+		return noLeader
 	}
 
 	// Bootstrap as single-node cluster.
@@ -81,7 +97,7 @@ func tryOnce() bool {
 		select {
 		case <-deadline:
 			r.Shutdown()
-			return false
+			return noLeader
 		case <-time.After(10 * time.Millisecond):
 		}
 	}
@@ -109,24 +125,39 @@ func tryOnce() bool {
 
 	select {
 	case <-done:
-		return false // No deadlock
+		return clean
 	case <-time.After(10 * time.Second):
-		return true // DEADLOCK detected
+		return deadlock
 	}
 }
 
 func main() {
+	// Exit codes follow the DDBench contract: 0 PASS, 1 FAIL, 2 ERROR.
 	total := 50
 	for i := 1; i <= total; i++ {
-		if tryOnce() {
+		switch tryOnce() {
+		case deadlock:
 			fmt.Printf("Attempt %d: DEADLOCK\n", i)
 			fmt.Println()
-			fmt.Printf("FAIL: Bug is present — deadlock on attempt %d/%d\n", i, total)
+			fmt.Printf("FAIL: Bug is present — Shutdown() deadlocked on attempt %d/%d\n", i, total)
 			os.Exit(1)
+		case noLeader:
+			fmt.Println()
+			fmt.Printf("FAIL: the single-node cluster did not start or elect a leader (attempt %d)\n", i)
+			os.Exit(1)
+		case infra:
+			fmt.Println()
+			fmt.Printf("ERROR: harness could not set up the node (attempt %d)\n", i)
+			os.Exit(2)
 		}
 		fmt.Printf("Attempt %d: OK\n", i)
 	}
+	if atomic.LoadInt64(&snapshots) == 0 {
+		fmt.Println()
+		fmt.Println("ERROR: no FSM snapshot was ever taken, so the shutdown race was never exercised")
+		os.Exit(2)
+	}
 	fmt.Println()
-	fmt.Printf("PASS: Bug is fixed — all %d runs completed without deadlock\n", total)
+	fmt.Printf("PASS: Bug is fixed — all %d attempts shut down cleanly (%d snapshots taken)\n", total, atomic.LoadInt64(&snapshots))
 	os.Exit(0)
 }

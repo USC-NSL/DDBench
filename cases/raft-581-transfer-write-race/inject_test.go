@@ -24,7 +24,7 @@ import (
 // leader's log, so the designated target often loses the election to
 // another node with a more up-to-date log. On the fixed code, writes
 // are blocked during the transfer window, so the target reliably wins.
-func TestLeadershipTransferWritesDuringTransfer(t *testing.T) {
+func TestDDBenchOracleWritesDuringTransfer(t *testing.T) {
 	conf := inmemConfig(t)
 	conf.Logger = hclog.New(&hclog.LoggerOptions{Level: hclog.Error})
 

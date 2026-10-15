@@ -1,0 +1,52 @@
+diff --git a/raft.go b/raft.go
+index 439fe6e..28c1128 100644
+--- a/raft.go
++++ b/raft.go
+@@ -692,8 +692,21 @@ func (r *Raft) leaderLoop() {
+ 				case err := <-doneCh:
+ 					if err != nil {
+ 						r.logger.Debug(err.Error())
++						future.respond(err)
++					} else {
++						// Wait for up to ElectionTimeout before flagging the
++						// leadership transfer as done and unblocking applies in
++						// the leaderLoop.
++						select {
++						case <-time.After(r.config().ElectionTimeout):
++							err := fmt.Errorf("leadership transfer timeout")
++							r.logger.Debug(err.Error())
++							future.respond(err)
++						case <-leftLeaderLoop:
++							r.logger.Debug("lost leadership during transfer (expected)")
++							future.respond(nil)
++						}
+ 					}
+-					future.respond(err)
+ 				}
+ 			}()
+ 
+diff --git a/testing.go b/testing.go
+index 91cf6e7..e088571 100644
+--- a/testing.go
++++ b/testing.go
+@@ -433,7 +433,7 @@ func (c *cluster) GetInState(s RaftState) []*Raft {
+ 	// restart the timer.
+ 	pollStartTime := time.Now()
+ 	for {
+-		inState, highestTerm := c.pollState(s)
++		_, highestTerm := c.pollState(s)
+ 		inStateTime := time.Now()
+ 
+ 		// Sometimes this routine is called very early on before the
+@@ -479,8 +479,9 @@ func (c *cluster) GetInState(s RaftState) []*Raft {
+ 				c.t.Fatalf("timer channel errored")
+ 			}
+ 
+-			c.logger.Info(fmt.Sprintf("stable state for %s reached at %s (%d nodes), %s from start of poll, %s from cluster start. Timeout at %s, %s after stability",
+-				s, inStateTime, len(inState), inStateTime.Sub(pollStartTime), inStateTime.Sub(c.startTime), t, t.Sub(inStateTime)))
++			inState, highestTerm := c.pollState(s)
++			c.logger.Info(fmt.Sprintf("stable state for %s reached at %s (%d nodes), highestTerm is %d, %s from start of poll, %s from cluster start. Timeout at %s, %s after stability",
++				s, inStateTime, len(inState), highestTerm, inStateTime.Sub(pollStartTime), inStateTime.Sub(c.startTime), t, t.Sub(inStateTime)))
+ 			return inState
+ 		}
+ 	}

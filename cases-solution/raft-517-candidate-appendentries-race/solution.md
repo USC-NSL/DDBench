@@ -1,9 +1,11 @@
 # Solution: hashicorp/raft #517
 
-## Fix
 - **Issue:** https://github.com/hashicorp/raft/issues/517
+- **Fix commit:** [`49bd61b66666fa76cb23fa81897e350f6e9b75de`](https://github.com/hashicorp/raft/commit/49bd61b66666fa76cb23fa81897e350f6e9b75de)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
+## Fix
 - **Fix PR:** https://github.com/hashicorp/raft/pull/570
-- **Fix commit:** `49bd61b66666fa76cb23fa81897e350f6e9b75de`
 
 ## Fix locus
 - **Component:** Raft state machine / leadership transfer synchronization
