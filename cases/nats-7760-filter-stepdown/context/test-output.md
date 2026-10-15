@@ -16,14 +16,14 @@ $ nats stream cluster step-down TEST
 
 Cluster Information:
 
-                  Name: test-cluster-7760
+                  Name: test-cluster
                 Leader: n4
                Replica: n1, current, seen 486ms ago
                Replica: n2, current, seen 486ms ago
                Replica: n3, current, seen 486ms ago
                Replica: n5, current, seen 486ms ago
 
-$ nats pub events.b "test-message-7760"
+$ nats pub events.b "test-message"
 
 $ nats consumer next TEST myconsumer --timeout=5s
 nats: error: could not load consumer "myconsumer": consumer not found (10014)

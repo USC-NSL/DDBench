@@ -1,5 +1,5 @@
 # Symptom
 
-After editing a consumer's filter subjects and then triggering a leader step-down on an interest-based replicated stream (R5), the consumer stops matching messages. Publishing messages that should match the consumer's filter subjects results in a timeout — no messages are delivered.
+On an interest-based, replicated (R5) stream, a pull consumer with several filter subjects stops delivering messages after its filter subjects are edited and its leader is then stepped down (for example with `nats consumer cluster step-down`).
 
-The stream itself continues to accept publishes, but the consumer appears to have lost track of its filter subjects. This only happens after a leader step-down following a filter edit; without the step-down, the consumer works correctly.
+Before the edit, and after the edit but before the step-down, the consumer works correctly. After the step-down, messages published to a subject that is still one of the consumer's filter subjects are never delivered: `nats consumer next` times out with `nats: error: no message received: nats: timeout`. The consumer's `Unprocessed Messages` stays at 0, and the stream stops gaining messages, so the matching messages are lost.

@@ -4,7 +4,7 @@ Consumers configured to fetch from follower replicas always wait the full `fetch
 
 ## Observable behavior
 
-- A Kafka cluster is configured with `fetch.from.follower.enabled=true` and a rack-aware replica selector.
+- A Kafka cluster has fetching from followers (KIP-392) enabled: brokers set `broker.rack` and the rack-aware replica selector (`replica.selector.class=org.apache.kafka.common.replica.RackAwareReplicaSelector`), and consumers set `client.rack`.
 - A producer writes records to the leader, which replicates them to the follower.
 - A consumer in the same rack as the follower sends a fetch request to the follower with `fetch.max.wait.ms` set (e.g., 500 ms).
 - The consumer does NOT receive the newly replicated records until `fetch.max.wait.ms` elapses, even though the data is already present on the follower.
