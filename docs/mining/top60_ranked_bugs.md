@@ -1,3 +1,5 @@
+> **Historical:** candidate-mining notes from the benchmark's construction. They include candidates that are not in the final 60-case benchmark (see [`index.md`](../../index.md)), and their commands and paths predate the current Docker workflow.
+
 # Top 60 Easiest-to-Deploy & Easiest-to-Reproduce Distributed System Bugs
 ## For Distributed Interactive Debugger Evaluation
 
