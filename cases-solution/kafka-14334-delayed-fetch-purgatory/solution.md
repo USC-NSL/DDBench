@@ -1,5 +1,9 @@
 # Solution: Kafka #14334
 
+- **Issue:** https://issues.apache.org/jira/browse/KAFKA-14334
+- **Fix commit:** [`dbf5826cd545820652ed6d136727aa80a03f4f54`](https://github.com/apache/kafka/commit/dbf5826cd545820652ed6d136727aa80a03f4f54)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/apache/kafka/pull/12783
 - **Commit:** `dbf5826cd545820652ed6d136727aa80a03f4f54`
@@ -73,3 +77,9 @@ private[server] def completeDelayedFetchRequests(topicPartitions: Seq[TopicParti
 git checkout dbf5826cd545820652ed6d136727aa80a03f4f54
 ./gradlew jar -x test -x spotlessCheck -x checkstyleMain -x checkstyleTest --quiet
 ```
+
+## Gold patch
+`gold.patch` in this directory is the source part of the upstream fix commit (`core/src/main`
+only). It excludes the test changes and also the two `jmh-benchmarks` edits: those adapt the
+benchmarks to a changed `TestUtils.createBrokerConfig` signature in the test tree, and
+applying them without the test changes breaks the build.

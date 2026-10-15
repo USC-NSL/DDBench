@@ -1,146 +1,142 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for kafka-15170-endless-rebalance-loop
-# Injects regression test into CooperativeStickyAssignorTest.java and adds
-# a partitionsTransferringOwnership() accessor to AbstractStickyAssignor.
-# On buggy code: test FAILS (partitionsTransferringOwnership is empty → infinite rebalance)
-# On fixed code: test PASSES
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Injects a test method into CooperativeStickyAssignorTest (clients): in a
+# rack-aware cooperative rebalance where each consumer owns a partition on the
+# other consumer's rack, no partition may be handed to a new consumer in the
+# same rebalance that takes it from its current owner (cooperative protocol).
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/kafka-15170-endless-rebalance-loop"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+# ── JUnit XML verdicts ──
+# Decided from the JUnit XML report for the exact oracle test case: it must
+# exist and contain no <failure>, <error> or <skipped>. Never from console text.
+junit_result() {  # <xml-file> <test-method> -> pass | fail | skip | norun
+    [ -f "$1" ] || { echo norun; return; }
+    awk -v m="$2" '
+        /<testcase[ >]/ {
+            inc = ($0 ~ ("name=\"" m "([({[][^\"]*)?\""))
+            if (inc) { found = 1
+                if ($0 ~ /<(failure|error)[ >\/]/) bad = 1
+                if ($0 ~ /<skipped/) skip = 1
+                if ($0 ~ /\/>[[:space:]]*$/ || $0 ~ /<\/testcase>/) inc = 0 }
+            next }
+        inc && /<(failure|error)[ >\/]/ { bad = 1 }
+        inc && /<skipped/ { skip = 1 }
+        inc && /<\/testcase>/ { inc = 0 }
+        END { if (!found) print "norun"; else if (bad) print "fail"; else if (skip) print "skip"; else print "pass" }
+    ' "$1"
+}
+# Exit with the verdict for the oracle test case.
+junit_verdict() {  # <xml> <method> <console-log> <pass-message> <fail-message>
+    case "$(junit_result "$1" "$2")" in
+        pass) pass "$4" ;;
+        fail) fail "$5" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)
+            if grep -qE "COMPILATION ERROR|Compilation failure|compilation failed|Compilation failed|error: |cannot find symbol" "$3"; then
+                fail "the oracle test did not run: the worktree or the injected oracle test does not compile"
+            fi
+            error "the oracle test did not run and no compilation error was found (see output above)" ;;
+    esac
+}
 
 TEST_FILE="$WORK_DIR/clients/src/test/java/org/apache/kafka/clients/consumer/CooperativeStickyAssignorTest.java"
-TEST_METHOD_FILE="/tmp/test_method_15170.java"
+TEST_METHOD=testDDBenchOracleRackAwareOwnershipTransfer
+REPORT="$WORK_DIR/clients/build/test-results/test/TEST-org.apache.kafka.clients.consumer.CooperativeStickyAssignorTest.xml"
+LOG="$RUN_DIR/gradle-test.log"
 
 export JAVA_HOME=${JAVA_HOME:-/usr/lib/jvm/java-17-openjdk-amd64}
 export PATH="$JAVA_HOME/bin:$PATH"
 
-# -- Rebuild if source changed --
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
-
-# Verify setup
-if [ ! -d "$WORK_DIR" ]; then
-    echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."
-    exit 1
-fi
+rebuild_worktree
+[ -f "$TEST_FILE" ] || error "CooperativeStickyAssignorTest.java not found in $WORK_DIR (run setup first)"
 
 echo "=== Reproducing kafka-15170-endless-rebalance-loop ==="
 
-# Backup original test file
-cp "$TEST_FILE" "$TEST_FILE.bak"
-
+# Always inject, under a ddbench-only method name; the worktree's version of
+# the test file is restored afterwards.
+cp "$TEST_FILE" "$RUN_DIR/CooperativeStickyAssignorTest.java.saved"
 cleanup() {
-    [ -f "$TEST_FILE.bak" ] && mv "$TEST_FILE.bak" "$TEST_FILE"
-    rm -f "$TEST_METHOD_FILE"
+    cp "$RUN_DIR/CooperativeStickyAssignorTest.java.saved" "$TEST_FILE"
+    # Reports and classes compiled from the injected test must not outlive the run.
+    rm -f "$REPORT"; rm -rf "$WORK_DIR/clients/build/reports/tests"
+    rm -f "$WORK_DIR"/clients/build/classes/java/test/org/apache/kafka/clients/consumer/CooperativeStickyAssignorTest*.class
 }
 trap cleanup EXIT
 
-# ── Inject behavioral test into CooperativeStickyAssignorTest.java ──
-# Verifies that partitionsTransferringOwnership is correctly populated when
-# rack-aware rebalancing revokes partitions from consumers with mismatched racks.
-INJECTED_TEST_NAME="testBug15170OwnershipTransferRegression"
-if grep -q "$INJECTED_TEST_NAME" "$TEST_FILE" 2>/dev/null; then
-    echo "Test $INJECTED_TEST_NAME already injected -- skipping injection"
-else
-    echo "Injecting test method $INJECTED_TEST_NAME into CooperativeStickyAssignorTest.java..."
-
-    cat > "$TEST_METHOD_FILE" << 'TESTEOF'
+cat > "$RUN_DIR/method.java" << 'TESTEOF'
     @Test
-    public void testBug15170OwnershipTransferRegression() {
-        // Bug KAFKA-15170: CooperativeStickyAssignor enters infinite rebalance
-        // because partitionsTransferringOwnership is not populated for partitions
-        // revoked due to rack mismatch during rack-aware assignment.
-        //
-        // Setup: 4 partitions across 2 racks (a, b), 2 consumers on racks a, b.
-        //   tp0 on rack a, tp1 on rack b, tp2 on rack a, tp3 on rack b
-        //   c0 (rack a) previously owns {tp0, tp1} — tp1 is rack-mismatched
-        //   c1 (rack b) previously owns {tp2, tp3} — tp2 is rack-mismatched
-        // Expected: rack-aware reassignment transfers tp1 c0→c1, tp2 c1→c0,
-        //   and partitionsTransferringOwnership records both transfers.
+    public void testDDBenchOracleRackAwareOwnershipTransfer() {
+        // 4 partitions on 2 racks; c0 (rack 0) owns {tp0, tp1} and c1 (rack 1)
+        // owns {tp2, tp3}, so tp1 and tp2 sit on the other consumer's rack.
         this.replicationFactor = 1;
         this.numBrokerRacks = 2;
         this.hasConsumerRack = true;
-
-        // Force rack-aware logic (without this, the assignor may skip rack
-        // optimization for small clusters and produce a sticky assignment
-        // with no transfers, masking the bug).
         AbstractPartitionAssignorTest.preferRackAwareLogic(assignor, true);
 
         Map<String, List<PartitionInfo>> partitionsPerTopic = new HashMap<>();
         partitionsPerTopic.put(topic1, partitionInfos(topic1, 4));
-
-        subscriptions.put("c0", buildSubscriptionV2Above(topics(topic1), partitions(tp(topic1, 0), tp(topic1, 1)),
-                generationId, 0));
-        subscriptions.put("c1", buildSubscriptionV2Above(topics(topic1), partitions(tp(topic1, 2), tp(topic1, 3)),
-                generationId, 1));
+        Map<String, List<TopicPartition>> owned = new HashMap<>();
+        owned.put("c0", partitions(tp(topic1, 0), tp(topic1, 1)));
+        owned.put("c1", partitions(tp(topic1, 2), tp(topic1, 3)));
+        subscriptions.put("c0", buildSubscriptionV2Above(topics(topic1), owned.get("c0"), generationId, 0));
+        subscriptions.put("c1", buildSubscriptionV2Above(topics(topic1), owned.get("c1"), generationId, 1));
 
         Map<String, List<TopicPartition>> assignment =
             assignor.assignPartitions(partitionsPerTopic, subscriptions);
 
-        // Sanity: all partitions assigned
-        int totalAssigned = 0;
-        for (List<TopicPartition> parts : assignment.values()) {
-            totalAssigned += parts.size();
+        // Cooperative rebalancing: a partition may only move to a new consumer
+        // after its current owner has revoked it, i.e. never in the same
+        // rebalance in which it is taken away. (Partitions being moved are left
+        // unassigned in this round and assigned in a follow-up rebalance.)
+        Set<TopicPartition> seen = new HashSet<>();
+        for (Map.Entry<String, List<TopicPartition>> e : assignment.entrySet()) {
+            for (TopicPartition p : e.getValue()) {
+                assertTrue(seen.add(p), p + " assigned to more than one consumer: " + assignment);
+                for (Map.Entry<String, List<TopicPartition>> o : owned.entrySet()) {
+                    assertFalse(!o.getKey().equals(e.getKey()) && o.getValue().contains(p),
+                        p + " was assigned to " + e.getKey() + " while still owned by " + o.getKey()
+                            + " (cooperative protocol violated): " + assignment);
+                }
+            }
         }
-        assertEquals(4, totalAssigned, "All 4 partitions must be assigned");
-
-        // KEY ASSERTION: partitionsTransferringOwnership must track the partitions
-        // that changed ownership due to rack mismatch revocation.
-        // On buggy code: this map is EMPTY — rack-revoked partitions are not tracked,
-        //   so the cooperative protocol does not revoke the correct partitions from
-        //   consumers, causing infinite rebalance loops.
-        // On fixed code: this map has 2 entries (tp1→c1, tp2→c0).
-        // Access via reflection since the field is protected and this test class
-        // is in a different package from AbstractStickyAssignor.
-        Map<?, ?> transferring;
-        try {
-            java.lang.reflect.Field f = AbstractStickyAssignor.class.getDeclaredField("partitionsTransferringOwnership");
-            f.setAccessible(true);
-            transferring = (Map<?, ?>) f.get(assignor);
-        } catch (Exception e) {
-            throw new RuntimeException("Cannot access partitionsTransferringOwnership", e);
-        }
-        assertFalse(transferring == null,
-            "partitionsTransferringOwnership should not be null for uniform subscriptions");
-        assertFalse(transferring.isEmpty(),
-            "Bug KAFKA-15170: partitionsTransferringOwnership is empty but should " +
-            "contain entries for partitions that changed ownership due to rack " +
-            "mismatch. Without this tracking, the cooperative protocol fails to " +
-            "revoke the correct partitions, causing infinite rebalance loops.");
     }
 TESTEOF
+LINE_COUNT=$(wc -l < "$TEST_FILE")
+{ head -n $((LINE_COUNT - 1)) "$TEST_FILE"; cat "$RUN_DIR/method.java"; echo "}"; } > "$RUN_DIR/injected.java"
+cp "$RUN_DIR/injected.java" "$TEST_FILE"
 
-    # Insert before the last closing brace of the class
-    LINE_COUNT=$(wc -l < "$TEST_FILE")
-    head -n $((LINE_COUNT - 1)) "$TEST_FILE" > "$TEST_FILE.tmp"
-    cat "$TEST_METHOD_FILE" >> "$TEST_FILE.tmp"
-    echo "}" >> "$TEST_FILE.tmp"
-    mv "$TEST_FILE.tmp" "$TEST_FILE"
-fi
-
-# ── Rebuild and run ──
-echo "Rebuilding..."
 cd "$WORK_DIR"
-./gradlew :clients:compileJava :clients:compileTestJava -x spotlessCheck -x checkstyleMain -x checkstyleTest --quiet 2>&1
-
-echo "Running regression test..."
-OUTPUT=$(./gradlew :clients:test --tests "CooperativeStickyAssignorTest.testBug15170OwnershipTransferRegression" -x spotlessCheck -x checkstyleMain -x checkstyleTest 2>&1)
-TEST_EXIT=$?
-echo "$OUTPUT"
-
-echo ""
-if [ "$TEST_EXIT" -ne 0 ]; then
-    echo "FAIL: Bug is present -- CooperativeStickyAssignor throws IllegalStateException during"
-    echo "      rack-aware rebalancing, causing infinite rebalance loops (KAFKA-15170)"
-    exit 1
-else
-    echo "PASS: Bug is fixed -- rack-aware assignment completes with correct partition distribution"
-    exit 0
-fi
+rm -f "$REPORT"
+echo "Running $TEST_METHOD ..."
+./gradlew :clients:test --tests "CooperativeStickyAssignorTest.$TEST_METHOD" \
+    -x spotlessCheck -x checkstyleMain -x checkstyleTest > "$LOG" 2>&1
+tail -40 "$LOG"
+junit_verdict "$REPORT" "$TEST_METHOD" "$LOG" \
+    "Bug is fixed — rack-aware cooperative assignment completes with a valid assignment" \
+    "Bug is present — rack-aware cooperative rebalancing fails to account for partitions changing owner"

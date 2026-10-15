@@ -2,6 +2,7 @@ name: kafka-15170-endless-rebalance-loop
 project: kafka
 repo: https://github.com/apache/kafka.git
 buggy_commit: "f0291ac74b88b988c4ab07c16286942838ba4556~1"
+fix_commit: "f0291ac74b88b988c4ab07c16286942838ba4556"
 resolve_time:
   date: "2024-05-15"
   source: issue_close_date

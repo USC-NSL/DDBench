@@ -1,0 +1,54 @@
+// DDBench oracle for kafka-14334-delayed-fetch-purgatory (passed with --init-script by reproduce.sh).
+//
+// Compiles the oracle test from DDBENCH_ORACLE_SRC (outside the worktree) in a
+// separate source set of :core and runs it with the task :core:ddbenchOracleTest.
+// Its classpath is core's main classes and core's own (main) dependencies plus
+// JUnit and the log4j binding, and nothing from any module's test sources, so no
+// test sources of the worktree are compiled: the oracle compiles whether or not
+// those still compile against a patched worktree. Outputs go to
+// core/build/*/ddbenchOracle*, which reproduce.sh removes afterwards.
+def oracleSrc = System.getenv('DDBENCH_ORACLE_SRC')
+if (oracleSrc == null || oracleSrc.isEmpty())
+    throw new GradleException('DDBENCH_ORACLE_SRC is not set')
+def oracleResources = System.getenv('DDBENCH_ORACLE_RESOURCES')
+
+allprojects {
+    if (path == ':core') {
+        afterEvaluate {
+            def oracle = sourceSets.create('ddbenchOracle')
+            oracle.java.srcDirs = []
+            oracle.resources.srcDirs = oracleResources ? [oracleResources] : []
+            oracle.scala.srcDirs = [oracleSrc]
+            // The same library versions as core's own tests (libs is Kafka's dependency catalogue).
+            configurations.ddbenchOracleImplementation.extendsFrom(configurations.implementation)
+            dependencies.add('ddbenchOracleImplementation', libs.junitJupiter)
+            dependencies.add('ddbenchOracleRuntimeOnly', libs.slf4jlog4j)
+            dependencies.add('ddbenchOracleRuntimeOnly', libs.log4j)
+            oracle.compileClasspath = sourceSets.main.output + configurations.ddbenchOracleCompileClasspath
+            oracle.runtimeClasspath = oracle.output + sourceSets.main.output + configurations.ddbenchOracleRuntimeClasspath
+
+            // Compiler warnings (deprecations in a patched worktree, unused imports)
+            // must not fail the oracle build.
+            tasks.named('compileDdbenchOracleScala') {
+                scalaCompileOptions.additionalParameters =
+                    (scalaCompileOptions.additionalParameters ?: []).findAll { it != '-Xfatal-warnings' && it != '-Werror' }
+            }
+
+            tasks.register('ddbenchOracleTest', Test) {
+                description = 'Runs the DDBench oracle test'
+                testClassesDirs = oracle.output.classesDirs
+                classpath = oracle.runtimeClasspath
+                useJUnitPlatform()
+                maxParallelForks = 1
+                maxHeapSize = '2g'
+                ignoreFailures = true
+                outputs.upToDateWhen { false }
+                testLogging {
+                    events 'passed', 'skipped', 'failed'
+                    showStandardStreams = true
+                    exceptionFormat = 'full'
+                }
+            }
+        }
+    }
+}

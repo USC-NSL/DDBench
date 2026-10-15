@@ -1,5 +1,9 @@
 # Solution: Kafka #15170
 
+- **Issue:** https://issues.apache.org/jira/browse/KAFKA-15170
+- **Fix commit:** [`f0291ac74b88b988c4ab07c16286942838ba4556`](https://github.com/apache/kafka/commit/f0291ac74b88b988c4ab07c16286942838ba4556)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 
 - **PR:** https://github.com/apache/kafka/pull/13965

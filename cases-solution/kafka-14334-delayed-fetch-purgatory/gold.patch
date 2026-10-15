@@ -1,0 +1,155 @@
+diff --git a/core/src/main/scala/kafka/cluster/Partition.scala b/core/src/main/scala/kafka/cluster/Partition.scala
+index 1eab4c4669..e1d2d85578 100755
+--- a/core/src/main/scala/kafka/cluster/Partition.scala
++++ b/core/src/main/scala/kafka/cluster/Partition.scala
+@@ -373,7 +373,7 @@ class Partition(val topicPartition: TopicPartition,
+ 
+   // Visible for testing
+   private[cluster] def createLog(isNew: Boolean, isFutureReplica: Boolean, offsetCheckpoints: OffsetCheckpoints, topicId: Option[Uuid]): UnifiedLog = {
+-    def updateHighWatermark(log: UnifiedLog) = {
++    def updateHighWatermark(log: UnifiedLog): Unit = {
+       val checkpointHighWatermark = offsetCheckpoints.fetch(log.parentDir, topicPartition).getOrElse {
+         info(s"No checkpointed highwatermark is found for partition $topicPartition")
+         0L
+diff --git a/core/src/main/scala/kafka/log/UnifiedLog.scala b/core/src/main/scala/kafka/log/UnifiedLog.scala
+index 0eafd01a41..5cb060dbef 100644
+--- a/core/src/main/scala/kafka/log/UnifiedLog.scala
++++ b/core/src/main/scala/kafka/log/UnifiedLog.scala
+@@ -373,8 +373,7 @@ class UnifiedLog(@volatile var logStartOffset: Long,
+    * Update the high watermark to a new offset. The new high watermark will be lower
+    * bounded by the log start offset and upper bounded by the log end offset.
+    *
+-   * This is intended to be called when initializing the high watermark or when updating
+-   * it on a follower after receiving a Fetch response from the leader.
++   * This is intended to be called by the leader when initializing the high watermark.
+    *
+    * @param hw the suggested new value for the high watermark
+    * @return the updated high watermark offset
+@@ -433,6 +432,27 @@ class UnifiedLog(@volatile var logStartOffset: Long,
+     }
+   }
+ 
++  /**
++   * Update high watermark with a new value. The new high watermark will be lower
++   * bounded by the log start offset and upper bounded by the log end offset.
++   *
++   * This method is intended to be used by the follower to update its high watermark after
++   * replication from the leader.
++   *
++   * @return the new high watermark if the high watermark changed, None otherwise.
++   */
++  def maybeUpdateHighWatermark(hw: Long): Option[Long] = {
++    lock.synchronized {
++      val oldHighWatermark = highWatermarkMetadata
++      updateHighWatermark(LogOffsetMetadata(hw)) match {
++        case oldHighWatermark.messageOffset =>
++          None
++        case newHighWatermark =>
++          Some(newHighWatermark)
++      }
++    }
++  }
++
+   /**
+    * Get the offset and metadata for the current high watermark. If offset metadata is not
+    * known, this will do a lookup in the index and cache the result.
+diff --git a/core/src/main/scala/kafka/server/KafkaApis.scala b/core/src/main/scala/kafka/server/KafkaApis.scala
+index bae20f2566..0800a66633 100644
+--- a/core/src/main/scala/kafka/server/KafkaApis.scala
++++ b/core/src/main/scala/kafka/server/KafkaApis.scala
+@@ -246,6 +246,7 @@ class KafkaApis(val requestChannel: RequestChannel,
+       // try to complete delayed action. In order to avoid conflicting locking, the actions to complete delayed requests
+       // are kept in a queue. We add the logic to check the ReplicaManager queue at the end of KafkaApis.handle() and the
+       // expiration thread for certain delayed operations (e.g. DelayedJoin)
++      // Delayed fetches are also completed by ReplicaFetcherThread.
+       replicaManager.tryCompleteActions()
+       // The local completion time may be set while processing the request. Only record it if it's unset.
+       if (request.apiLocalCompleteTimeNanos < 0)
+diff --git a/core/src/main/scala/kafka/server/ReplicaFetcherThread.scala b/core/src/main/scala/kafka/server/ReplicaFetcherThread.scala
+index 2e728ce817..ea94aaa137 100644
+--- a/core/src/main/scala/kafka/server/ReplicaFetcherThread.scala
++++ b/core/src/main/scala/kafka/server/ReplicaFetcherThread.scala
+@@ -23,6 +23,8 @@ import org.apache.kafka.common.requests._
+ import org.apache.kafka.common.TopicPartition
+ import org.apache.kafka.server.common.MetadataVersion
+ 
++import scala.collection.mutable
++
+ class ReplicaFetcherThread(name: String,
+                            leader: LeaderEndPoint,
+                            brokerConfig: KafkaConfig,
+@@ -41,6 +43,9 @@ class ReplicaFetcherThread(name: String,
+ 
+   this.logIdent = logPrefix
+ 
++  // Visible for testing
++  private[server] val partitionsWithNewHighWatermark = mutable.Buffer[TopicPartition]()
++
+   override protected val isOffsetForLeaderEpochSupported: Boolean = metadataVersionSupplier().isOffsetForLeaderEpochSupported
+ 
+   override protected def latestEpoch(topicPartition: TopicPartition): Option[Int] = {
+@@ -88,6 +93,11 @@ class ReplicaFetcherThread(name: String,
+     }
+   }
+ 
++  override def doWork(): Unit = {
++    super.doWork()
++    completeDelayedFetchRequests()
++  }
++
+   // process fetched data
+   override def processPartitionData(topicPartition: TopicPartition,
+                                     fetchOffset: Long,
+@@ -117,10 +127,16 @@ class ReplicaFetcherThread(name: String,
+ 
+     // For the follower replica, we do not need to keep its segment base offset and physical position.
+     // These values will be computed upon becoming leader or handling a preferred read replica fetch.
+-    val followerHighWatermark = log.updateHighWatermark(partitionData.highWatermark)
++    var maybeUpdateHighWatermarkMessage = s"but did not update replica high watermark"
++    log.maybeUpdateHighWatermark(partitionData.highWatermark).foreach { newHighWatermark =>
++      maybeUpdateHighWatermarkMessage = s"and updated replica high watermark to $newHighWatermark"
++      partitionsWithNewHighWatermark += topicPartition
++    }
++
+     log.maybeIncrementLogStartOffset(leaderLogStartOffset, LeaderOffsetIncremented)
+     if (logTrace)
+-      trace(s"Follower set replica high watermark for partition $topicPartition to $followerHighWatermark")
++      trace(s"Follower received high watermark ${partitionData.highWatermark} from the leader " +
++        s"$maybeUpdateHighWatermarkMessage for partition $topicPartition")
+ 
+     // Traffic from both in-sync and out of sync replicas are accounted for in replication quota to ensure total replication
+     // traffic doesn't exceed quota.
+@@ -135,6 +151,13 @@ class ReplicaFetcherThread(name: String,
+     logAppendInfo
+   }
+ 
++  private def completeDelayedFetchRequests(): Unit = {
++    if (partitionsWithNewHighWatermark.nonEmpty) {
++      replicaMgr.completeDelayedFetchRequests(partitionsWithNewHighWatermark.toSeq)
++      partitionsWithNewHighWatermark.clear()
++    }
++  }
++
+   def maybeWarnIfOversizedRecords(records: MemoryRecords, topicPartition: TopicPartition): Unit = {
+     // oversized messages don't cause replication to fail from fetch request version 3 (KIP-74)
+     if (metadataVersionSupplier().fetchRequestVersion <= 2 && records.sizeInBytes > 0 && records.validBytes <= 0)
+diff --git a/core/src/main/scala/kafka/server/ReplicaManager.scala b/core/src/main/scala/kafka/server/ReplicaManager.scala
+index 8e7d588e68..9ca92691d8 100644
+--- a/core/src/main/scala/kafka/server/ReplicaManager.scala
++++ b/core/src/main/scala/kafka/server/ReplicaManager.scala
+@@ -331,6 +331,15 @@ class ReplicaManager(val config: KafkaConfig,
+     delayedFetchPurgatory.checkAndComplete(topicPartitionOperationKey)
+   }
+ 
++  /**
++   * Complete any local follower fetches that have been unblocked since new data is available
++   * from the leader for one or more partitions. Should only be called by ReplicaFetcherThread
++   * after successfully replicating from the leader.
++   */
++  private[server] def completeDelayedFetchRequests(topicPartitions: Seq[TopicPartition]): Unit = {
++    topicPartitions.foreach(tp => delayedFetchPurgatory.checkAndComplete(TopicPartitionOperationKey(tp)))
++  }
++
+   def stopReplicas(correlationId: Int,
+                    controllerId: Int,
+                    controllerEpoch: Int,

@@ -1,0 +1,47 @@
+// DDBench oracle for kafka-15784-txn-offset-atomicity (passed with --init-script by reproduce.sh).
+//
+// Compiles the oracle test from DDBENCH_ORACLE_SRC (outside the worktree) in a
+// separate source set of :core, against core's main classes and core's test
+// dependencies, and runs it with the task :core:ddbenchOracleTest. The test does
+// not use core's own test sources, so it compiles whether or not those still
+// compile against a patched worktree. Outputs go to core/build/*/ddbenchOracle*,
+// which reproduce.sh removes afterwards.
+def oracleSrc = System.getenv('DDBENCH_ORACLE_SRC')
+if (oracleSrc == null || oracleSrc.isEmpty())
+    throw new GradleException('DDBENCH_ORACLE_SRC is not set')
+
+allprojects {
+    if (path == ':core') {
+        afterEvaluate {
+            def oracle = sourceSets.create('ddbenchOracle')
+            oracle.java.srcDirs = []
+            oracle.resources.srcDirs = []
+            oracle.scala.srcDirs = [oracleSrc]
+            oracle.compileClasspath = sourceSets.main.output + configurations.testCompileClasspath
+            oracle.runtimeClasspath = oracle.output + sourceSets.main.output + configurations.testRuntimeClasspath
+
+            // Compiler warnings (deprecations in a patched worktree, unused imports)
+            // must not fail the oracle build.
+            tasks.named('compileDdbenchOracleScala') {
+                scalaCompileOptions.additionalParameters =
+                    (scalaCompileOptions.additionalParameters ?: []).findAll { it != '-Xfatal-warnings' && it != '-Werror' }
+            }
+
+            tasks.register('ddbenchOracleTest', Test) {
+                description = 'Runs the DDBench oracle test'
+                testClassesDirs = oracle.output.classesDirs
+                classpath = oracle.runtimeClasspath
+                useJUnitPlatform()
+                maxParallelForks = 1
+                maxHeapSize = '2g'
+                ignoreFailures = true
+                outputs.upToDateWhen { false }
+                testLogging {
+                    events 'passed', 'skipped', 'failed'
+                    showStandardStreams = true
+                    exceptionFormat = 'full'
+                }
+            }
+        }
+    }
+}

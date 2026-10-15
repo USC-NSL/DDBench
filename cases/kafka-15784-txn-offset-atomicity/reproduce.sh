@@ -1,223 +1,132 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for kafka-15784-txn-offset-atomicity
-# Injects a regression test that verifies transactional offset commit atomicity:
-# when a log append fails during transactional offset commit, the in-memory group
-# state must be rolled back. On the buggy commit, the group retains stale pending
-# offsets because prepareTxnOffsetCommit runs before appendRecords, and an
-# exception from appendRecords skips the failure callback.
-# -- Docker mode (preferred) --
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Runs a single-broker group coordinator on a real __consumer_offsets log with
+# transaction verification enabled. A transactional producer commits offsets for
+# its group while the group is deleted, or while the coordinator unloads and
+# reloads the offsets partition; then the transaction completes. The offset the
+# live coordinator serves must equal the offset a coordinator serves after
+# reloading the log, and an acknowledged, committed offset must be served.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# -- Host fallback (no Docker) --
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/kafka-15784-txn-offset-atomicity"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+# ── JUnit XML verdicts ──
+# Decided from the JUnit XML report for the exact oracle test cases: each must
+# exist and contain no <failure>, <error> or <skipped>. Never from console text.
+junit_result() {  # <xml-file> <test-method> -> pass | fail | skip | norun
+    [ -f "$1" ] || { echo norun; return; }
+    awk -v m="$2" '
+        /<testcase[ >]/ {
+            inc = ($0 ~ ("name=\"" m "([({[][^\"]*)?\""))
+            if (inc) { found = 1
+                if ($0 ~ /<(failure|error)[ >\/]/) bad = 1
+                if ($0 ~ /<skipped/) skip = 1
+                if ($0 ~ /\/>[[:space:]]*$/ || $0 ~ /<\/testcase>/) inc = 0 }
+            next }
+        inc && /<(failure|error)[ >\/]/ { bad = 1 }
+        inc && /<skipped/ { skip = 1 }
+        inc && /<\/testcase>/ { inc = 0 }
+        END { if (!found) print "norun"; else if (bad) print "fail"; else if (skip) print "skip"; else print "pass" }
+    ' "$1"
+}
+
+ORACLE_CLASS=kafka.coordinator.group.DDBenchOracleTxnOffsetCommitTest
+ORACLE_FILE=DDBenchOracleTxnOffsetCommitTest.scala
+INIT_SCRIPT=ddbench-oracle.init.gradle
+# Baseline (no concurrent event), then the two concurrent events.
+ORACLE_METHODS="testDDBenchOracleTxnOffsetCommitBaseline testDDBenchOracleGroupDeletedDuringTxnOffsetCommit testDDBenchOracleCoordinatorReloadDuringTxnOffsetCommit"
+REPORT="$WORK_DIR/core/build/test-results/ddbenchOracleTest/TEST-$ORACLE_CLASS.xml"
+LOG="$RUN_DIR/gradle-test.log"
 
 export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-17-openjdk-amd64}"
+export PATH="$JAVA_HOME/bin:$PATH"
 
-# -- Rebuild if source changed --
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
-
-# Verify setup
-if [ ! -d "$WORK_DIR" ]; then
-    echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."
-    exit 1
-fi
-
-echo "=== Reproducing kafka-15784-txn-offset-atomicity ==="
-
-TEST_FILE="$WORK_DIR/core/src/test/scala/unit/kafka/coordinator/group/TxnOffsetAtomicityTest.scala"
-
-# Always remove stale injected test
-rm -f "$TEST_FILE"
-
-INJECTED=true
+# Everything compiled or reported for the oracle source set (core/build/*/ddbenchOracle*).
+remove_oracle_outputs() {
+    [ -d "$WORK_DIR/core/build" ] || return 0
+    find "$WORK_DIR/core/build" -maxdepth 5 -iname '*ddbenchoracle*' -prune -exec rm -rf {} + 2>/dev/null
+    return 0
+}
 cleanup() {
-    [ "$INJECTED" = true ] && rm -f "$TEST_FILE"
+    remove_oracle_outputs
+    rm -rf "$RUN_DIR"
 }
 trap cleanup EXIT
 
-# Inject a behavioral test that detects the atomicity violation.
-# Uses reflection to call storeOffsets so it compiles on both
-# the buggy API (transactionalId param) and the fix API (verificationGuard param).
-# Also uses a custom Mockito Answer to intercept any append* method call,
-# handling both appendRecords (buggy) and appendForGroup (fix).
-cat > "$TEST_FILE" << 'SCALAEOF'
-package kafka.coordinator.group
+rebuild_worktree
+[ -d "$WORK_DIR/core/src/main/scala/kafka/coordinator/group" ] || error "kafka core sources not found in $WORK_DIR (run setup first)"
+for f in "$ORACLE_FILE" "$INIT_SCRIPT"; do
+    [ -f "$CASE_DIR/inject_test/$f" ] || error "oracle harness file inject_test/$f is missing"
+done
 
-import kafka.common.OffsetAndMetadata
-import kafka.server.{KafkaConfig, ReplicaManager, RequestLocal}
-import kafka.utils.TestUtils
-import org.apache.kafka.common.{TopicIdPartition, TopicPartition, Uuid}
-import org.apache.kafka.common.metrics.Metrics
-import org.apache.kafka.common.record.RecordBatch
-import org.apache.kafka.common.protocol.Errors
-import org.apache.kafka.server.common.MetadataVersion
-import org.apache.kafka.server.util.MockTime
-import org.junit.jupiter.api.Assertions._
-import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
-import org.mockito.ArgumentMatchers._
-import org.mockito.Mockito._
-import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
+echo "=== Reproducing kafka-15784-txn-offset-atomicity ==="
 
-import scala.collection.immutable
-
-class TxnOffsetAtomicityTest {
-
-  private val groupPartitionId = 0
-  private val groupId = "test-group"
-  private val topicIdPartition = new TopicIdPartition(Uuid.randomUuid(), 0, "test-topic")
-  private val producerId = 232L
-  private val producerEpoch = 0.toShort
-  private val transactionalId = "txn-id"
-  private val time = new MockTime()
-  private val numOffsetsPartitions = 2
-
-  private var replicaManager: ReplicaManager = _
-  private var groupMetadataManager: GroupMetadataManager = _
-  private var group: GroupMetadata = _
-  private var metrics: Metrics = _
-
-  private val offsetConfig = {
-    val config = KafkaConfig.fromProps(TestUtils.createBrokerConfig(nodeId = 0, zkConnect = ""))
-    OffsetConfig(maxMetadataSize = config.offsetMetadataMaxSize,
-      loadBufferSize = config.offsetsLoadBufferSize,
-      offsetsRetentionMs = config.offsetsRetentionMinutes * 60 * 1000L,
-      offsetsRetentionCheckIntervalMs = config.offsetsRetentionCheckIntervalMs,
-      offsetsTopicNumPartitions = config.offsetsTopicPartitions,
-      offsetsTopicSegmentBytes = config.offsetsTopicSegmentBytes,
-      offsetsTopicReplicationFactor = config.offsetsTopicReplicationFactor,
-      offsetsTopicCompressionType = config.offsetsTopicCompressionType,
-      offsetCommitTimeoutMs = config.offsetCommitTimeoutMs,
-      offsetCommitRequiredAcks = config.offsetCommitRequiredAcks)
-  }
-
-  @AfterEach
-  def tearDown(): Unit = {
-    if (groupMetadataManager != null)
-      groupMetadataManager.shutdown()
-    if (metrics != null)
-      metrics.close()
-  }
-
-  @BeforeEach
-  def setUp(): Unit = {
-    metrics = new Metrics()
-    // Use a custom default answer that throws on any append* method,
-    // handling both appendRecords (buggy API) and appendForGroup (fix API)
-    replicaManager = mock(classOf[ReplicaManager], withSettings().defaultAnswer(new Answer[AnyRef] {
-      override def answer(invocation: InvocationOnMock): AnyRef = {
-        if (invocation.getMethod.getName.startsWith("append"))
-          throw new RuntimeException("Simulated log append failure")
-        org.mockito.Mockito.RETURNS_DEFAULTS.answer(invocation)
-      }
-    }))
-    when(replicaManager.getMagic(any[TopicPartition]())).thenReturn(Some(RecordBatch.CURRENT_MAGIC_VALUE))
-
-    groupMetadataManager = new GroupMetadataManager(0, MetadataVersion.latest, offsetConfig, replicaManager,
-      time, metrics)
-    groupMetadataManager.startup(() => numOffsetsPartitions, false)
-    groupMetadataManager.addOwnedPartition(groupPartitionId)
-
-    group = new GroupMetadata(groupId, Empty, time)
-    groupMetadataManager.addGroup(group)
-  }
-
-  @Test
-  def testTxnOffsetAtomicityOnAppendException(): Unit = {
-    val offset = 42
-    val offsetAndMetadata = OffsetAndMetadata(offset, "", time.milliseconds())
-    val offsets = immutable.Map(topicIdPartition -> offsetAndMetadata)
-
-    var commitErrors: Option[immutable.Map[TopicIdPartition, Errors]] = None
-    val callback: immutable.Map[TopicIdPartition, Errors] => Unit = { errors =>
-      commitErrors = Some(errors)
-    }
-
-    assertFalse(group.hasOffsets, "Group should have no offsets before commit")
-
-    // Call storeOffsets via reflection to handle both buggy and fix API signatures.
-    // Buggy API: storeOffsets(group, consumerId, offsets, callback, txnId, prodId, prodEpoch, requestLocal)
-    // Fix API may add/change parameters (e.g., verificationGuard instead of txnId).
-    val storeMethod = groupMetadataManager.getClass.getMethods
-      .filter(_.getName == "storeOffsets")
-      .filter(_.getParameterCount >= 7)
-      .sortBy(-_.getParameterCount)
-      .head
-
-    val paramTypes = storeMethod.getParameterTypes
-    val args = new Array[AnyRef](paramTypes.length)
-    // First 4 args are always: group, consumerId, offsets, callback
-    args(0) = group
-    args(1) = ""
-    args(2) = offsets
-    args(3) = callback.asInstanceOf[AnyRef]
-    // Remaining args: fill based on type
-    for (i <- 4 until paramTypes.length) {
-      val pt = paramTypes(i)
-      args(i) = {
-        if (pt == classOf[String]) transactionalId
-        else if (pt == java.lang.Long.TYPE || pt == classOf[java.lang.Long]) java.lang.Long.valueOf(producerId)
-        else if (pt == java.lang.Short.TYPE || pt == classOf[java.lang.Short]) java.lang.Short.valueOf(producerEpoch)
-        else if (pt.getSimpleName.contains("RequestLocal")) RequestLocal.NoCaching
-        else if (pt.getSimpleName.contains("Optional")) java.util.Optional.empty()
-        else null
-      }
-    }
-
-    try {
-      storeMethod.invoke(groupMetadataManager, args: _*)
-    } catch {
-      case e: java.lang.reflect.InvocationTargetException =>
-        val cause = e.getCause
-        if (cause == null || !cause.getMessage.contains("Simulated log append failure")) throw e
-      case e: RuntimeException =>
-        if (!e.getMessage.contains("Simulated log append failure")) throw e
-    }
-
-    // KEY ASSERTION: After a failed append, the group must NOT retain pending offsets.
-    if (group.hasOffsets) {
-      assertTrue(group.allOffsets.isEmpty,
-        "On buggy code: group.hasOffsets is true but allOffsets should be empty (pending only)")
-      assertTrue(group.hasPendingOffsetCommitsFromProducer(producerId),
-        "On buggy code: group should have pending txn offset commits from the failed producer")
-
-      fail("FAIL: Atomicity violation detected (KAFKA-15784). " +
-        "Group retains stale pending offsets in memory after log append exception. " +
-        "prepareTxnOffsetCommit was called before appendRecords, and the failure " +
-        "callback was never invoked to clean up.")
-    }
-
-    assertFalse(group.hasOffsets,
-      "Group should have no offsets after failed append (in-memory state unchanged)")
-  }
-}
-SCALAEOF
-echo "Injected regression test: $TEST_FILE"
-
-echo ""
-echo "Running injected test..."
+# The oracle test is compiled from $RUN_DIR (outside the worktree) in its own
+# source set of :core; nothing in the worktree can stand in for it.
+mkdir -p "$RUN_DIR/oracle-src/kafka/coordinator/group"
+cp "$CASE_DIR/inject_test/$ORACLE_FILE" "$RUN_DIR/oracle-src/kafka/coordinator/group/$ORACLE_FILE"
+cp "$CASE_DIR/inject_test/$INIT_SCRIPT" "$RUN_DIR/$INIT_SCRIPT"
+remove_oracle_outputs
 
 cd "$WORK_DIR"
-OUTPUT=$(./gradlew :core:test --tests "kafka.coordinator.group.TxnOffsetAtomicityTest" \
-    -x spotlessCheck -x checkstyleMain -x checkstyleTest \
-    --no-daemon --info 2>&1)
-TEST_EXIT=$?
-echo "$OUTPUT"
+echo "Running $ORACLE_CLASS ..."
+DDBENCH_ORACLE_SRC="$RUN_DIR/oracle-src" ./gradlew --init-script "$RUN_DIR/$INIT_SCRIPT" \
+    :core:ddbenchOracleTest --no-daemon > "$LOG" 2>&1
+GRADLE_RC=$?
+grep -E "DDBench oracle:|DDBenchOracle.*(PASSED|FAILED|SKIPPED)|AssertionFailedError|^FAILURE|What went wrong|error:|Compilation failed" "$LOG" | head -60
+echo "(gradle exited $GRADLE_RC)"
 
-echo ""
-if [ "$TEST_EXIT" -ne 0 ]; then
-    echo "FAIL: Bug is present -- GroupMetadataManager mutates in-memory state before log append."
-    echo "      When appendRecords throws, the failure callback is never invoked and"
-    echo "      the group retains stale pending offsets (KAFKA-15784)."
-    exit 1
-else
-    echo "PASS: Bug is fixed -- in-memory state is only updated in the append callback,"
-    echo "      ensuring atomicity of transactional offset commits."
-    exit 0
+if [ -f "$REPORT" ]; then   # assertion messages, for humans
+    grep -oE '<(failure|error) message="[^"]*"' "$REPORT" | sed -e 's/^<[a-z]* message="/  /' -e 's/"$//' \
+        -e 's/&quot;/"/g' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e "s/&apos;/'/g" -e 's/&amp;/\&/g' | head -10
 fi
+failed=""; skipped=""; norun=""
+for m in $ORACLE_METHODS; do
+    r=$(junit_result "$REPORT" "$m")
+    echo "  $m: $r"
+    case "$r" in
+        pass) ;;
+        fail) failed="$failed $m" ;;
+        skip) skipped="$skipped $m" ;;
+        *)    norun="$norun $m" ;;
+    esac
+done
+
+if [ -n "$failed" ]; then
+    fail "Bug is present — the coordinator's served offsets disagree with the offsets log, or an acknowledged transactional offset commit is not served (failed:$failed)"
+fi
+if [ -n "$skipped" ]; then
+    fail "an oracle test was skipped:$skipped"
+fi
+if [ -n "$norun" ]; then
+    tail -40 "$LOG"
+    if grep -qE "COMPILATION ERROR|Compilation failure|compilation failed|Compilation failed|error: |cannot find symbol" "$LOG"; then
+        fail "the oracle test did not run: the worktree or the injected oracle test does not compile"
+    fi
+    error "the oracle test did not run and no compilation error was found (see output above)"
+fi
+pass "Bug is fixed — transactional offset commits racing with group deletion or a coordinator reload leave the served offsets equal to the offsets log"

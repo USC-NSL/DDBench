@@ -1,0 +1,909 @@
+diff --git a/core/src/main/scala/kafka/coordinator/group/GroupCoordinator.scala b/core/src/main/scala/kafka/coordinator/group/GroupCoordinator.scala
+index 0f546a4744..aba205372b 100644
+--- a/core/src/main/scala/kafka/coordinator/group/GroupCoordinator.scala
++++ b/core/src/main/scala/kafka/coordinator/group/GroupCoordinator.scala
+@@ -29,9 +29,11 @@ import org.apache.kafka.common.message.LeaveGroupRequestData.MemberIdentity
+ import org.apache.kafka.common.metrics.Metrics
+ import org.apache.kafka.common.metrics.stats.Meter
+ import org.apache.kafka.common.protocol.{ApiKeys, Errors}
++import org.apache.kafka.common.record.RecordBatch
+ import org.apache.kafka.common.requests._
+ import org.apache.kafka.common.utils.Time
+ import org.apache.kafka.server.record.BrokerCompressionType
++import org.apache.kafka.storage.internals.log.VerificationGuard
+ 
+ import scala.collection.{Map, Seq, Set, immutable, mutable}
+ import scala.math.max
+@@ -909,8 +911,32 @@ private[group] class GroupCoordinator(
+         val group = groupManager.getGroup(groupId).getOrElse {
+           groupManager.addGroup(new GroupMetadata(groupId, Empty, time))
+         }
+-        doTxnCommitOffsets(group, transactionalId, memberId, groupInstanceId, generationId, producerId, producerEpoch,
+-          offsetMetadata, requestLocal, responseCallback)
++
++        val offsetTopicPartition = new TopicPartition(Topic.GROUP_METADATA_TOPIC_NAME, partitionFor(group.groupId))
++
++        def postVerificationCallback(
++          error: Errors,
++          newRequestLocal: RequestLocal,
++          verificationGuard: VerificationGuard
++        ): Unit = {
++          if (error != Errors.NONE) {
++            val finalError = GroupMetadataManager.maybeConvertOffsetCommitError(error)
++            responseCallback(offsetMetadata.map { case (k, _) => k -> finalError })
++          } else {
++            doTxnCommitOffsets(group, memberId, groupInstanceId, generationId, producerId, producerEpoch,
++              offsetTopicPartition, offsetMetadata, newRequestLocal, responseCallback, Some(verificationGuard))
++          }
++        }
++
++        groupManager.replicaManager.maybeStartTransactionVerificationForPartition(
++          topicPartition = offsetTopicPartition,
++          transactionalId,
++          producerId,
++          producerEpoch,
++          RecordBatch.NO_SEQUENCE,
++          requestLocal,
++          postVerificationCallback
++        )
+     }
+   }
+ 
+@@ -952,15 +978,16 @@ private[group] class GroupCoordinator(
+   }
+ 
+   private def doTxnCommitOffsets(group: GroupMetadata,
+-                                 transactionalId: String,
+                                  memberId: String,
+                                  groupInstanceId: Option[String],
+                                  generationId: Int,
+                                  producerId: Long,
+                                  producerEpoch: Short,
++                                 offsetTopicPartition: TopicPartition,
+                                  offsetMetadata: immutable.Map[TopicIdPartition, OffsetAndMetadata],
+                                  requestLocal: RequestLocal,
+-                                 responseCallback: immutable.Map[TopicIdPartition, Errors] => Unit): Unit = {
++                                 responseCallback: immutable.Map[TopicIdPartition, Errors] => Unit,
++                                 verificationGuard: Option[VerificationGuard]): Unit = {
+     group.inLock {
+       val validationErrorOpt = validateOffsetCommit(
+         group,
+@@ -973,8 +1000,8 @@ private[group] class GroupCoordinator(
+       if (validationErrorOpt.isDefined) {
+         responseCallback(offsetMetadata.map { case (k, _) => k -> validationErrorOpt.get })
+       } else {
+-        groupManager.storeOffsets(group, memberId, offsetMetadata, responseCallback, transactionalId, producerId,
+-          producerEpoch, requestLocal)
++        groupManager.storeOffsets(group, memberId, offsetTopicPartition, offsetMetadata, responseCallback, producerId,
++          producerEpoch, requestLocal, verificationGuard)
+       }
+     }
+   }
+@@ -1033,19 +1060,21 @@ private[group] class GroupCoordinator(
+         isTransactional = false
+       )
+ 
++      val offsetTopicPartition = new TopicPartition(Topic.GROUP_METADATA_TOPIC_NAME, partitionFor(group.groupId))
++
+       if (validationErrorOpt.isDefined) {
+         responseCallback(offsetMetadata.map { case (k, _) => k -> validationErrorOpt.get })
+       } else {
+         group.currentState match {
+           case Empty =>
+-            groupManager.storeOffsets(group, memberId, offsetMetadata, responseCallback)
++            groupManager.storeOffsets(group, memberId, offsetTopicPartition, offsetMetadata, responseCallback, verificationGuard = None)
+ 
+           case Stable | PreparingRebalance =>
+             // During PreparingRebalance phase, we still allow a commit request since we rely
+             // on heartbeat response to eventually notify the rebalance in progress signal to the consumer
+             val member = group.get(memberId)
+             completeAndScheduleNextHeartbeatExpiration(group, member)
+-            groupManager.storeOffsets(group, memberId, offsetMetadata, responseCallback, requestLocal = requestLocal)
++            groupManager.storeOffsets(group, memberId, offsetTopicPartition, offsetMetadata, responseCallback, requestLocal = requestLocal, verificationGuard = None)
+ 
+           case CompletingRebalance =>
+             // We should not receive a commit request if the group has not completed rebalance;
+diff --git a/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala b/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala
+index 276602836f..31af1d81a2 100644
+--- a/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala
++++ b/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala
+@@ -26,7 +26,8 @@ import java.util.concurrent.locks.ReentrantLock
+ import java.util.concurrent.ConcurrentHashMap
+ import com.yammer.metrics.core.Gauge
+ import kafka.common.OffsetAndMetadata
+-import kafka.server.{ReplicaManager, RequestLocal}
++import kafka.coordinator.group.GroupMetadataManager.maybeConvertOffsetCommitError
++import kafka.server.{LogAppendResult, ReplicaManager, RequestLocal}
+ import kafka.utils.CoreUtils.inLock
+ import kafka.utils.Implicits._
+ import kafka.utils._
+@@ -47,7 +48,7 @@ import org.apache.kafka.server.common.MetadataVersion
+ import org.apache.kafka.server.common.MetadataVersion.{IBP_0_10_1_IV0, IBP_2_1_IV0, IBP_2_1_IV1, IBP_2_3_IV0}
+ import org.apache.kafka.server.metrics.KafkaMetricsGroup
+ import org.apache.kafka.server.util.KafkaScheduler
+-import org.apache.kafka.storage.internals.log.{AppendOrigin, FetchIsolation}
++import org.apache.kafka.storage.internals.log.{AppendOrigin, FetchIsolation, VerificationGuard}
+ 
+ import scala.collection._
+ import scala.collection.mutable.ArrayBuffer
+@@ -324,171 +325,178 @@ class GroupMetadataManager(brokerId: Int,
+     }
+   }
+ 
+-  private def appendForGroup(group: GroupMetadata,
+-                             records: Map[TopicPartition, MemoryRecords],
+-                             requestLocal: RequestLocal,
+-                             callback: Map[TopicPartition, PartitionResponse] => Unit,
+-                             transactionalId: String = null): Unit = {
++  // This method should be called under the group lock to ensure atomicity of the update to the the in-memory and persisted state.
++  private def appendForGroup(
++    group: GroupMetadata,
++    records: Map[TopicPartition, MemoryRecords],
++    requestLocal: RequestLocal,
++    callback: Map[TopicPartition, PartitionResponse] => Unit,
++    verificationGuards: Map[TopicPartition, VerificationGuard] = Map.empty
++  ): Unit = {
+     // call replica manager to append the group message
+-    replicaManager.appendRecords(
++    replicaManager.appendForGroup(
+       timeout = config.offsetCommitTimeoutMs.toLong,
+       requiredAcks = config.offsetCommitRequiredAcks,
+-      internalTopicsAllowed = true,
+-      origin = AppendOrigin.COORDINATOR,
+       entriesPerPartition = records,
+       delayedProduceLock = Some(group.lock),
+       responseCallback = callback,
+       requestLocal = requestLocal,
+-      transactionalId = transactionalId)
++      verificationGuards = verificationGuards
++    )
++  }
++
++  private def generateOffsetRecords(magicValue: Byte,
++                            isTxnOffsetCommit: Boolean,
++                            groupId: String,
++                            offsetTopicPartition: TopicPartition,
++                            filteredOffsetMetadata: Map[TopicIdPartition, OffsetAndMetadata],
++                            producerId: Long,
++                            producerEpoch: Short): Map[TopicPartition, MemoryRecords] = {
++      // We always use CREATE_TIME, like the producer. The conversion to LOG_APPEND_TIME (if necessary) happens automatically.
++      val timestampType = TimestampType.CREATE_TIME
++      val timestamp = time.milliseconds()
++
++      val records = filteredOffsetMetadata.map { case (topicIdPartition, offsetAndMetadata) =>
++        val key = GroupMetadataManager.offsetCommitKey(groupId, topicIdPartition.topicPartition)
++        val value = GroupMetadataManager.offsetCommitValue(offsetAndMetadata, interBrokerProtocolVersion)
++        new SimpleRecord(timestamp, key, value)
++      }
++      val buffer = ByteBuffer.allocate(AbstractRecords.estimateSizeInBytes(magicValue, compressionType, records.asJava))
++
++      if (isTxnOffsetCommit && magicValue < RecordBatch.MAGIC_VALUE_V2)
++        throw Errors.UNSUPPORTED_FOR_MESSAGE_FORMAT.exception("Attempting to make a transaction offset commit with an invalid magic: " + magicValue)
++
++      val builder = MemoryRecords.builder(buffer, magicValue, compressionType, timestampType, 0L, time.milliseconds(),
++        producerId, producerEpoch, 0, isTxnOffsetCommit, RecordBatch.NO_PARTITION_LEADER_EPOCH)
++
++      records.foreach(builder.append)
++      Map(offsetTopicPartition -> builder.build())
++  }
++
++  private def createPutCacheCallback(isTxnOffsetCommit: Boolean,
++                             group: GroupMetadata,
++                             consumerId: String,
++                             offsetMetadata: immutable.Map[TopicIdPartition, OffsetAndMetadata],
++                             filteredOffsetMetadata: Map[TopicIdPartition, OffsetAndMetadata],
++                             responseCallback: immutable.Map[TopicIdPartition, Errors] => Unit,
++                             producerId: Long,
++                             records: Map[TopicPartition, MemoryRecords],
++                             preAppendErrors: Map[TopicPartition, LogAppendResult] = Map.empty): Map[TopicPartition, PartitionResponse] => Unit = {
++    val offsetTopicPartition = new TopicPartition(Topic.GROUP_METADATA_TOPIC_NAME, partitionFor(group.groupId))
++    // set the callback function to insert offsets into cache after log append completed
++    def putCacheCallback(responseStatus: Map[TopicPartition, PartitionResponse]): Unit = {
++      // the append response should only contain the topics partition
++      if (responseStatus.size != 1 || !responseStatus.contains(offsetTopicPartition))
++        throw new IllegalStateException("Append status %s should only have one partition %s"
++          .format(responseStatus, offsetTopicPartition))
++
++      // construct the commit response status and insert
++      // the offset and metadata to cache if the append status has no error
++      val status = responseStatus(offsetTopicPartition)
++
++      val responseError = group.inLock {
++        if (status.error == Errors.NONE) {
++          if (!group.is(Dead)) {
++            filteredOffsetMetadata.forKeyValue { (topicIdPartition, offsetAndMetadata) =>
++              if (isTxnOffsetCommit)
++                group.onTxnOffsetCommitAppend(producerId, topicIdPartition, CommitRecordMetadataAndOffset(Some(status.baseOffset), offsetAndMetadata))
++              else
++                group.onOffsetCommitAppend(topicIdPartition, CommitRecordMetadataAndOffset(Some(status.baseOffset), offsetAndMetadata))
++            }
++          }
++
++          // Record the number of offsets committed to the log
++          offsetCommitsSensor.record(records.size)
++
++          Errors.NONE
++        } else {
++          if (!group.is(Dead)) {
++            if (!group.hasPendingOffsetCommitsFromProducer(producerId))
++              removeProducerGroup(producerId, group.groupId)
++            filteredOffsetMetadata.forKeyValue { (topicIdPartition, offsetAndMetadata) =>
++              if (isTxnOffsetCommit)
++                group.failPendingTxnOffsetCommit(producerId, topicIdPartition)
++              else
++                group.failPendingOffsetWrite(topicIdPartition, offsetAndMetadata)
++            }
++          }
++
++          debug(s"Offset commit $filteredOffsetMetadata from group ${group.groupId}, consumer $consumerId " +
++            s"with generation ${group.generationId} failed when appending to log due to ${status.error.exceptionName}")
++
++          maybeConvertOffsetCommitError(status.error)
++        }
++      }
++
++      // compute the final error codes for the commit response
++      val commitStatus = offsetMetadata.map { case (topicIdPartition, offsetAndMetadata) =>
++        if (!validateOffsetMetadataLength(offsetAndMetadata.metadata))
++          (topicIdPartition, Errors.OFFSET_METADATA_TOO_LARGE)
++        else if (preAppendErrors.contains(topicIdPartition.topicPartition))
++          (topicIdPartition, preAppendErrors(topicIdPartition.topicPartition).error)
++        else
++          (topicIdPartition, responseError)
++      }
++
++      // finally trigger the callback logic passed from the API layer
++      responseCallback(commitStatus)
++    }
++    putCacheCallback
+   }
+ 
+   /**
+    * Store offsets by appending it to the replicated log and then inserting to cache
++   *
++   * This method should be called under the group lock to ensure validations and updates are all performed
++   * atomically.
+    */
+   def storeOffsets(group: GroupMetadata,
+                    consumerId: String,
++                   offsetTopicPartition: TopicPartition,
+                    offsetMetadata: immutable.Map[TopicIdPartition, OffsetAndMetadata],
+                    responseCallback: immutable.Map[TopicIdPartition, Errors] => Unit,
+-                   transactionalId: String = null,
+                    producerId: Long = RecordBatch.NO_PRODUCER_ID,
+                    producerEpoch: Short = RecordBatch.NO_PRODUCER_EPOCH,
+-                   requestLocal: RequestLocal = RequestLocal.NoCaching): Unit = {
+-    // first filter out partitions with offset metadata size exceeding limit
++                   requestLocal: RequestLocal = RequestLocal.NoCaching,
++                   verificationGuard: Option[VerificationGuard]): Unit = {
++    if (!group.hasReceivedConsistentOffsetCommits)
++      warn(s"group: ${group.groupId} with leader: ${group.leaderOrNull} has received offset commits from consumers as well " +
++        s"as transactional producers. Mixing both types of offset commits will generally result in surprises and " +
++        s"should be avoided.")
++
+     val filteredOffsetMetadata = offsetMetadata.filter { case (_, offsetAndMetadata) =>
+       validateOffsetMetadataLength(offsetAndMetadata.metadata)
+     }
+-
+-    group.inLock {
+-      if (!group.hasReceivedConsistentOffsetCommits)
+-        warn(s"group: ${group.groupId} with leader: ${group.leaderOrNull} has received offset commits from consumers as well " +
+-          s"as transactional producers. Mixing both types of offset commits will generally result in surprises and " +
+-          s"should be avoided.")
+-    }
+-
+-    val isTxnOffsetCommit = producerId != RecordBatch.NO_PRODUCER_ID
+-    // construct the message set to append
+     if (filteredOffsetMetadata.isEmpty) {
+       // compute the final error codes for the commit response
+       val commitStatus = offsetMetadata.map { case (k, _) => k -> Errors.OFFSET_METADATA_TOO_LARGE }
+       responseCallback(commitStatus)
+-    } else {
+-      getMagic(partitionFor(group.groupId)) match {
+-        case Some(magicValue) =>
+-          // We always use CREATE_TIME, like the producer. The conversion to LOG_APPEND_TIME (if necessary) happens automatically.
+-          val timestampType = TimestampType.CREATE_TIME
+-          val timestamp = time.milliseconds()
+-
+-          val records = filteredOffsetMetadata.map { case (topicIdPartition, offsetAndMetadata) =>
+-            val key = GroupMetadataManager.offsetCommitKey(group.groupId, topicIdPartition.topicPartition)
+-            val value = GroupMetadataManager.offsetCommitValue(offsetAndMetadata, interBrokerProtocolVersion)
+-            new SimpleRecord(timestamp, key, value)
+-          }
+-          val offsetTopicPartition = new TopicPartition(Topic.GROUP_METADATA_TOPIC_NAME, partitionFor(group.groupId))
+-          val buffer = ByteBuffer.allocate(AbstractRecords.estimateSizeInBytes(magicValue, compressionType, records.asJava))
+-
+-          if (isTxnOffsetCommit && magicValue < RecordBatch.MAGIC_VALUE_V2)
+-            throw Errors.UNSUPPORTED_FOR_MESSAGE_FORMAT.exception("Attempting to make a transaction offset commit with an invalid magic: " + magicValue)
+-
+-          val builder = MemoryRecords.builder(buffer, magicValue, compressionType, timestampType, 0L, time.milliseconds(),
+-            producerId, producerEpoch, 0, isTxnOffsetCommit, RecordBatch.NO_PARTITION_LEADER_EPOCH)
+-
+-          records.foreach(builder.append)
+-          val entries = Map(offsetTopicPartition -> builder.build())
+-
+-          // set the callback function to insert offsets into cache after log append completed
+-          def putCacheCallback(responseStatus: Map[TopicPartition, PartitionResponse]): Unit = {
+-            // the append response should only contain the topics partition
+-            if (responseStatus.size != 1 || !responseStatus.contains(offsetTopicPartition))
+-              throw new IllegalStateException("Append status %s should only have one partition %s"
+-                .format(responseStatus, offsetTopicPartition))
+-
+-            // construct the commit response status and insert
+-            // the offset and metadata to cache if the append status has no error
+-            val status = responseStatus(offsetTopicPartition)
+-
+-            val responseError = group.inLock {
+-              if (status.error == Errors.NONE) {
+-                if (!group.is(Dead)) {
+-                  filteredOffsetMetadata.forKeyValue { (topicIdPartition, offsetAndMetadata) =>
+-                    if (isTxnOffsetCommit)
+-                      group.onTxnOffsetCommitAppend(producerId, topicIdPartition, CommitRecordMetadataAndOffset(Some(status.baseOffset), offsetAndMetadata))
+-                    else
+-                      group.onOffsetCommitAppend(topicIdPartition, CommitRecordMetadataAndOffset(Some(status.baseOffset), offsetAndMetadata))
+-                  }
+-                }
+-
+-                // Record the number of offsets committed to the log
+-                offsetCommitsSensor.record(records.size)
+-
+-                Errors.NONE
+-              } else {
+-                if (!group.is(Dead)) {
+-                  if (!group.hasPendingOffsetCommitsFromProducer(producerId))
+-                    removeProducerGroup(producerId, group.groupId)
+-                  filteredOffsetMetadata.forKeyValue { (topicIdPartition, offsetAndMetadata) =>
+-                    if (isTxnOffsetCommit)
+-                      group.failPendingTxnOffsetCommit(producerId, topicIdPartition)
+-                    else
+-                      group.failPendingOffsetWrite(topicIdPartition, offsetAndMetadata)
+-                  }
+-                }
+-
+-                debug(s"Offset commit $filteredOffsetMetadata from group ${group.groupId}, consumer $consumerId " +
+-                  s"with generation ${group.generationId} failed when appending to log due to ${status.error.exceptionName}")
+-
+-                // transform the log append error code to the corresponding the commit status error code
+-                status.error match {
+-                  case Errors.UNKNOWN_TOPIC_OR_PARTITION
+-                       | Errors.NOT_ENOUGH_REPLICAS
+-                       | Errors.NOT_ENOUGH_REPLICAS_AFTER_APPEND =>
+-                    Errors.COORDINATOR_NOT_AVAILABLE
+-
+-                  case Errors.NOT_LEADER_OR_FOLLOWER
+-                       | Errors.KAFKA_STORAGE_ERROR =>
+-                    Errors.NOT_COORDINATOR
+-
+-                  case Errors.MESSAGE_TOO_LARGE
+-                       | Errors.RECORD_LIST_TOO_LARGE
+-                       | Errors.INVALID_FETCH_SIZE =>
+-                    Errors.INVALID_COMMIT_OFFSET_SIZE
+-
+-                  case other => other
+-                }
+-              }
+-            }
+-
+-            // compute the final error codes for the commit response
+-            val commitStatus = offsetMetadata.map { case (topicIdPartition, offsetAndMetadata) =>
+-              if (validateOffsetMetadataLength(offsetAndMetadata.metadata))
+-                (topicIdPartition, responseError)
+-              else
+-                (topicIdPartition, Errors.OFFSET_METADATA_TOO_LARGE)
+-            }
++      return
++    }
+ 
+-            // finally trigger the callback logic passed from the API layer
+-            responseCallback(commitStatus)
+-          }
++    val magicOpt = getMagic(partitionFor(group.groupId))
++    if (magicOpt.isEmpty) {
++      val commitStatus = offsetMetadata.map { case (topicIdPartition, _) =>
++        (topicIdPartition, Errors.NOT_COORDINATOR)
++      }
++      responseCallback(commitStatus)
++      return
++    }
+ 
+-          if (isTxnOffsetCommit) {
+-            group.inLock {
+-              addProducerGroup(producerId, group.groupId)
+-              group.prepareTxnOffsetCommit(producerId, offsetMetadata)
+-            }
+-          } else {
+-            group.inLock {
+-              group.prepareOffsetCommit(offsetMetadata)
+-            }
+-          }
++    val isTxnOffsetCommit = producerId != RecordBatch.NO_PRODUCER_ID
++    val records = generateOffsetRecords(magicOpt.get, isTxnOffsetCommit, group.groupId, offsetTopicPartition, filteredOffsetMetadata, producerId, producerEpoch)
++    val putCacheCallback = createPutCacheCallback(isTxnOffsetCommit, group, consumerId, offsetMetadata, filteredOffsetMetadata, responseCallback, producerId, records)
+ 
+-          appendForGroup(group, entries, requestLocal, putCacheCallback, transactionalId)
++    val verificationGuards = verificationGuard.map(guard => offsetTopicPartition -> guard).toMap
+ 
+-        case None =>
+-          val commitStatus = offsetMetadata.map { case (topicIdPartition, _) =>
+-            (topicIdPartition, Errors.NOT_COORDINATOR)
+-          }
+-          responseCallback(commitStatus)
+-      }
++    if (isTxnOffsetCommit) {
++      addProducerGroup(producerId, group.groupId)
++      group.prepareTxnOffsetCommit(producerId, offsetMetadata)
++    } else {
++      group.prepareOffsetCommit(offsetMetadata)
+     }
++
++    appendForGroup(group, records, requestLocal, putCacheCallback, verificationGuards)
+   }
+ 
+   /**
+@@ -1352,6 +1360,28 @@ object GroupMetadataManager {
+       "%X".format(BigInt(1, bytes))
+   }
+ 
++  def maybeConvertOffsetCommitError(error: Errors) : Errors = {
++    error match {
++      case Errors.UNKNOWN_TOPIC_OR_PARTITION
++           | Errors.NOT_ENOUGH_REPLICAS
++           | Errors.NOT_ENOUGH_REPLICAS_AFTER_APPEND =>
++        Errors.COORDINATOR_NOT_AVAILABLE
++
++      case Errors.NOT_LEADER_OR_FOLLOWER
++           | Errors.KAFKA_STORAGE_ERROR =>
++        Errors.NOT_COORDINATOR
++
++      case Errors.MESSAGE_TOO_LARGE
++           | Errors.RECORD_LIST_TOO_LARGE
++           | Errors.INVALID_FETCH_SIZE =>
++        Errors.INVALID_COMMIT_OFFSET_SIZE
++
++      // We may see INVALID_TXN_STATE or INVALID_PID_MAPPING here due to transaction verification.
++      // They can be returned without mapping to a new error.
++      case other => other
++    }
++  }
++
+ }
+ 
+ case class GroupTopicPartition(group: String, topicPartition: TopicPartition) {
+diff --git a/core/src/main/scala/kafka/coordinator/transaction/TransactionStateManager.scala b/core/src/main/scala/kafka/coordinator/transaction/TransactionStateManager.scala
+index d460edb029..af46bfcc95 100644
+--- a/core/src/main/scala/kafka/coordinator/transaction/TransactionStateManager.scala
++++ b/core/src/main/scala/kafka/coordinator/transaction/TransactionStateManager.scala
+@@ -767,15 +767,15 @@ class TransactionStateManager(brokerId: Int,
+           }
+           if (append) {
+             replicaManager.appendRecords(
+-                newMetadata.txnTimeoutMs.toLong,
+-                TransactionLog.EnforcedRequiredAcks,
+-                internalTopicsAllowed = true,
+-                origin = AppendOrigin.COORDINATOR,
+-                recordsPerPartition,
+-                updateCacheCallback,
+-                requestLocal = requestLocal)
+-
+-              trace(s"Appending new metadata $newMetadata for transaction id $transactionalId with coordinator epoch $coordinatorEpoch to the local transaction log")
++              timeout = newMetadata.txnTimeoutMs.toLong,
++              requiredAcks = TransactionLog.EnforcedRequiredAcks,
++              internalTopicsAllowed = true,
++              origin = AppendOrigin.COORDINATOR,
++              entriesPerPartition = recordsPerPartition,
++              responseCallback = updateCacheCallback,
++              requestLocal = requestLocal)
++
++            trace(s"Appending new metadata $newMetadata for transaction id $transactionalId with coordinator epoch $coordinatorEpoch to the local transaction log")
+           }
+       }
+     }
+diff --git a/core/src/main/scala/kafka/server/ReplicaManager.scala b/core/src/main/scala/kafka/server/ReplicaManager.scala
+index 60f69caad4..b9e0e1360e 100644
+--- a/core/src/main/scala/kafka/server/ReplicaManager.scala
++++ b/core/src/main/scala/kafka/server/ReplicaManager.scala
+@@ -24,8 +24,7 @@ import kafka.log.remote.RemoteLogManager
+ import kafka.log.{LogManager, UnifiedLog}
+ import kafka.server.HostedPartition.Online
+ import kafka.server.QuotaFactory.QuotaManagers
+-import kafka.server.ReplicaManager.{AtMinIsrPartitionCountMetricName, FailedIsrUpdatesPerSecMetricName, IsrExpandsPerSecMetricName, IsrShrinksPerSecMetricName, LeaderCountMetricName, OfflineReplicaCountMetricName, PartitionCountMetricName, PartitionsWithLateTransactionsCountMetricName, ProducerIdCountMetricName, ReassigningPartitionsMetricName, UnderMinIsrPartitionCountMetricName, UnderReplicatedPartitionsMetricName}
+-import kafka.server.ReplicaManager.createLogReadResult
++import kafka.server.ReplicaManager.{AtMinIsrPartitionCountMetricName, FailedIsrUpdatesPerSecMetricName, IsrExpandsPerSecMetricName, IsrShrinksPerSecMetricName, LeaderCountMetricName, OfflineReplicaCountMetricName, PartitionCountMetricName, PartitionsWithLateTransactionsCountMetricName, ProducerIdCountMetricName, ReassigningPartitionsMetricName, UnderMinIsrPartitionCountMetricName, UnderReplicatedPartitionsMetricName, createLogReadResult}
+ import kafka.server.checkpoints.{LazyOffsetCheckpoints, OffsetCheckpointFile, OffsetCheckpoints}
+ import kafka.server.metadata.ZkMetadataCache
+ import kafka.utils.Implicits._
+@@ -887,7 +886,63 @@ class ReplicaManager(val config: KafkaConfig,
+     }
+ 
+     val allResults = localProduceResults ++ errorResults
+-    val produceStatus = allResults.map { case (topicPartition, result) =>
++    val produceStatus = buildProducePartitionStatus(allResults)
++
++    addCompletePurgatoryAction(actionQueue, allResults)
++    recordConversionStatsCallback(localProduceResults.map { case (k, v) =>
++      k -> v.info.recordValidationStats
++    })
++
++    maybeAddDelayedProduce(
++      requiredAcks,
++      delayedProduceLock,
++      timeout,
++      allEntries,
++      allResults,
++      produceStatus,
++      responseCallback
++    )
++  }
++
++  private def partitionEntriesForVerification(verificationGuards: mutable.Map[TopicPartition, VerificationGuard],
++                                              entriesPerPartition: Map[TopicPartition, MemoryRecords],
++                                              verifiedEntries: mutable.Map[TopicPartition, MemoryRecords],
++                                              unverifiedEntries: mutable.Map[TopicPartition, MemoryRecords],
++                                              errorEntries: mutable.Map[TopicPartition, Errors]): Unit = {
++    val transactionalProducerIds = mutable.HashSet[Long]()
++    entriesPerPartition.foreach { case (topicPartition, records) =>
++      try {
++        // Produce requests (only requests that require verification) should only have one batch per partition in "batches" but check all just to be safe.
++        val transactionalBatches = records.batches.asScala.filter(batch => batch.hasProducerId && batch.isTransactional)
++        transactionalBatches.foreach(batch => transactionalProducerIds.add(batch.producerId))
++
++        if (transactionalBatches.nonEmpty) {
++          // We return VerificationGuard if the partition needs to be verified. If no state is present, no need to verify.
++          val firstBatch = records.firstBatch
++          val verificationGuard = getPartitionOrException(topicPartition).maybeStartTransactionVerification(firstBatch.producerId, firstBatch.baseSequence, firstBatch.producerEpoch)
++          if (verificationGuard != VerificationGuard.SENTINEL) {
++            verificationGuards.put(topicPartition, verificationGuard)
++            unverifiedEntries.put(topicPartition, records)
++          } else
++            verifiedEntries.put(topicPartition, records)
++        } else {
++          // If there is no producer ID or transactional records in the batches, no need to verify.
++          verifiedEntries.put(topicPartition, records)
++        }
++      } catch {
++        case e: Exception => errorEntries.put(topicPartition, Errors.forException(e))
++      }
++    }
++    // We should have exactly one producer ID for transactional records
++    if (transactionalProducerIds.size > 1) {
++      throw new InvalidPidMappingException("Transactional records contained more than one producer ID")
++    }
++  }
++
++  private def buildProducePartitionStatus(
++    results: Map[TopicPartition, LogAppendResult]
++  ): Map[TopicPartition, ProducePartitionStatus] = {
++    results.map { case (topicPartition, result) =>
+       topicPartition -> ProducePartitionStatus(
+         result.info.lastOffset + 1, // required offset
+         new PartitionResponse(
+@@ -899,11 +954,16 @@ class ReplicaManager(val config: KafkaConfig,
+           result.info.recordErrors,
+           result.errorMessage
+         )
+-      ) // response status
++      )
+     }
++  }
+ 
++  private def addCompletePurgatoryAction(
++    actionQueue: ActionQueue,
++    appendResults: Map[TopicPartition, LogAppendResult]
++  ): Unit = {
+     actionQueue.add {
+-      () => allResults.foreach { case (topicPartition, result) =>
++      () => appendResults.foreach { case (topicPartition, result) =>
+         val requestKey = TopicPartitionOperationKey(topicPartition)
+         result.info.leaderHwChange match {
+           case LeaderHwChange.INCREASED =>
+@@ -915,20 +975,99 @@ class ReplicaManager(val config: KafkaConfig,
+             // probably unblock some follower fetch requests since log end offset has been updated
+             delayedFetchPurgatory.checkAndComplete(requestKey)
+           case LeaderHwChange.NONE =>
+-            // nothing
+-          }
++          // nothing
+         }
++      }
+     }
++  }
+ 
+-    recordConversionStatsCallback(localProduceResults.map { case (k, v) => k -> v.info.recordValidationStats })
++  /**
++   * Append messages to offsets topic, and wait for them to be replicated to other replicas;
++   * the callback function will be triggered either when timeout or the required acks are satisfied;
++   * if the callback function itself is already synchronized on some object then pass this object to avoid deadlock.
++   * This method should not return until the write to the local log is completed because updating offsets requires updating
++   * the in-memory and persisted state under a lock together.
++   *
++   * Noted that all pending delayed check operations are stored in a queue. All callers to ReplicaManager.appendRecords()
++   * are expected to call ActionQueue.tryCompleteActions for all affected partitions, without holding any conflicting
++   * locks.
++   *
++   * If appending transactional records, call maybeStartTransactionVerificationForPartition(s) and call this method in the callback.
++   * For example, the GroupCoordinator will pass `doCommitTxnOffsets` as the post-verification callback, and that method eventually call this.
++   *
++   * @param timeout                       maximum time we will wait to append before returning
++   * @param requiredAcks                  number of replicas who must acknowledge the append before sending the response
++   * @param entriesPerPartition           the records per partition to be appended
++   * @param responseCallback              callback for sending the response
++   * @param delayedProduceLock            lock for the delayed actions
++   * @param requestLocal                  container for the stateful instances scoped to this request -- this must correspond to the
++   *                                      thread calling this method
++   * @param verificationGuards            the mapping from topic partition to verification guards if transaction verification is used
++   */
++  def appendForGroup(
++    timeout: Long,
++    requiredAcks: Short,
++    entriesPerPartition: Map[TopicPartition, MemoryRecords],
++    responseCallback: Map[TopicPartition, PartitionResponse] => Unit,
++    delayedProduceLock: Option[Lock],
++    requestLocal: RequestLocal,
++    verificationGuards: Map[TopicPartition, VerificationGuard]
++  ): Unit = {
++    if (!isValidRequiredAcks(requiredAcks)) {
++      sendInvalidRequiredAcksResponse(entriesPerPartition, responseCallback)
++      return
++    }
++
++    // This should only be called on __consumer_offsets until KAFKA-15987 is complete
++    entriesPerPartition.keys.foreach { tp =>
++      if (!tp.topic.equals(Topic.GROUP_METADATA_TOPIC_NAME))
++        throw new IllegalArgumentException()
++    }
++
++    val sTime = time.milliseconds
++    val localProduceResults = appendToLocalLog(
++      internalTopicsAllowed = true,
++      origin = AppendOrigin.COORDINATOR,
++      entriesPerPartition,
++      requiredAcks,
++      requestLocal,
++      verificationGuards.toMap
++    )
+ 
+-    if (delayedProduceRequestRequired(requiredAcks, allEntries, allResults)) {
++    debug("Produce to local log in %d ms".format(time.milliseconds - sTime))
++
++    val allResults = localProduceResults
++    val produceStatus = buildProducePartitionStatus(allResults)
++
++    addCompletePurgatoryAction(defaultActionQueue, allResults)
++
++    maybeAddDelayedProduce(
++      requiredAcks,
++      delayedProduceLock,
++      timeout,
++      entriesPerPartition,
++      allResults,
++      produceStatus,
++      responseCallback
++    )
++  }
++
++  private def maybeAddDelayedProduce(
++    requiredAcks: Short,
++    delayedProduceLock: Option[Lock],
++    timeoutMs: Long,
++    entriesPerPartition: Map[TopicPartition, MemoryRecords],
++    initialAppendResults: Map[TopicPartition, LogAppendResult],
++    initialProduceStatus: Map[TopicPartition, ProducePartitionStatus],
++    responseCallback: Map[TopicPartition, PartitionResponse] => Unit,
++  ): Unit = {
++    if (delayedProduceRequestRequired(requiredAcks, entriesPerPartition, initialAppendResults)) {
+       // create delayed produce operation
+-      val produceMetadata = ProduceMetadata(requiredAcks, produceStatus)
+-      val delayedProduce = new DelayedProduce(timeout, produceMetadata, this, responseCallback, delayedProduceLock)
++      val produceMetadata = ProduceMetadata(requiredAcks, initialProduceStatus)
++      val delayedProduce = new DelayedProduce(timeoutMs, produceMetadata, this, responseCallback, delayedProduceLock)
+ 
+       // create a list of (topic, partition) pairs to use as keys for this delayed produce operation
+-      val producerRequestKeys = allEntries.keys.map(TopicPartitionOperationKey(_)).toSeq
++      val producerRequestKeys = entriesPerPartition.keys.map(TopicPartitionOperationKey(_)).toSeq
+ 
+       // try to complete the request immediately, otherwise put it into the purgatory
+       // this is because while the delayed produce operation is being created, new
+@@ -936,43 +1075,174 @@ class ReplicaManager(val config: KafkaConfig,
+       delayedProducePurgatory.tryCompleteElseWatch(delayedProduce, producerRequestKeys)
+     } else {
+       // we can respond immediately
+-      val produceResponseStatus = produceStatus.map { case (k, status) => k -> status.responseStatus }
++      val produceResponseStatus = initialProduceStatus.map { case (k, status) => k -> status.responseStatus }
+       responseCallback(produceResponseStatus)
+     }
+   }
+ 
+-  private def partitionEntriesForVerification(verificationGuards: mutable.Map[TopicPartition, VerificationGuard],
+-                                              entriesPerPartition: Map[TopicPartition, MemoryRecords],
+-                                              verifiedEntries: mutable.Map[TopicPartition, MemoryRecords],
+-                                              unverifiedEntries: mutable.Map[TopicPartition, MemoryRecords],
+-                                              errorEntries: mutable.Map[TopicPartition, Errors]): Unit= {
+-    val transactionalProducerIds = mutable.HashSet[Long]()
+-    entriesPerPartition.foreach { case (topicPartition, records) =>
+-      try {
+-        // Produce requests (only requests that require verification) should only have one batch per partition in "batches" but check all just to be safe.
+-        val transactionalBatches = records.batches.asScala.filter(batch => batch.hasProducerId && batch.isTransactional)
+-        transactionalBatches.foreach(batch => transactionalProducerIds.add(batch.producerId))
++  private def sendInvalidRequiredAcksResponse(entries: Map[TopicPartition, MemoryRecords],
++                                             responseCallback: Map[TopicPartition, PartitionResponse] => Unit): Unit = {
++    // If required.acks is outside accepted range, something is wrong with the client
++    // Just return an error and don't handle the request at all
++    val responseStatus = entries.map { case (topicPartition, _) =>
++      topicPartition -> new PartitionResponse(
++        Errors.INVALID_REQUIRED_ACKS,
++        LogAppendInfo.UNKNOWN_LOG_APPEND_INFO.firstOffset,
++        RecordBatch.NO_TIMESTAMP,
++        LogAppendInfo.UNKNOWN_LOG_APPEND_INFO.logStartOffset
++      )
++    }
++    responseCallback(responseStatus)
++  }
+ 
+-        if (transactionalBatches.nonEmpty) {
+-          // We return VerificationGuard if the partition needs to be verified. If no state is present, no need to verify.
+-          val firstBatch = records.firstBatch
+-          val verificationGuard = getPartitionOrException(topicPartition).maybeStartTransactionVerification(firstBatch.producerId, firstBatch.baseSequence, firstBatch.producerEpoch)
+-          if (verificationGuard != VerificationGuard.SENTINEL) {
+-            verificationGuards.put(topicPartition, verificationGuard)
+-            unverifiedEntries.put(topicPartition, records)
+-          } else
+-            verifiedEntries.put(topicPartition, records)
+-        } else {
+-          // If there is no producer ID or transactional records in the batches, no need to verify.
+-          verifiedEntries.put(topicPartition, records)
++  /**
++   *
++   * @param topicPartition  the topic partition to maybe verify
++   * @param transactionalId the transactional id for the transaction
++   * @param producerId      the producer id for the producer writing to the transaction
++   * @param producerEpoch   the epoch of the producer writing to the transaction
++   * @param baseSequence    the base sequence of the first record in the batch we are trying to append
++   * @param requestLocal    container for the stateful instances scoped to this request -- this must correspond to the
++   *                        thread calling this method
++   * @param callback        the method to execute once the verification is either completed or returns an error
++   *
++   * When the verification returns, the callback will be supplied the error if it exists or Errors.NONE.
++   * If the verification guard exists, it will also be supplied. Otherwise the SENTINEL verification guard will be returned.
++   * This guard can not be used for verification and any appends that attenpt to use it will fail.
++   */
++  def maybeStartTransactionVerificationForPartition(
++    topicPartition: TopicPartition,
++    transactionalId: String,
++    producerId: Long,
++    producerEpoch: Short,
++    baseSequence: Int,
++    requestLocal: RequestLocal,
++    callback: (Errors, RequestLocal, VerificationGuard) => Unit
++  ): Unit = {
++    def generalizedCallback(preAppendErrors: Map[TopicPartition, Errors],
++                            newRequestLocal: RequestLocal,
++                            verificationGuards: Map[TopicPartition, VerificationGuard]): Unit = {
++      callback(
++        preAppendErrors.getOrElse(topicPartition, Errors.NONE),
++        newRequestLocal,
++        verificationGuards.getOrElse(topicPartition, VerificationGuard.SENTINEL))
++    }
++
++    maybeStartTransactionVerificationForPartitions(
++      Map(topicPartition -> baseSequence),
++      transactionalId,
++      producerId,
++      producerEpoch,
++      requestLocal,
++      generalizedCallback
++    )
++  }
++
++  /**
++   *
++   * @param topicPartitionBatchInfo  the topic partitions to maybe verify mapped to the base sequence of their first record batch
++   * @param transactionalId          the transactional id for the transaction
++   * @param producerId               the producer id for the producer writing to the transaction
++   * @param producerEpoch            the epoch of the producer writing to the transaction
++   * @param requestLocal             container for the stateful instances scoped to this request -- this must correspond to the
++   *                                 thread calling this method
++   * @param callback                 the method to execute once the verification is either completed or returns an error
++   *
++   * When the verification returns, the callback will be supplied the errors per topic partition if there were errors.
++   * The callback will also be supplied the verification guards per partition if they exist. It is possible to have an
++   * error and a verification guard for a topic partition if the topic partition was unable to be verified by the transaction
++   * coordinator. Transaction coordinator errors are mapped to append-friendly errors. The callback is wrapped so that it
++   * is scheduled on a request handler thread. There, it should be called with that request handler thread's thread local and
++   * not the one supplied to this method.
++   */
++  def maybeStartTransactionVerificationForPartitions(
++    topicPartitionBatchInfo: Map[TopicPartition, Int],
++    transactionalId: String,
++    producerId: Long,
++    producerEpoch: Short,
++    requestLocal: RequestLocal,
++    callback: (Map[TopicPartition, Errors], RequestLocal, Map[TopicPartition, VerificationGuard]) => Unit
++  ): Unit = {
++    // Skip verification if the request is not transactional or transaction verification is disabled.
++    if (transactionalId == null ||
++      !config.transactionPartitionVerificationEnable
++      || addPartitionsToTxnManager.isEmpty
++    ) {
++      callback(Map.empty[TopicPartition, Errors], requestLocal, Map.empty[TopicPartition, VerificationGuard])
++      return
++    }
++
++    val verificationGuards = mutable.Map[TopicPartition, VerificationGuard]()
++    val errors = mutable.Map[TopicPartition, Errors]()
++
++    topicPartitionBatchInfo.map { case (topicPartition, baseSequence) =>
++      val errorOrGuard = maybeStartTransactionVerificationForPartition(
++        topicPartition,
++        producerId,
++        producerEpoch,
++        baseSequence
++      )
++
++      errorOrGuard match {
++        case Left(error) => errors.put(topicPartition, error)
++        case Right(verificationGuard) => if (verificationGuard != VerificationGuard.SENTINEL)
++          verificationGuards.put(topicPartition, verificationGuard)
++      }
++    }
++
++    // No partitions require verification.
++    if (verificationGuards.isEmpty) {
++      callback(errors.toMap, requestLocal, Map.empty[TopicPartition, VerificationGuard])
++      return
++    }
++
++    def invokeCallback(
++      requestLocal: RequestLocal,
++      verificationErrors: Map[TopicPartition, Errors]
++    ): Unit = {
++      // Map transaction coordinator errors to known errors for the response
++      val convertedErrors = verificationErrors.map { case (tp, error) =>
++        error match {
++          case Errors.CONCURRENT_TRANSACTIONS |
++            Errors.COORDINATOR_LOAD_IN_PROGRESS |
++            Errors.COORDINATOR_NOT_AVAILABLE |
++            Errors.NOT_COORDINATOR => tp -> Errors.NOT_ENOUGH_REPLICAS
++          case _ => tp -> error
+         }
+-      } catch {
+-        case e: Exception => errorEntries.put(topicPartition, Errors.forException(e))
++
+       }
++      callback(errors ++ convertedErrors, requestLocal, verificationGuards.toMap)
+     }
+-    // We should have exactly one producer ID for transactional records
+-    if (transactionalProducerIds.size > 1) {
+-      throw new InvalidPidMappingException("Transactional records contained more than one producer ID")
++
++    // Wrap the callback to be handled on an arbitrary request handler thread when transaction verification is complete.
++    val verificationCallback = KafkaRequestHandler.wrapAsyncCallback(
++      invokeCallback,
++      requestLocal
++    )
++
++    addPartitionsToTxnManager.get.verifyTransaction(
++      transactionalId = transactionalId,
++      producerId = producerId,
++      producerEpoch = producerEpoch,
++      topicPartitions = verificationGuards.keys.toSeq,
++      callback = verificationCallback
++    )
++
++  }
++
++  private def maybeStartTransactionVerificationForPartition(
++    topicPartition: TopicPartition,
++    producerId: Long,
++    producerEpoch: Short,
++    baseSequence: Int
++  ): Either[Errors, VerificationGuard] = {
++    try {
++      val verificationGuard = getPartitionOrException(topicPartition)
++        .maybeStartTransactionVerification(producerId, baseSequence, producerEpoch)
++      Right(verificationGuard)
++    } catch {
++      case e: Exception =>
++        Left(Errors.forException(e))
+     }
+   }
+ 

@@ -1,51 +1,53 @@
 # Solution: Kafka #15784
 
+- **Issue:** https://issues.apache.org/jira/browse/KAFKA-15784
+- **Fix commit:** [`e4249b69bda215d308ac5580a89fcc58ca054b97`](https://github.com/apache/kafka/commit/e4249b69bda215d308ac5580a89fcc58ca054b97)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
-- **PR:** https://github.com/apache/kafka/pull/14774
+
+- **PR:** https://github.com/apache/kafka/pull/14774 ("KAFKA-15784: Ensure atomicity of in memory update and write when transactionally committing offsets")
 - **Commit:** `e4249b69bda215d308ac5580a89fcc58ca054b97`
+- **Issue text:** KAFKA-15449 (PR #14370, transactional offset commit verification, KIP-890 part 1) "removed the locking around validating, updating state, and writing to the log transactional offset commits". Verification releases the group lock, so these steps are no longer atomic.
 
 ## Fix locus
-- **Component:** Group coordinator offset management / ReplicaManager
-- **Files:** `GroupMetadataManager.scala` (+167/-137), `GroupCoordinator.scala` (+37/-8), `ReplicaManager.scala` (+179/-36)
+
+- **Component:** group coordinator, transactional offset commit path (`GroupCoordinator`, `GroupMetadataManager`) and its use of `ReplicaManager` transaction verification
+- **Files (gold.patch):**
+  - `core/src/main/scala/kafka/coordinator/group/GroupCoordinator.scala` (+37/-8)
+  - `core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala` (+167/-137)
+  - `core/src/main/scala/kafka/server/ReplicaManager.scala` (+299/-53)
+  - `core/src/main/scala/kafka/coordinator/transaction/TransactionStateManager.scala` (+9/-9, named arguments only)
+
+The upstream commit also changes five test files (`GroupCoordinatorTest`, `GroupMetadataManagerTest`, `ReplicaManagerTest`, `AbstractCoordinatorConcurrencyTest`, `KafkaApisTest`); they are not part of gold.patch. Because the fix changes `storeOffsets`' signature, core's existing test sources no longer compile with gold.patch alone. The case therefore builds `:core:jar` (not the whole build, whose `jmh-benchmarks` jar compiles core's tests), and the oracle compiles its test in a separate source set.
 
 ## Root cause
 
-In `GroupMetadataManager.storeOffsets`, the transactional offset commit path calls `group.prepareTxnOffsetCommit(producerId, offsetMetadata)` to update the group's in-memory state BEFORE calling `appendForGroup` (which delegates to `replicaManager.appendRecords`) to persist the offset records to the `__consumer_offsets` topic log.
+A transactional offset commit goes `GroupCoordinator.handleTxnCommitOffsets` → `doTxnCommitOffsets`, which takes the group lock, validates the commit (`validateOffsetCommit`: group not `Dead`, member and generation) and calls `GroupMetadataManager.storeOffsets`. `storeOffsets` updates the group in memory (`addProducerGroup`, `group.prepareTxnOffsetCommit`) and then calls `appendForGroup` → `ReplicaManager.appendRecords(..., transactionalId = ...)`.
 
-When `appendRecords` succeeds, the `putCacheCallback` is invoked, which calls `group.onTxnOffsetCommitAppend` to finalize the in-memory state. When `appendRecords` returns an error via the callback, `group.failPendingTxnOffsetCommit` rolls back the pending state. However, when `appendRecords` throws an exception (e.g., I/O error, storage failure), the callback is never invoked. The `prepareTxnOffsetCommit` mutation persists in memory with no corresponding rollback, causing the in-memory group state to diverge from the persisted transaction log state.
+With `transaction.partition.verification.enable=true`, `appendRecords` does not append when the producer has no ongoing transaction on the `__consumer_offsets` partition yet. It takes a `VerificationGuard`, sends a verification request through `AddPartitionsToTxnManager.verifyTransaction`, and returns. The records are appended later by `appendEntries`, called from the verification callback (wrapped by `KafkaRequestHandler.wrapAsyncCallback`, possibly on another request handler thread) without the group lock. The group lock is released as soon as `appendRecords` returns.
 
-This violates the atomicity guarantee that should exist between in-memory and persisted state for transactional offset commits.
+Validation and the in-memory update therefore happen before the transaction coordinator round trip, and the write after it, with the group lock released in between. If the group changes in that window, the write still happens with the stale validation. Examples: `DeleteGroups` marks the empty group `Dead` and removes it from the cache; unloading the offsets partition marks the group `Dead`, removes it and drops its producer-to-group mapping; offset deletion and rebalances (generation changes) have the same problem. The offset commit record is appended and the client gets `NONE`. `putCacheCallback` sees the group `Dead` and skips the cache update. When the commit marker arrives, `handleTxnCompletion` finds no group or no pending entry, so the committed offset never reaches the cache. Loading the partition replays the record and the marker and does produce the offset. The cache and the log have diverged.
+
+## Diagnosis chain
+
+1. **Runtime evidence:** the offset served by the live coordinator differs from the offset a reloaded coordinator (failover) serves. This happens only for transactional commits that overlap with a group event (deletion, partition unload/reload), and only when the commit is acknowledged with `NONE`. Plain (non-transactional) commits and non-overlapping transactional commits are consistent. The log contains the offset commit record and the commit marker, so the persisted side is complete and the cache is the one that is missing the offset.
+2. **Narrowing the component:** the cache update for offset commits happens in `GroupMetadataManager.storeOffsets` (`prepareTxnOffsetCommit` before the append, `onTxnOffsetCommitAppend` / `failPendingTxnOffsetCommit` in `putCacheCallback` after it) and in `handleTxnCompletion` (on the marker). `putCacheCallback` skips a `Dead` group but still reports `NONE` for a successful append. So the append happened for a group that had already been deleted or unloaded, although `doTxnCommitOffsets` rejects `Dead` groups under the group lock.
+3. **Code-level reasoning:** follow the append. `appendForGroup` passes `transactionalId` to `ReplicaManager.appendRecords`. With verification enabled, `appendRecords` takes the `notYetVerifiedEntriesPerPartition` branch, calls `verifyTransaction` and returns; the append runs later in the callback. Validation, `prepareTxnOffsetCommit` and the decision to write happen at request time under the group lock, but the write happens after an RPC round trip without it. Any group change in between is not seen by the write. The issue title, "ensure atomicity of in memory update and write", describes this.
 
 ## Fix description
 
-The fix is a large refactoring (+167/-137 in GroupMetadataManager alone) that:
+The fix verifies first and then validates, updates and writes atomically:
 
-1. **Separates record generation from state mutation**: Extracts `generateOffsetRecords` to build the MemoryRecords without touching group state, and `createPutCacheCallback` to create the callback that handles both success and failure of the log append. The in-memory state update (`group.onTxnOffsetCommitAppend` or `group.failPendingTxnOffsetCommit`) only happens inside the callback.
+- `GroupCoordinator.handleTxnCommitOffsets` calls the new `ReplicaManager.maybeStartTransactionVerificationForPartition(offsetTopicPartition, transactionalId, producerId, producerEpoch, NO_SEQUENCE, requestLocal, postVerificationCallback)`. Only when verification completes does `postVerificationCallback` call `doTxnCommitOffsets`. That method takes the group lock and runs `validateOffsetCommit`, then `storeOffsets`. A `Dead` group is now rejected (`COORDINATOR_NOT_AVAILABLE`, and the producer retries). Verification errors are mapped by the new `GroupMetadataManager.maybeConvertOffsetCommitError`.
+- `storeOffsets` no longer takes `transactionalId`. It takes the offsets `TopicPartition` and an `Option[VerificationGuard]`, builds the records (`generateOffsetRecords`) and the callback (`createPutCacheCallback`), calls `prepareTxnOffsetCommit` / `prepareOffsetCommit` and then `appendForGroup`, all under the caller's group lock.
+- `GroupMetadataManager.appendForGroup` calls the new `ReplicaManager.appendForGroup` (offsets topic only). It appends to the local log synchronously with the verification guards, so the write happens while the group lock is still held. `appendRecords` is refactored into shared helpers (`buildProducePartitionStatus`, `addCompletePurgatoryAction`, `maybeAddDelayedProduce`, `sendInvalidRequiredAcksResponse`) and the verification logic into `maybeStartTransactionVerificationForPartitions`.
 
-2. **Adds `appendForGroup` to ReplicaManager**: A new dedicated method for appending to the `__consumer_offsets` topic that accepts `VerificationGuard` objects for transaction verification. Unlike the general `appendRecords`, this method enforces that entries are only for the group metadata topic and handles verification guards.
+Any fix that makes the validation, the in-memory update and the log write of a transactional offset commit atomic with respect to other group operations, while keeping verification, satisfies the oracle. For example, a fix that re-validates and prepares inside the post-verification append under the group lock would also pass.
 
-3. **Adds transaction verification**: The `GroupCoordinator.doTxnCommitOffsets` flow now calls `maybeStartTransactionVerificationForPartition` on the ReplicaManager before proceeding with the offset commit. This verifies the transaction state before attempting any writes.
+## How to verify
 
-4. **Removes `transactionalId` from `storeOffsets`**: The transactional ID is no longer passed through `storeOffsets` to `appendRecords`. Instead, transaction verification happens at the coordinator level before `storeOffsets` is called.
-
-5. **Adds `maybeConvertOffsetCommitError`**: A new helper method that maps verification and append errors to appropriate offset commit error codes.
-
-## Diagnosis chain
-1. **Runtime evidence:** After a storage failure during transactional offset commit, the coordinator may retain stale pending offsets in memory. On coordinator failover, the new coordinator reloads state from the log and the stale offsets disappear, revealing the inconsistency. Alternatively, a subsequent transaction commit/abort operates on incorrect in-memory state.
-2. **Narrowing the component:** The transactional offset commit path goes through `GroupCoordinator.handleTxnCommitOffsets` -> `doTxnCommitOffsets` -> `GroupMetadataManager.storeOffsets`. The state mutation happens in `storeOffsets` where `group.prepareTxnOffsetCommit` is called before the log append.
-3. **Code-level reasoning:** In `storeOffsets`, the call sequence is: (a) `addProducerGroup(producerId, groupId)` + `group.prepareTxnOffsetCommit(producerId, offsetMetadata)` under group lock, (b) `appendForGroup` which calls `replicaManager.appendRecords`. Step (a) mutates in-memory state. If step (b) throws an exception, the callback containing the rollback logic is never reached. The fix moves all state mutation into the callback so it only executes after the log append completes (success or failure).
-
-## Key files
-- `core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala` (+167/-137) -- extract `generateOffsetRecords`, `createPutCacheCallback`; remove `transactionalId` from `storeOffsets`; add `maybeConvertOffsetCommitError`
-- `core/src/main/scala/kafka/coordinator/group/GroupCoordinator.scala` (+37/-8) -- add transaction verification before offset commit; update `doTxnCommitOffsets` signature
-- `core/src/main/scala/kafka/server/ReplicaManager.scala` (+179/-36) -- add `appendForGroup`, `maybeStartTransactionVerificationForPartition`; refactor `appendRecords` into helper methods
-- `core/src/main/scala/kafka/coordinator/transaction/TransactionStateManager.scala` (+9/-9) -- minor parameter name alignment
-- `core/src/test/scala/unit/kafka/server/ReplicaManagerTest.scala` (+86/-0) -- new tests for verification error handling
-- `core/src/test/scala/unit/kafka/coordinator/group/GroupCoordinatorTest.scala` (+67/-32) -- new tests for txn offset commit error conversion
-- `core/src/test/scala/unit/kafka/coordinator/group/GroupMetadataManagerTest.scala` (+45/-128) -- updated to use new `storeOffsets` and `appendForGroup` signatures
-
-## How to apply
 ```bash
-git checkout e4249b69bda215d308ac5580a89fcc58ca054b97
-./gradlew jar -x test -x spotlessCheck -x checkstyleMain -x checkstyleTest --quiet
+./bench.sh validate-oracle kafka-15784-txn-offset-atomicity --runs 3   # buggy worktree FAILs, gold.patch PASSes -> SOUND
+./bench.sh eval kafka-15784-txn-offset-atomicity --patch cases-solution/kafka-15784-txn-offset-atomicity/gold.patch
 ```
