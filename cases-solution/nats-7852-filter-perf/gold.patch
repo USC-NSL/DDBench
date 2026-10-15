@@ -1,0 +1,24 @@
+diff --git a/server/consumer.go b/server/consumer.go
+index 5b7c5ac66..b0e3a4d5a 100644
+--- a/server/consumer.go
++++ b/server/consumer.go
+@@ -1221,14 +1221,13 @@ func (mset *stream) addConsumerWithAssignment(config *ConsumerConfig, oname stri
+ 
+ 	// If we have multiple filter subjects, create a sublist which we will use
+ 	// in calling store.LoadNextMsgMulti.
+-	if len(o.cfg.FilterSubjects) > 0 {
++	if len(o.subjf) <= 1 {
++		o.filters = nil
++	} else {
+ 		o.filters = gsl.NewSublist[struct{}]()
+-		for _, filter := range o.cfg.FilterSubjects {
+-			o.filters.Insert(filter, struct{}{})
++		for _, filter := range o.subjf {
++			o.filters.Insert(filter.subject, struct{}{})
+ 		}
+-	} else {
+-		// Make sure this is nil otherwise.
+-		o.filters = nil
+ 	}
+ 
+ 	if o.store != nil && o.store.HasState() {

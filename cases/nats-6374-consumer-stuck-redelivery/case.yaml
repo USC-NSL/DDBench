@@ -2,6 +2,7 @@ name: nats-6374-consumer-stuck-redelivery
 project: nats
 repo: https://github.com/nats-io/nats-server.git
 buggy_commit: "2a8ee64628f6bd87a4d86557af4330ec69783f7f"
+fix_commit: "4be933fc655c3d35b678a74402dacd8c0448c0a7"
 resolve_time:
   date: "2025-01-22"
   source: issue_close_date

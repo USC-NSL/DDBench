@@ -1,5 +1,9 @@
 # Solution: NATS Server #6455
 
+- **Issue:** https://github.com/nats-io/nats-server/issues/6455
+- **Fix commit:** [`bc18f1a4cbdbeebbfb09913a0a760c9f6bf8ac3a`](https://github.com/nats-io/nats-server/commit/bc18f1a4cbdbeebbfb09913a0a760c9f6bf8ac3a) — Merge commit of the fix PR; the change itself is 58cafceab177002297438dc1f4d3db3b6a7a22f4.
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Root Cause
 
 When a clustered JetStream stream encounters a "last sequence mismatch" error, `resetClusteredState()` in `server/jetstream_cluster.go` tears down the stream via `mset.stop(shouldDelete, false)` and then recreates it via `js.processClusterCreateStream(acc, sa)`.

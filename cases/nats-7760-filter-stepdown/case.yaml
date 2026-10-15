@@ -2,6 +2,8 @@ name: nats-7760-filter-stepdown
 project: nats
 repo: https://github.com/nats-io/nats-server.git
 buggy_commit: "v2.12.3"
+fix_commit: "d345774fdb1c3e4e49297a7f9ca1da0a06065dab"
+fix_commit_note: "Fix landed on main (PR #7773); the buggy revision is the v2.12.3 release. Release-branch backport: e2dacf3f086594171524628e6e1db27eafd7800c (v2.12.4)."
 resolve_time:
   date: "2026-01-27"
   source: issue_close_date

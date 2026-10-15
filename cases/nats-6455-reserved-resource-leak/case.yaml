@@ -2,6 +2,8 @@ name: nats-6455-reserved-resource-leak
 project: nats
 repo: https://github.com/nats-io/nats-server.git
 buggy_commit: "29fbf46d70601600af6b1152fa02e41fd646d0e2"
+fix_commit: "bc18f1a4cbdbeebbfb09913a0a760c9f6bf8ac3a"
+fix_commit_note: "Merge commit of the fix PR; the change itself is 58cafceab177002297438dc1f4d3db3b6a7a22f4."
 resolve_time:
   date: "2025-02-05"
   source: issue_close_date

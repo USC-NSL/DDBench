@@ -25,7 +25,7 @@ import (
 // 3. Pre-seed 256 consumers so the map is large (longer iteration =
 //    wider race window). 32 was insufficient for reliable detection.
 // 4. Duration of 15s to give the race enough attempts to fire.
-func TestWQConsumerPartitionRace(t *testing.T) {
+func TestDDBenchOracleWQConsumerPartitionRace(t *testing.T) {
 	conf := createConfFile(t, []byte(fmt.Sprintf(`
 		listen: 127.0.0.1:-1
 		jetstream: { store_dir: %q }

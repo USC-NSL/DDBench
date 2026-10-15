@@ -2,6 +2,7 @@ name: nats-7718-subscription-leak
 project: nats
 repo: https://github.com/nats-io/nats-server.git
 buggy_commit: "b72becc443073300e5599d06fa0cde1cd5518589~1"
+fix_commit: "b72becc443073300e5599d06fa0cde1cd5518589"
 resolve_time:
   date: "2026-01-13"
   source: issue_close_date

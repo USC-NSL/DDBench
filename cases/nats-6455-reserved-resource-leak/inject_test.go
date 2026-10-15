@@ -18,7 +18,7 @@ import (
 // reserveStreamResources(), adding MaxBytes to the server's reserved tally
 // again without releasing the previous reservation. After repeated resets
 // the server reports disk full even though actual usage is unchanged.
-func TestJetStreamClusterReservedResourcesAccountingAfterClusterReset(t *testing.T) {
+func TestDDBenchOracleReservedResourcesAfterClusterReset(t *testing.T) {
 	for _, clusterResetErr := range []error{errLastSeqMismatch, errFirstSequenceMismatch} {
 		t.Run(clusterResetErr.Error(), func(t *testing.T) {
 			c := createJetStreamClusterExplicit(t, "R3S", 3)

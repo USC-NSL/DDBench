@@ -1,5 +1,9 @@
 # Solution: NATS #7718
 
+- **Issue:** https://github.com/nats-io/nats-server/issues/7718
+- **Fix commit:** [`b72becc443073300e5599d06fa0cde1cd5518589`](https://github.com/nats-io/nats-server/commit/b72becc443073300e5599d06fa0cde1cd5518589)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/nats-io/nats-server/pull/7720
 - **Commit:** `b72becc443073300e5599d06fa0cde1cd5518589`
@@ -25,4 +29,4 @@ go build -o nats-server .
 ```
 
 ## How to verify
-Run the consumer churn test (see verification.md). After 200 consumer create/destroy cycles, the subscription count should remain stable (within a small delta of the initial count).
+Run `./bench.sh validate-oracle nats-7718-subscription-leak --runs 3`, which applies `gold.patch` and runs the oracle. Its injected test creates and deletes a stream and a consumer 3 times in a 3-node cluster whose account imports a stream on `>`; with the fix, every server reports the same subscription count at each step, and the counts are identical from cycle to cycle (see "Oracle verdict" in `cases/nats-7718-subscription-leak/reproduce.md`).

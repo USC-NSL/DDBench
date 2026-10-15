@@ -2,6 +2,7 @@ name: nats-7852-filter-perf
 project: nats
 repo: https://github.com/nats-io/nats-server.git
 buggy_commit: "66e9bbc7f8684dd1b31c54ef686924e0841f9846~1"
+fix_commit: "66e9bbc7f8684dd1b31c54ef686924e0841f9846"
 resolve_time:
   date: "2026-02-20"
   source: issue_close_date

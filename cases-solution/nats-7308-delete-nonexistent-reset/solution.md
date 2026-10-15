@@ -1,5 +1,9 @@
 # Solution: NATS Server #7308
 
+- **Issue:** https://github.com/nats-io/nats-server/issues/7308
+- **Fix commit:** [`96d5f147a0cd99f1c0596736358092826bffc7d2`](https://github.com/nats-io/nats-server/commit/96d5f147a0cd99f1c0596736358092826bffc7d2) — v2.11-branch backport of fd40cf513b17717b4070da83d3764d9af30c6a77 (main, PR #7348); the buggy revision is the v2.11.8 release.
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/nats-io/nats-server/pull/7348
 - **Commit:** `fd40cf513b17717b4070da83d3764d9af30c6a77`
@@ -22,3 +26,9 @@ This 12-line change in `server/jetstream_cluster.go` distinguishes between a gen
 git cherry-pick fd40cf513b17717b4070da83d3764d9af30c6a77
 go build -o nats-server .
 ```
+
+## Gold patch
+The case's buggy commit is the `v2.11.8` release, and the main-branch fix (`fd40cf51`) does not apply to it.
+`gold.patch` in this directory is the source part of the 2.11-branch backport of the same fix,
+`96d5f147a0cd99f1c0596736358092826bffc7d2` ("[FIXED] Reset clustered state on msg delete EOF",
+`server/jetstream_cluster.go` only). It applies to `v2.11.8` with line offsets.

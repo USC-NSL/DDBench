@@ -1,5 +1,9 @@
 # Solution: NATS Server #6374
 
+- **Issue:** https://github.com/nats-io/nats-server/issues/6374
+- **Fix commit:** [`4be933fc655c3d35b678a74402dacd8c0448c0a7`](https://github.com/nats-io/nats-server/commit/4be933fc655c3d35b678a74402dacd8c0448c0a7)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/nats-io/nats-server/pull/6387
 - **Commit:** `4be933fc655c3d35b678a74402dacd8c0448c0a7`

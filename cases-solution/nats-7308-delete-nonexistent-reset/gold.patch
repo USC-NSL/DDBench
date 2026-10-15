@@ -1,0 +1,45 @@
+diff --git a/server/jetstream_cluster.go b/server/jetstream_cluster.go
+index 940c36cab..b92506d0d 100644
+--- a/server/jetstream_cluster.go
++++ b/server/jetstream_cluster.go
+@@ -3280,7 +3280,7 @@ func (js *jetStream) applyStreamEntries(mset *stream, ce *CommittedEntry, isReco
+ 					}
+ 					panic(err.Error())
+ 				}
+-				s, cc := js.server(), js.cluster
++				s := js.server()
+ 
+ 				var removed bool
+ 				if md.NoErase {
+@@ -3289,9 +3289,18 @@ func (js *jetStream) applyStreamEntries(mset *stream, ce *CommittedEntry, isReco
+ 					removed, err = mset.eraseMsg(md.Seq)
+ 				}
+ 
+-				// Cluster reset error.
++				var isLeader bool
++				if node := mset.raftNode(); node != nil && node.Leader() {
++					isLeader = true
++				}
++
+ 				if err == ErrStoreEOF {
+-					return err
++					if isLeader && !isRecovering {
++						var resp = JSApiMsgDeleteResponse{ApiResponse: ApiResponse{Type: JSApiMsgDeleteResponseType}}
++						resp.Error = NewJSStreamMsgDeleteFailedError(err, Unless(err))
++						s.sendAPIErrResponse(md.Client, mset.account(), md.Subject, md.Reply, _EMPTY_, s.jsonResponse(resp))
++					}
++					continue
+ 				}
+ 
+ 				if err != nil && !isRecovering {
+@@ -3299,10 +3308,6 @@ func (js *jetStream) applyStreamEntries(mset *stream, ce *CommittedEntry, isReco
+ 						md.Seq, md.Client.serviceAccount(), md.Stream, err)
+ 				}
+ 
+-				js.mu.RLock()
+-				isLeader := cc.isStreamLeader(md.Client.serviceAccount(), md.Stream)
+-				js.mu.RUnlock()
+-
+ 				if isLeader && !isRecovering {
+ 					var resp = JSApiMsgDeleteResponse{ApiResponse: ApiResponse{Type: JSApiMsgDeleteResponseType}}
+ 					if err != nil {
