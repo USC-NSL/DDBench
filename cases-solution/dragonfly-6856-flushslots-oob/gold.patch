@@ -1,0 +1,42 @@
+diff --git a/src/server/cluster/cluster_defs.h b/src/server/cluster/cluster_defs.h
+index a0081696..41ae9a39 100644
+--- a/src/server/cluster/cluster_defs.h
++++ b/src/server/cluster/cluster_defs.h
+@@ -10,11 +10,15 @@
+ #include <string_view>
+ #include <vector>
+ 
++#include "facade/cmd_arg_parser.h"
+ #include "facade/facade_types.h"
+ #include "server/cluster_support.h"
+ 
+ namespace dfly::cluster {
+ 
++// A SlotId validated to be within [0, kMaxSlotNum], usable directly with CmdArgParser::Next().
++using ParsedSlotId = facade::FInt<SlotId{0}, SlotId{kMaxSlotNum}>;
++
+ struct SlotRange {
+   static constexpr SlotId kMaxSlotId = 0x3FFF;
+   SlotId start = 0;
+diff --git a/src/server/cluster/cluster_family.cc b/src/server/cluster/cluster_family.cc
+index 80d8b21c..3bb7acc2 100644
+--- a/src/server/cluster/cluster_family.cc
++++ b/src/server/cluster/cluster_family.cc
+@@ -730,12 +730,14 @@ void ClusterFamily::DflyClusterFlushSlots(CmdArgList args, CommandContext* cmd_c
+ 
+   CmdArgParser parser(args);
+   do {
+-    auto [slot_start, slot_end] = parser.Next<SlotId, SlotId>();
++    auto [slot_start, slot_end] = parser.Next<ParsedSlotId, ParsedSlotId>();
++    RETURN_ON_PARSE_ERROR(parser, cmd_cntx);
++    if (slot_start > slot_end) {
++      return cmd_cntx->SendError("Invalid slot range");
++    }
+     slot_ranges.emplace_back(SlotRange{slot_start, slot_end});
+   } while (parser.HasNext());
+ 
+-  RETURN_ON_PARSE_ERROR(parser, cmd_cntx);
+-
+   DeleteSlots(SlotRanges(std::move(slot_ranges)));
+ 
+   return cmd_cntx->SendOk();

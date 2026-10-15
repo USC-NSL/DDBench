@@ -2,6 +2,7 @@ name: dragonfly-6909-search-nonfinite
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "1c38bb63d2824080430d6d25e5a6fe6d714a2882~1"
+fix_commit: "1c38bb63d2824080430d6d25e5a6fe6d714a2882"
 resolve_time:
   date: "2026-03-17"
   source: issue_close_date

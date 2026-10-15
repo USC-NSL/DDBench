@@ -1,76 +1,84 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for dragonfly-6856-flushslots-oob
-# Starts Dragonfly, triggers the bug, and reports PASS/FAIL.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# In cluster mode, sends DFLYCLUSTER FLUSHSLOTS 0 16384 (slot id out of range)
+# and checks that the server survived.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/dragonfly-6856-flushslots-oob"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+# ── Server liveness ──
+wait_for_ping() {  # <port> <pid> [seconds]: succeed once the server answers PING
+    local i
+    for i in $(seq 1 $(( ${3:-30} * 4 ))); do
+        kill -0 "$2" 2>/dev/null || return 1
+        [ "$(timeout 2 redis-cli -p "$1" PING 2>/dev/null)" = "PONG" ] && return 0
+        sleep 0.25
+    done
+    return 1
+}
+alive_and_responsive() {  # <port> <pid>
+    kill -0 "$2" 2>/dev/null && [ "$(timeout 5 redis-cli -p "$1" PING 2>/dev/null)" = "PONG" ]
+}
+
 BINARY="$WORK_DIR/build-dbg/dragonfly"
 PORT=16856
-DATA_DIR="$WORK_DIR/dragonfly-6856-data"
 NODE_ID="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+DATA_DIR="$RUN_DIR/data"
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
-
-# Verify setup
-if [ ! -x "$BINARY" ]; then
-    echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 1
-fi
-
-# Cleanup from previous runs
-pkill -f "dragonfly.*--port $PORT" 2>/dev/null || true
-sleep 1
-rm -rf "$DATA_DIR"
+rebuild_worktree
+[ -x "$BINARY" ] || error "dragonfly binary not found at $BINARY (run setup first)"
 mkdir -p "$DATA_DIR"
 
 echo "=== Reproducing dragonfly-6856-flushslots-oob ==="
 
 cleanup() {
     [ -n "${SERVER_PID:-}" ] && kill "$SERVER_PID" 2>/dev/null && wait "$SERVER_PID" 2>/dev/null
-    rm -rf "$DATA_DIR"
 }
 trap cleanup EXIT
 
-# Start Dragonfly in cluster mode
-"$BINARY" --port "$PORT" --logtostderr --proactor_threads 1 \
-    --dbfilename="" --dir "$DATA_DIR" \
-    --cluster_mode=yes --cluster_node_id="$NODE_ID" &>/dev/null &
+"$BINARY" --port "$PORT" --cluster_mode=yes --cluster_node_id="$NODE_ID" --logtostderr --proactor_threads 1 \
+    --dbfilename="" --dir "$DATA_DIR" > "$RUN_DIR/server.log" 2>&1 &
 SERVER_PID=$!
-sleep 2
-
-# Check server started
-if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-    echo "ERROR: Dragonfly failed to start."
-    exit 1
+if ! wait_for_ping "$PORT" "$SERVER_PID" 60; then
+    tail -20 "$RUN_DIR/server.log"
+    fail "Dragonfly did not start serving"
 fi
 
-# Trigger the bug: DFLYCLUSTER FLUSHSLOTS with out-of-range slot ID
 echo "Sending: DFLYCLUSTER FLUSHSLOTS 0 16384"
-redis-cli -p "$PORT" DFLYCLUSTER FLUSHSLOTS 0 16384 2>/dev/null || true
+timeout 10 redis-cli -p "$PORT" DFLYCLUSTER FLUSHSLOTS 0 16384 2>&1 | head -3
 sleep 1
 
-# Check if process crashed
-if kill -0 "$SERVER_PID" 2>/dev/null; then
-    echo ""
-    echo "PASS: Bug is fixed — process survived FLUSHSLOTS with out-of-range slot ID"
-    kill "$SERVER_PID" 2>/dev/null
-    wait "$SERVER_PID" 2>/dev/null
-    rm -rf "$DATA_DIR"
-    exit 0
-else
-    wait "$SERVER_PID" 2>/dev/null
-    EXIT_CODE=$?
-    echo ""
-    echo "FAIL: Bug is present — process crashed (exit code $EXIT_CODE, SIGABRT=134)"
-    rm -rf "$DATA_DIR"
-    exit 1
+# Verdict: the server must still be running AND answering.
+if alive_and_responsive "$PORT" "$SERVER_PID"; then
+    pass "Bug is fixed — the server survived FLUSHSLOTS with an out-of-range slot"
 fi
+if kill -0 "$SERVER_PID" 2>/dev/null; then
+    fail "Dragonfly is running but no longer answers PING after the trigger"
+fi
+wait "$SERVER_PID"; EXIT_CODE=$?; SERVER_PID=
+tail -15 "$RUN_DIR/server.log"
+fail "Bug is present — the server crashed on FLUSHSLOTS with an out-of-range slot (exit code $EXIT_CODE)"

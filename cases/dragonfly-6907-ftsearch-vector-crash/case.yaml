@@ -2,6 +2,7 @@ name: dragonfly-6907-ftsearch-vector-crash
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "c09a5a16bacc4b107435b0f144c1eb4a7553fd04~1"
+fix_commit: "c09a5a16bacc4b107435b0f144c1eb4a7553fd04"
 resolve_time:
   date: "2026-03-17"
   source: issue_close_date

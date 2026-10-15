@@ -1,0 +1,41 @@
+diff --git a/src/facade/dragonfly_connection.cc b/src/facade/dragonfly_connection.cc
+index 483f4ee6..5bad8a58 100644
+--- a/src/facade/dragonfly_connection.cc
++++ b/src/facade/dragonfly_connection.cc
+@@ -838,6 +838,11 @@ void Connection::RegisterBreakHook(BreakerCb breaker_cb) {
+   breaker_cb_ = std::move(breaker_cb);
+ }
+ 
++void Connection::FlushReplies() {  // NOLINT must not be const due to flush side effect
++  DCHECK(reply_builder_);
++  reply_builder_->Flush();
++}
++
+ pair<string, string> Connection::GetClientInfoBeforeAfterTid() const {
+   if (!socket_) {
+     LOG(DFATAL) << "unexpected null socket_ "
+diff --git a/src/facade/dragonfly_connection.h b/src/facade/dragonfly_connection.h
+index 2fd98c53..28b09bd4 100644
+--- a/src/facade/dragonfly_connection.h
++++ b/src/facade/dragonfly_connection.h
+@@ -157,6 +157,8 @@ class Connection : public util::Connection {
+   // Register hook that is executen when the connection breaks.
+   void RegisterBreakHook(BreakerCb breaker_cb);
+ 
++  void FlushReplies();
++
+   // Manually shutdown self.
+   void ShutdownSelfBlocking();
+ 
+diff --git a/src/server/main_service.cc b/src/server/main_service.cc
+index a2f41dc4..c6f022d1 100644
+--- a/src/server/main_service.cc
++++ b/src/server/main_service.cc
+@@ -1514,6 +1514,7 @@ DispatchResult Service::DispatchCommand(facade::ParsedArgs args, facade::ParsedC
+ 
+   if (dfly_cntx->async_dispatch && cid->IsBlocking()) {
+     ++ServerState::tlocal()->stats.blocking_commands_in_pipelines;
++    cmd_cntx->conn()->FlushReplies();
+   }
+ 
+   ArgSlice tail_args;

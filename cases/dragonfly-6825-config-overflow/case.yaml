@@ -2,6 +2,7 @@ name: dragonfly-6825-config-overflow
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "4b16da4d2e80eafc57ecb5fef511a9d49afe5c54~1"
+fix_commit: "4b16da4d2e80eafc57ecb5fef511a9d49afe5c54"
 resolve_time:
   date: "2026-03-10"
   source: issue_close_date

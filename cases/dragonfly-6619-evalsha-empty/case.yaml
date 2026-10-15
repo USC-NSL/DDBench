@@ -2,6 +2,7 @@ name: dragonfly-6619-evalsha-empty
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "761387a51433a5becb06db2ac7bf7e9f18b832d2~1"
+fix_commit: "761387a51433a5becb06db2ac7bf7e9f18b832d2"
 resolve_time:
   date: "2026-02-14"
   source: issue_close_date

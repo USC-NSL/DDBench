@@ -1,5 +1,9 @@
 # Solution: Dragonfly #6825
 
+- **Issue:** https://github.com/dragonflydb/dragonfly/issues/6825
+- **Fix commit:** [`4b16da4d2e80eafc57ecb5fef511a9d49afe5c54`](https://github.com/dragonflydb/dragonfly/commit/4b16da4d2e80eafc57ecb5fef511a9d49afe5c54)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix PR
 - **PR:** https://github.com/dragonflydb/dragonfly/pull/6853
 - **Title:** fix(cluster): Handle number overflow in DFLYCLUSTER CONFIG parsing

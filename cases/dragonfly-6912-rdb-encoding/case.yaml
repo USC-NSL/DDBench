@@ -2,6 +2,7 @@ name: dragonfly-6912-rdb-encoding
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "ef296f099b6e210ad28f043be9d0a8cec4dc4885~1"
+fix_commit: "ef296f099b6e210ad28f043be9d0a8cec4dc4885"
 resolve_time:
   date: "2026-03-20"
   source: issue_close_date

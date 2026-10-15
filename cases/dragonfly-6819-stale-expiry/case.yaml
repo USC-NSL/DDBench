@@ -2,6 +2,7 @@ name: dragonfly-6819-stale-expiry
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "fa4d116313779182571f70a537ab31f09ec043a5~1"
+fix_commit: "fa4d116313779182571f70a537ab31f09ec043a5"
 resolve_time:
   date: "2026-03-06"
   source: issue_close_date

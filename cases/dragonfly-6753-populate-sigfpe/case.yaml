@@ -2,6 +2,7 @@ name: dragonfly-6753-populate-sigfpe
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "5e31c9f84acfcfc2a7fb421cde7845ffcdf5536e~1"
+fix_commit: "5e31c9f84acfcfc2a7fb421cde7845ffcdf5536e"
 resolve_time:
   date: "2026-02-27"
   source: issue_close_date

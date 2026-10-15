@@ -2,6 +2,7 @@ name: dragonfly-6614-monitor-multiexec
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "84034d0903e8409dd48adcce974e5250d357a7ce~1"
+fix_commit: "84034d0903e8409dd48adcce974e5250d357a7ce"
 resolve_time:
   date: "2026-02-13"
   source: issue_close_date

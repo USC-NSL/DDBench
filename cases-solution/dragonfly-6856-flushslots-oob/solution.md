@@ -1,5 +1,9 @@
 # Solution: Dragonfly #6856
 
+- **Issue:** https://github.com/dragonflydb/dragonfly/issues/6856
+- **Fix commit:** [`c79bbe0c646c1bce47f76168dbe813951aecd8ce`](https://github.com/dragonflydb/dragonfly/commit/c79bbe0c646c1bce47f76168dbe813951aecd8ce)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix PR
 - **PR:** https://github.com/dragonflydb/dragonfly/pull/6861
 - **Title:** fix(cluster): Validate slot IDs in DFLYCLUSTER FLUSHSLOTS to prevent out-of-bounds crash

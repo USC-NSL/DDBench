@@ -2,6 +2,7 @@ name: dragonfly-6654-mc-reply-large
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "ff4ef508985cb91a7fdf418682af1534c24acf83~1"
+fix_commit: "ff4ef508985cb91a7fdf418682af1534c24acf83"
 resolve_time:
   date: "2026-02-17"
   source: issue_close_date

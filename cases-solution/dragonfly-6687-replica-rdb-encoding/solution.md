@@ -1,5 +1,9 @@
 # Solution: Dragonfly #6687
 
+- **Issue:** https://github.com/dragonflydb/dragonfly/issues/6687
+- **Fix commit:** [`8347cd80192a7be967a3983a6a55a10525915015`](https://github.com/dragonflydb/dragonfly/commit/8347cd80192a7be967a3983a6a55a10525915015)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/dragonflydb/dragonfly/pull/6807
 - **Commit:** `8347cd80192a7be967a3983a6a55a10525915015`

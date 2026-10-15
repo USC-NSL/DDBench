@@ -1,80 +1,86 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for dragonfly-6912-rdb-encoding
-# Starts Dragonfly, triggers the bug, and reports PASS/FAIL.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Creates a Count-Min Sketch, increments it, runs DUMP on the key, and checks
+# that the server survived.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/dragonfly-6912-rdb-encoding"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+# ── Server liveness ──
+wait_for_ping() {  # <port> <pid> [seconds]: succeed once the server answers PING
+    local i
+    for i in $(seq 1 $(( ${3:-30} * 4 ))); do
+        kill -0 "$2" 2>/dev/null || return 1
+        [ "$(timeout 2 redis-cli -p "$1" PING 2>/dev/null)" = "PONG" ] && return 0
+        sleep 0.25
+    done
+    return 1
+}
+alive_and_responsive() {  # <port> <pid>
+    kill -0 "$2" 2>/dev/null && [ "$(timeout 5 redis-cli -p "$1" PING 2>/dev/null)" = "PONG" ]
+}
+
 BINARY="$WORK_DIR/build-dbg/dragonfly"
 PORT=16912
-DATA_DIR="$WORK_DIR/dragonfly-6912-data"
+DATA_DIR="$RUN_DIR/data"
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
-
-# Verify setup
-if [ ! -x "$BINARY" ]; then
-    echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 1
-fi
-
-# Cleanup from previous runs
-pkill -f "dragonfly.*--port $PORT" 2>/dev/null || true
-sleep 1
-rm -rf "$DATA_DIR"
+rebuild_worktree
+[ -x "$BINARY" ] || error "dragonfly binary not found at $BINARY (run setup first)"
 mkdir -p "$DATA_DIR"
 
 echo "=== Reproducing dragonfly-6912-rdb-encoding ==="
 
 cleanup() {
     [ -n "${SERVER_PID:-}" ] && kill "$SERVER_PID" 2>/dev/null && wait "$SERVER_PID" 2>/dev/null
-    rm -rf "$DATA_DIR"
 }
 trap cleanup EXIT
 
-# Start Dragonfly
 "$BINARY" --port "$PORT" --logtostderr --proactor_threads 1 \
-    --dbfilename="" --dir "$DATA_DIR" &>/dev/null &
+    --dbfilename="" --dir "$DATA_DIR" > "$RUN_DIR/server.log" 2>&1 &
 SERVER_PID=$!
-sleep 2
-
-# Check server started
-if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-    echo "ERROR: Dragonfly failed to start."
-    exit 1
+if ! wait_for_ping "$PORT" "$SERVER_PID" 60; then
+    tail -20 "$RUN_DIR/server.log"
+    fail "Dragonfly did not start serving"
 fi
 
-# Trigger the bug: CMS.INITBYPROB, CMS.INCRBY, then DUMP
-echo "Sending: CMS.INITBYPROB mysketch 0.001 0.01"
-redis-cli -p "$PORT" CMS.INITBYPROB mysketch 0.001 0.01 2>/dev/null || true
-
-echo "Sending: CMS.INCRBY mysketch item1 5 item2 10"
-redis-cli -p "$PORT" CMS.INCRBY mysketch item1 5 item2 10 2>/dev/null || true
-
-echo "Sending: DUMP mysketch"
-redis-cli -p "$PORT" DUMP mysketch 2>/dev/null || true
+echo "Sending: CMS.INITBYPROB mysketch 0.001 0.01 / CMS.INCRBY / DUMP mysketch"
+[ "$(timeout 10 redis-cli -p "$PORT" CMS.INITBYPROB mysketch 0.001 0.01 2>&1)" = "OK" ] \
+    || fail "CMS.INITBYPROB did not succeed"
+timeout 10 redis-cli -p "$PORT" CMS.INCRBY mysketch item1 5 item2 10 2>&1 | head -3
+timeout 10 redis-cli -p "$PORT" DUMP mysketch > /dev/null 2>&1
 sleep 1
 
-# Check if process crashed
-if kill -0 "$SERVER_PID" 2>/dev/null; then
-    echo ""
-    echo "PASS: Bug is fixed — process survived DUMP on CMS key"
-    kill "$SERVER_PID" 2>/dev/null
-    wait "$SERVER_PID" 2>/dev/null
-    rm -rf "$DATA_DIR"
-    exit 0
-else
-    wait "$SERVER_PID" 2>/dev/null
-    EXIT_CODE=$?
-    echo ""
-    echo "FAIL: Bug is present — process crashed (exit code $EXIT_CODE)"
-    rm -rf "$DATA_DIR"
-    exit 1
+# Verdict: the server must still be running AND answering.
+if alive_and_responsive "$PORT" "$SERVER_PID"; then
+    pass "Bug is fixed — the server survived DUMP on a Count-Min Sketch key"
 fi
+if kill -0 "$SERVER_PID" 2>/dev/null; then
+    fail "Dragonfly is running but no longer answers PING after the trigger"
+fi
+wait "$SERVER_PID"; EXIT_CODE=$?; SERVER_PID=
+tail -15 "$RUN_DIR/server.log"
+fail "Bug is present — the server crashed on DUMP of a Count-Min Sketch key (exit code $EXIT_CODE)"

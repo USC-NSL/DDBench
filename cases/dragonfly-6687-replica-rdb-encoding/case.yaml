@@ -2,6 +2,7 @@ name: dragonfly-6687-replica-rdb-encoding
 project: dragonfly
 repo: https://github.com/dragonflydb/dragonfly.git
 buggy_commit: "8347cd80192a7be967a3983a6a55a10525915015~1"
+fix_commit: "8347cd80192a7be967a3983a6a55a10525915015"
 resolve_time:
   date: "2026-03-10"
   source: issue_close_date
@@ -13,5 +14,8 @@ build:
   binary: build-opt/dragonfly
 docker:
   caps: []
-  num_cpus: 10
+  # Dragonfly sizes its thread pool from the container's CPU quota and ignores
+  # --proactor_threads; with 10 CPUs it needs >= 2.5GiB maxmemory and refuses
+  # the 512MB the scenario (and the upstream test, 2 threads) uses.
+  num_cpus: 2
   seccomp_unconfined: true
