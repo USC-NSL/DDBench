@@ -1,0 +1,172 @@
+diff --git a/examples/single_mem_node/main.rs b/examples/single_mem_node/main.rs
+index 2b62a72..cae1ec8 100644
+--- a/examples/single_mem_node/main.rs
++++ b/examples/single_mem_node/main.rs
+@@ -196,7 +196,8 @@ fn send_propose(sender: mpsc::Sender<Msg>) {
+                 cb: Box::new(move || {
+                     s1.send(0).unwrap();
+                 }),
+-            }).unwrap();
++            })
++            .unwrap();
+ 
+         let n = r1.recv().unwrap();
+         assert_eq!(n, 0);
+diff --git a/src/raft.rs b/src/raft.rs
+index 6413455..307c058 100644
+--- a/src/raft.rs
++++ b/src/raft.rs
+@@ -572,10 +572,7 @@ impl<T: Storage> Raft<T> {
+         self.bcast_heartbeat_with_ctx(ctx)
+     }
+ 
+-    #[cfg_attr(
+-        feature = "cargo-clippy",
+-        allow(clippy::needless_pass_by_value)
+-    )]
++    #[cfg_attr(feature = "cargo-clippy", allow(clippy::needless_pass_by_value))]
+     fn bcast_heartbeat_with_ctx(&mut self, ctx: Option<Vec<u8>>) {
+         let self_id = self.id;
+         let mut prs = self.take_prs();
+@@ -1002,35 +999,7 @@ impl<T: Storage> Raft<T> {
+         fail_point!("before_step");
+ 
+         match m.get_msg_type() {
+-            MessageType::MsgHup => if self.state != StateRole::Leader {
+-                let ents = self
+-                    .raft_log
+-                    .slice(
+-                        self.raft_log.applied + 1,
+-                        self.raft_log.committed + 1,
+-                        raft_log::NO_LIMIT,
+-                    ).expect("unexpected error getting unapplied entries");
+-                let n = self.num_pending_conf(&ents);
+-                if n != 0 && self.raft_log.committed > self.raft_log.applied {
+-                    warn!(
+-                        "{} cannot campaign at term {} since there are still {} pending \
+-                         configuration changes to apply",
+-                        self.tag, self.term, n
+-                    );
+-                    return Ok(());
+-                }
+-                info!(
+-                    "{} is starting a new election at term {}",
+-                    self.tag, self.term
+-                );
+-                if self.pre_vote {
+-                    self.campaign(CAMPAIGN_PRE_ELECTION);
+-                } else {
+-                    self.campaign(CAMPAIGN_ELECTION);
+-                }
+-            } else {
+-                debug!("{} ignoring MsgHup because already leader", self.tag);
+-            },
++            MessageType::MsgHup => self.hup(false),
+             MessageType::MsgRequestVote | MessageType::MsgRequestPreVote => {
+                 // We can vote if this is a repeat of a vote we've already cast...
+                 let can_vote = (self.vote == m.get_from()) ||
+@@ -1079,6 +1048,55 @@ impl<T: Storage> Raft<T> {
+         Ok(())
+     }
+ 
++    fn hup(&mut self, transfer_leader: bool) {
++        if self.state == StateRole::Leader {
++            debug!("{} ignoring MsgHup because already leader", self.tag);
++            return;
++        }
++
++        // If there is a pending snapshot, its index will be returned by
++        // `maybe_first_index`. Note that snapshot updates configuration
++        // already, so as long as pending entries don't contain conf change
++        // it's safe to start campaign.
++        let first_index = match self.raft_log.unstable.maybe_first_index() {
++            Some(idx) => idx,
++            None => self.raft_log.applied + 1,
++        };
++
++        let ents = self
++            .raft_log
++            .slice(first_index, self.raft_log.committed + 1, raft_log::NO_LIMIT)
++            .unwrap_or_else(|e| {
++                panic!(
++                    "{} unexpected error getting unapplied entries [{}, {}): {:?}",
++                    self.tag,
++                    first_index,
++                    self.raft_log.committed + 1,
++                    e
++                );
++            });
++        let n = self.num_pending_conf(&ents);
++        if n != 0 {
++            warn!(
++                "{} cannot campaign at term {} since there are still {} pending \
++                 configuration changes to apply",
++                self.tag, self.term, n
++            );
++            return;
++        }
++        info!(
++            "{} is starting a new election at term {}",
++            self.tag, self.term
++        );
++        if transfer_leader {
++            self.campaign(CAMPAIGN_TRANSFER);
++        } else if self.pre_vote {
++            self.campaign(CAMPAIGN_PRE_ELECTION);
++        } else {
++            self.campaign(CAMPAIGN_ELECTION);
++        }
++    }
++
+     fn log_vote_approve(&self, m: &Message) {
+         info!(
+             "{} [logterm: {}, index: {}, vote: {}] cast {:?} for {} [logterm: {}, index: {}] \
+@@ -1632,7 +1650,7 @@ impl<T: Storage> Raft<T> {
+                     // Leadership transfers never use pre-vote even if self.pre_vote is true; we
+                     // know we are not recovering from a partition so there is no need for the
+                     // extra round trip.
+-                    self.campaign(CAMPAIGN_TRANSFER);
++                    self.hup(true);
+                 } else {
+                     info!(
+                         "{} received MsgTimeoutNow from {} but is not promotable",
+diff --git a/src/raw_node.rs b/src/raw_node.rs
+index 43524a4..09f4fb6 100644
+--- a/src/raw_node.rs
++++ b/src/raw_node.rs
+@@ -153,7 +153,8 @@ impl Ready {
+             (match since_idx {
+                 None => raft.raft_log.next_entries(),
+                 Some(idx) => raft.raft_log.next_entries_since(idx),
+-            }).unwrap_or_else(Vec::new),
++            })
++            .unwrap_or_else(Vec::new),
+         );
+         let ss = raft.soft_state();
+         if &ss != prev_ss {
+@@ -286,10 +287,7 @@ impl<T: Storage> RawNode<T> {
+     }
+ 
+     /// ProposeConfChange proposes a config change.
+-    #[cfg_attr(
+-        feature = "cargo-clippy",
+-        allow(clippy::needless_pass_by_value)
+-    )]
++    #[cfg_attr(feature = "cargo-clippy", allow(clippy::needless_pass_by_value))]
+     pub fn propose_conf_change(&mut self, context: Vec<u8>, cc: ConfChange) -> Result<()> {
+         let data = protobuf::Message::write_to_bytes(&cc)?;
+         let mut m = Message::new();
+diff --git a/src/util.rs b/src/util.rs
+index e5f1491..f74a763 100644
+--- a/src/util.rs
++++ b/src/util.rs
+@@ -64,7 +64,8 @@ pub fn limit_size<T: Message + Clone>(entries: &mut Vec<T>, max: u64) {
+                 size += u64::from(Message::compute_size(e));
+                 size <= max
+             }
+-        }).count();
++        })
++        .count();
+ 
+     entries.truncate(limit);
+ }

@@ -2,6 +2,7 @@ name: raft-rs-345-readindex-config-change
 project: raft-rs
 repo: https://github.com/tikv/raft-rs.git
 buggy_commit: "513b82ce4507747a678fee7b4405c8b8b106fc12~1"
+fix_commit: "513b82ce4507747a678fee7b4405c8b8b106fc12"
 resolve_time:
   date: "2020-05-21"
   source: issue_close_date

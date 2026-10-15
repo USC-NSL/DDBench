@@ -1,5 +1,9 @@
 # Solution: raft-rs #345
 
+- **Issue:** https://github.com/tikv/raft-rs/issues/345
+- **Fix commit:** [`513b82ce4507747a678fee7b4405c8b8b106fc12`](https://github.com/tikv/raft-rs/commit/513b82ce4507747a678fee7b4405c8b8b106fc12)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 - **PR:** https://github.com/tikv/raft-rs/pull/363
 - **Commit:** `513b82ce4507747a678fee7b4405c8b8b106fc12`

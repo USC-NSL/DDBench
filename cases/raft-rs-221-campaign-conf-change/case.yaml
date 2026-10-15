@@ -2,6 +2,7 @@ name: raft-rs-221-campaign-conf-change
 project: raft-rs
 repo: https://github.com/tikv/raft-rs.git
 buggy_commit: "aa131db1ba95166501c1cf5b8d90cd7c7bde2308"
+fix_commit: "64571f0fb7d87e5c335f05a67b2ff5fbe90dec36"
 resolve_time:
   date: "2019-04-29"
   source: issue_close_date
