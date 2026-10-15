@@ -1,5 +1,9 @@
 # Solution: Ra #439
 
+- **Issue:** https://github.com/rabbitmq/ra/issues/439
+- **Fix commit:** [`d128c812fbf582bbaffd0f94bc20a236d078fb6f`](https://github.com/rabbitmq/ra/commit/d128c812fbf582bbaffd0f94bc20a236d078fb6f)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 
 - **PR:** https://github.com/rabbitmq/ra/pull/442
