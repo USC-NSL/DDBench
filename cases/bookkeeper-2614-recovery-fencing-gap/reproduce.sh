@@ -1,72 +1,124 @@
 #!/usr/bin/env bash
-# Reproduce script for bookkeeper-2614-recovery-fencing-gap
-# Verifies that recovery reads carry the fencing flag, preventing the original
-# writer from committing entries after ledger recovery has closed the ledger.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Reproduction and verification script for bookkeeper-2614-recovery-fencing-gap
+# Injects the two-writer recovery test (LedgerRecovery2Test plus its mock bookie
+# infrastructure, shipped as test-only files in inject_test/) and runs
+# testFirstWriterCannotCommitWriteAfter2ndWriterCloses: after a second writer
+# recovers and closes a ledger, the first writer must not be able to commit a
+# write. Production code is never modified by this script.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
-set -euo pipefail
+set -uo pipefail
 
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/bookkeeper-2614-recovery-fencing-gap"
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RESULT_LOG="/tmp/bk_2614_test_output.txt"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+# ── JUnit XML verdicts ──
+# Decided from the JUnit XML report for the exact oracle test case: it must
+# exist and contain no <failure>, <error> or <skipped>. Never from console text.
+junit_result() {  # <xml-file> <test-method> -> pass | fail | skip | norun
+    [ -f "$1" ] || { echo norun; return; }
+    awk -v m="$2" '
+        /<testcase[ >]/ {
+            inc = ($0 ~ ("name=\"" m "([({[][^\"]*)?\""))
+            if (inc) { found = 1
+                if ($0 ~ /<(failure|error)[ >\/]/) bad = 1
+                if ($0 ~ /<skipped/) skip = 1
+                if ($0 ~ /\/>[[:space:]]*$/ || $0 ~ /<\/testcase>/) inc = 0 }
+            next }
+        inc && /<(failure|error)[ >\/]/ { bad = 1 }
+        inc && /<skipped/ { skip = 1 }
+        inc && /<\/testcase>/ { inc = 0 }
+        END { if (!found) print "norun"; else if (bad) print "fail"; else if (skip) print "skip"; else print "pass" }
+    ' "$1"
+}
+# Exit with the verdict for the oracle test case.
+junit_verdict() {  # <xml> <method> <console-log> <pass-message> <fail-message>
+    case "$(junit_result "$1" "$2")" in
+        pass) pass "$4" ;;
+        fail) fail "$5" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)
+            if grep -qE "COMPILATION ERROR|Compilation failure|compilation failed|Compilation failed|error: |cannot find symbol" "$3"; then
+                fail "the oracle test did not run: the worktree or the injected oracle test does not compile"
+            fi
+            error "the oracle test did not run and no compilation error was found (see output above)" ;;
+    esac
+}
+
+INJECT_DIR="$CASE_DIR/inject_test"
+TEST_CLASS=org.apache.bookkeeper.client.LedgerRecovery2Test
+TEST_METHOD=testFirstWriterCannotCommitWriteAfter2ndWriterCloses
+REPORT="$WORK_DIR/bookkeeper-server/target/surefire-reports/TEST-$TEST_CLASS.xml"
+LOG="$RUN_DIR/mvn-test.log"
+
+rebuild_worktree
+[ -d "$WORK_DIR/bookkeeper-server" ] || error "bookkeeper-server not found in $WORK_DIR (run setup first)"
+[ -d "$INJECT_DIR" ] || error "oracle test files $INJECT_DIR missing"
+cd "$WORK_DIR"
 
 echo "=== Reproducing bookkeeper-2614-recovery-fencing-gap ==="
 
-cd "$WORK_DIR"
+# Test-only files to inject (destination -> source). Whatever the worktree has
+# at these paths is saved and restored afterwards.
+TEST_ROOT=bookkeeper-server/src/test/java/org/apache/bookkeeper
+FILES=(
+    "$TEST_ROOT/proto/MockBookies.java:MockBookies.java"
+    "$TEST_ROOT/proto/MockLedgerData.java:MockLedgerData.java"
+    "$TEST_ROOT/proto/MockBookieClient.java:MockBookieClient.java"
+    "$TEST_ROOT/client/MockClientContext.java:MockClientContext.java"
+    "$TEST_ROOT/client/LedgerRecovery2Test.java:LedgerRecovery2Test.java"
+)
+mkdir -p "$RUN_DIR/saved"
+cleanup() {
+    local entry dst
+    # Reports and classes compiled from the injected sources must not outlive the run.
+    rm -rf bookkeeper-server/target/surefire-reports
+    rm -f bookkeeper-server/target/test-classes/org/apache/bookkeeper/client/{LedgerRecovery2Test,MockClientContext}*.class \
+          bookkeeper-server/target/test-classes/org/apache/bookkeeper/proto/{MockBookies,MockLedgerData,MockBookieClient}*.class
+    for entry in "${FILES[@]}"; do
+        dst=${entry%%:*}
+        if [ -f "$RUN_DIR/saved/$(basename "$dst")" ]; then
+            cp "$RUN_DIR/saved/$(basename "$dst")" "$dst"
+        else
+            rm -f "$dst"
+        fi
+    done
+}
+trap cleanup EXIT
+for entry in "${FILES[@]}"; do
+    dst=${entry%%:*}; src=${entry#*:}
+    [ -f "$dst" ] && cp "$dst" "$RUN_DIR/saved/$(basename "$dst")"
+    cp "$INJECT_DIR/$src" "$dst" || error "could not inject $src"
+done
 
-# Use a persistent Maven local repo inside the workspace volume so the
-# SNAPSHOT artifacts from setup are reusable across containers.
-M2_REPO="/workspace/.m2"
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh" 2>&1 | tail -5 || \
-    mvn -pl bookkeeper-server -am clean install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -Dmaven.repo.local="$M2_REPO" -q
-
-# Reset to buggy state (production code must be at buggy commit)
-git checkout -- bookkeeper-server/src/main/java/org/apache/bookkeeper/client/PendingReadOp.java 2>/dev/null || true
-
-# Inject test infrastructure from static inject_test files shipped with
-# this case. These are test-only files that compile against the buggy
-# commit's production code. The production code stays at the buggy commit
-# so PendingReadOp still lacks FLAG_DO_FENCING in recovery reads.
-INJECT_DIR="${CASE_DIR}/inject_test"
-if [ -d "/bench/inject_test" ]; then
-    INJECT_DIR="/bench/inject_test"
-fi
-
-cp "$INJECT_DIR/MockBookies.java" \
-    bookkeeper-server/src/test/java/org/apache/bookkeeper/proto/MockBookies.java
-cp "$INJECT_DIR/MockLedgerData.java" \
-    bookkeeper-server/src/test/java/org/apache/bookkeeper/proto/MockLedgerData.java
-cp "$INJECT_DIR/MockBookieClient.java" \
-    bookkeeper-server/src/test/java/org/apache/bookkeeper/proto/MockBookieClient.java
-cp "$INJECT_DIR/MockClientContext.java" \
-    bookkeeper-server/src/test/java/org/apache/bookkeeper/client/MockClientContext.java
-cp "$INJECT_DIR/LedgerRecovery2Test.java" \
-    bookkeeper-server/src/test/java/org/apache/bookkeeper/client/LedgerRecovery2Test.java
-
-echo "Test infrastructure injected from case directory. Production code remains at buggy commit."
-
-# Run the specific test
-echo "Running testFirstWriterCannotCommitWriteAfter2ndWriterCloses..."
-set +e
+rm -rf bookkeeper-server/target/surefire-reports
+echo "Running $TEST_METHOD ..."
 mvn -pl bookkeeper-server test \
-    -Dtest="LedgerRecovery2Test#testFirstWriterCannotCommitWriteAfter2ndWriterCloses" \
+    -Dtest="LedgerRecovery2Test#$TEST_METHOD" \
     -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip \
-    -Dsurefire.failIfNoSpecifiedTests=false \
-    -Dmaven.repo.local="$M2_REPO" \
-    2>&1 | tee "$RESULT_LOG"
-set -e
-
-if grep -qE "BUILD SUCCESS" "$RESULT_LOG" && grep -qE "Tests run:.*Failures: 0.*Errors: 0" "$RESULT_LOG"; then
-    echo ""
-    echo "PASS: Bug is fixed"
-    exit 0
-else
-    echo ""
-    echo "FAIL: Bug is present — recovery reads do not carry fencing flag; original writer can commit after recovery close"
-    exit 1
-fi
+    -Dsurefire.failIfNoSpecifiedTests=false > "$LOG" 2>&1
+tail -40 "$LOG"
+junit_verdict "$REPORT" "$TEST_METHOD" "$LOG" \
+    "Bug is fixed — the first writer cannot commit a write after recovery closed the ledger" \
+    "Bug is present — the original writer committed an entry after ledger recovery closed the ledger"

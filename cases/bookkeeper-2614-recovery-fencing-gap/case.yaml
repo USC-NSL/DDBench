@@ -2,13 +2,14 @@ name: bookkeeper-2614-recovery-fencing-gap
 project: bookkeeper
 repo: https://github.com/apache/bookkeeper.git
 buggy_commit: "c11baba7dcedc227849021d0aee8303cfcc9765c"
+fix_commit: "017307bc67431a7616861ad09927c4e3327633d1"
 resolve_time:
   date: "2021-03-12"
   source: issue_close_date
   reference: "https://github.com/apache/bookkeeper/issues/2614"
 submodules: false
 build:
-  command: "mvn -pl bookkeeper-server -am clean install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -Dmaven.repo.local=/workspace/.m2 -q"
+  command: "mvn -pl bookkeeper-server -am clean install -DskipTests -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip -q"
   binary: bookkeeper-server/target/bookkeeper-server-4.14.0-SNAPSHOT.jar
 docker:
   caps: []

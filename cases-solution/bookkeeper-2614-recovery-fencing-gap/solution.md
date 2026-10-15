@@ -1,5 +1,9 @@
 # Solution: BookKeeper #2614
 
+- **Issue:** https://github.com/apache/bookkeeper/issues/2614
+- **Fix commit:** [`017307bc67431a7616861ad09927c4e3327633d1`](https://github.com/apache/bookkeeper/commit/017307bc67431a7616861ad09927c4e3327633d1)
+- **Gold patch:** [`gold.patch`](gold.patch) (source-only; `./bench.sh validate-oracle` applies it)
+
 ## Fix
 
 - **PR:** https://github.com/apache/bookkeeper/pull/2616

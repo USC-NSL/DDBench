@@ -1,36 +1,91 @@
 #!/usr/bin/env bash
 # Reproduction and verification script for bookkeeper-4701-fencing-race
-# Injects a race-condition test into bookkeeper-server, runs it, and reports PASS/FAIL.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Injects a JUnit test into the bookie package: two threads call
+# HandleFactoryImpl.getHandle() for the same new ledger at the same time (500
+# trials); both must get the same LedgerDescriptor.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/bookkeeper-4701-fencing-race"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
 
-# ── Rebuild if source changed ──
-[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
 
-# Verify setup
-if [ ! -d "$WORK_DIR/bookkeeper-server" ]; then
-    echo "ERROR: Project not found at $WORK_DIR. Run ./setup.sh first."
-    exit 1
-fi
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
 
+# ── JUnit XML verdicts ──
+# Decided from the JUnit XML report for the exact oracle test case: it must
+# exist and contain no <failure>, <error> or <skipped>. Never from console text.
+junit_result() {  # <xml-file> <test-method> -> pass | fail | skip | norun
+    [ -f "$1" ] || { echo norun; return; }
+    awk -v m="$2" '
+        /<testcase[ >]/ {
+            inc = ($0 ~ ("name=\"" m "([({[][^\"]*)?\""))
+            if (inc) { found = 1
+                if ($0 ~ /<(failure|error)[ >\/]/) bad = 1
+                if ($0 ~ /<skipped/) skip = 1
+                if ($0 ~ /\/>[[:space:]]*$/ || $0 ~ /<\/testcase>/) inc = 0 }
+            next }
+        inc && /<(failure|error)[ >\/]/ { bad = 1 }
+        inc && /<skipped/ { skip = 1 }
+        inc && /<\/testcase>/ { inc = 0 }
+        END { if (!found) print "norun"; else if (bad) print "fail"; else if (skip) print "skip"; else print "pass" }
+    ' "$1"
+}
+# Exit with the verdict for the oracle test case.
+junit_verdict() {  # <xml> <method> <console-log> <pass-message> <fail-message>
+    case "$(junit_result "$1" "$2")" in
+        pass) pass "$4" ;;
+        fail) fail "$5" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)
+            if grep -qE "COMPILATION ERROR|Compilation failure|compilation failed|Compilation failed|error: |cannot find symbol" "$3"; then
+                fail "the oracle test did not run: the worktree or the injected oracle test does not compile"
+            fi
+            error "the oracle test did not run and no compilation error was found (see output above)" ;;
+    esac
+}
+
+TEST_DIR="$WORK_DIR/bookkeeper-server/src/test/java/org/apache/bookkeeper/bookie"
+TEST_CLASS=DDBenchOracleHandleFactoryRaceTest
+TEST_FILE="$TEST_DIR/$TEST_CLASS.java"
+REPORT="$WORK_DIR/bookkeeper-server/target/surefire-reports/TEST-org.apache.bookkeeper.bookie.$TEST_CLASS.xml"
+LOG="$RUN_DIR/mvn-test.log"
+
+rebuild_worktree
+[ -d "$WORK_DIR/bookkeeper-server" ] || error "bookkeeper-server not found in $WORK_DIR (run setup first)"
 cd "$WORK_DIR"
 
 echo "=== Reproducing bookkeeper-4701-fencing-race ==="
 
-# ── Inject the race-condition test ──
-TEST_DIR="bookkeeper-server/src/test/java/org/apache/bookkeeper/bookie"
-mkdir -p "$TEST_DIR"
+cleanup() {
+    rm -f "$TEST_FILE"
+    # Reports and classes compiled from the injected test must not outlive the run.
+    rm -rf "$WORK_DIR/bookkeeper-server/target/surefire-reports"
+    rm -f "$WORK_DIR"/bookkeeper-server/target/test-classes/org/apache/bookkeeper/bookie/DDBenchOracle*.class
+}
+trap cleanup EXIT
 
-cat > "$TEST_DIR/HandleFactoryRaceTest.java" << 'TESTEOF'
+mkdir -p "$TEST_DIR"
+cat > "$TEST_FILE" << 'TESTEOF'
 /*
  * Test for BookKeeper PR #4701: Race condition in HandleFactoryImpl.getHandle().
  *
@@ -66,7 +121,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public class HandleFactoryRaceTest {
+public class DDBenchOracleHandleFactoryRaceTest {
 
     @Rule
     public TemporaryFolder tempDir = new TemporaryFolder();
@@ -164,14 +219,17 @@ public class HandleFactoryRaceTest {
             t2.join(5000);
 
             if (error1.get() != null || error2.get() != null) {
-                // Errors might happen for various reasons; skip this trial
-                continue;
+                Throwable t = error1.get() != null ? error1.get() : error2.get();
+                fail("concurrent getHandle() threw instead of returning a handle: " + t);
             }
 
             LedgerDescriptor h1 = handle1.get();
             LedgerDescriptor h2 = handle2.get();
 
-            if (h1 != null && h2 != null && h1 != h2) {
+            if (h1 == null || h2 == null) {
+                fail("concurrent getHandle() returned null (t1 alive=" + t1.isAlive() + ", t2 alive=" + t2.isAlive() + ")");
+            }
+            if (h1 != h2) {
                 raceCount.incrementAndGet();
             }
         }
@@ -192,45 +250,12 @@ public class HandleFactoryRaceTest {
 }
 TESTEOF
 
-echo "Test injected at: $TEST_DIR/HandleFactoryRaceTest.java"
-echo ""
-
-# ── Run the test ──
-echo "Running HandleFactoryRaceTest (this may take 1-2 minutes)..."
-echo ""
-
-MVN_OUTPUT=$(mvn -pl bookkeeper-server test \
-    -Dtest=HandleFactoryRaceTest \
+rm -rf bookkeeper-server/target/surefire-reports
+echo "Running $TEST_CLASS (this may take 1-2 minutes)..."
+mvn -pl bookkeeper-server test -Dtest="$TEST_CLASS" \
     -Dcheckstyle.skip -Dspotbugs.skip -Drat.skip -Dmaven.javadoc.skip \
-    -Dsurefire.useFile=false \
-    2>&1) || true
-
-# Extract result from output
-echo "$MVN_OUTPUT" | tail -30
-
-# Determine PASS/FAIL
-# Surefire captures System.out, so grep for the fail() assertion message instead.
-# "Race condition detected" appears in surefire error output when the race is triggered.
-# BUILD SUCCESS means no test failures (bug is fixed).
-if echo "$MVN_OUTPUT" | grep -q "Race condition detected: getHandle() returned different LedgerDescriptor"; then
-    echo ""
-    echo "FAIL: Bug is present -- concurrent getHandle() calls return different LedgerDescriptor instances"
-    rm -f "$TEST_DIR/HandleFactoryRaceTest.java"
-    exit 1
-elif echo "$MVN_OUTPUT" | grep -q "BUILD SUCCESS"; then
-    echo ""
-    echo "PASS: Bug is fixed -- concurrent getHandle() calls return the same LedgerDescriptor"
-    rm -f "$TEST_DIR/HandleFactoryRaceTest.java"
-    exit 0
-elif echo "$MVN_OUTPUT" | grep -q "BUILD FAILURE"; then
-    # BUILD FAILURE without our assertion message means compilation or other error
-    echo ""
-    echo "ERROR: Test failed to compile or run. Check output above."
-    rm -f "$TEST_DIR/HandleFactoryRaceTest.java"
-    exit 2
-else
-    echo ""
-    echo "ERROR: Could not determine test result. Check output above."
-    rm -f "$TEST_DIR/HandleFactoryRaceTest.java"
-    exit 2
-fi
+    -Dsurefire.useFile=false > "$LOG" 2>&1
+tail -30 "$LOG"
+junit_verdict "$REPORT" testConcurrentGetHandleReturnsSameInstance "$LOG" \
+    "Bug is fixed — concurrent getHandle() calls return the same LedgerDescriptor" \
+    "Bug is present — concurrent getHandle() calls returned different LedgerDescriptor instances"

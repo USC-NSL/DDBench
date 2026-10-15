@@ -1,0 +1,17 @@
+diff --git a/bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/HandleFactoryImpl.java b/bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/HandleFactoryImpl.java
+index ac87c3aed4..4862266d12 100644
+--- a/bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/HandleFactoryImpl.java
++++ b/bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/HandleFactoryImpl.java
+@@ -60,7 +60,11 @@ class HandleFactoryImpl implements HandleFactory, LedgerDeletionListener {
+                 throw BookieException.create(BookieException.Code.LedgerFencedAndDeletedException);
+             }
+             handle = LedgerDescriptor.create(masterKey, ledgerId, ledgerStorage);
+-            ledgers.putIfAbsent(ledgerId, handle);
++            LedgerDescriptor storedValue = ledgers.putIfAbsent(ledgerId, handle);
++            // If it has been modified by other thread, use the previous one.
++            if (storedValue != null && storedValue != handle) {
++                return getHandle(ledgerId, masterKey, journalReplay);
++            }
+         }
+ 
+         handle.checkAccess(masterKey);
