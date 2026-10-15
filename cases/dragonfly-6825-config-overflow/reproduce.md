@@ -23,3 +23,11 @@ python3 replay_crash.py crashes 000000
 
 ## Expected result (bug present)
 One of the Dragonfly processes crashes with SIGABRT and a check failure message.
+
+## Oracle verdict
+
+`./bench.sh reproduce dragonfly-6825-config-overflow` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): after `DFLYCLUSTER CONFIG` with a slot range whose `end` is `1E383`, sent to a node started with `--cluster_mode=yes`, the Dragonfly process has exited (crashed) or no longer answers `PING`. A worktree that does not build, or a Dragonfly server that does not answer `PING` within 60 s of starting, is also FAIL.
+- **PASS** (exit 0): Dragonfly is still running and answers `PING` with `PONG` after the trigger (the reply to `DFLYCLUSTER CONFIG` itself is not checked).
+- **ERROR** (exit 2): `REBUILD.sh` or the built `build-dbg/dragonfly` binary is missing (the case is not set up).

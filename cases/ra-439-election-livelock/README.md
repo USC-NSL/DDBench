@@ -17,12 +17,15 @@ The fix adds a branch to `handle_candidate/2` for `#pre_vote_rpc{}` that calls `
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup ra-439-election-livelock        # build image + case repository, warm caches
+./bench.sh reproduce ra-439-election-livelock    # FAIL (exit 1) while the bug is present
+./bench.sh shell ra-439-election-livelock        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
+
+## Prerequisites
+
+Docker (all toolchains are in the `bug-bench/ra` image; see the top-level README).
 
 ## What to Expect
 
@@ -35,5 +38,5 @@ The injected CT test fails with a `badmatch` exception: `handle_candidate/2` ret
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) — Observable cluster behavior and liveness failure
-- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure
-- [`verification.md`](verification.md) — Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) — The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

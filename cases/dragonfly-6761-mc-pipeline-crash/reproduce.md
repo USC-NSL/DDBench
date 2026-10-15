@@ -26,3 +26,11 @@ python3 replay_crash.py crashes 000000 127.0.0.1 11211
 
 ## Expected result (bug present)
 The Dragonfly process crashes with SIGABRT. The crash occurs in `Connection::ExecuteMCBatch()` because `STATS` and `VERSION` commands return `WOULD_BLOCK` which is not handled in the pipeline batch execution path.
+
+## Oracle verdict
+
+`./bench.sh reproduce dragonfly-6761-mc-pipeline-crash` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): after `get nokey` and `version` are sent as one pipeline to the memcached port, the Dragonfly process has exited (crashed) or no longer answers `PING`. A worktree that does not build, or a Dragonfly server that does not answer `PING` within 60 s of starting, is also FAIL.
+- **PASS** (exit 0): Dragonfly is still running and answers `PING` with `PONG` after the trigger (the memcached replies are not checked).
+- **ERROR** (exit 2): `REBUILD.sh` or the built `build-dbg/dragonfly` binary is missing (the case is not set up).

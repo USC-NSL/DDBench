@@ -1,7 +1,18 @@
 # Reproduce: NATS #7852
 
+Run these steps inside `./bench.sh shell nats-7852-filter-perf`, from `/workspace/src` (the `nats` CLI is preinstalled in the image).
+
 ## Step 1: Start NATS server with JetStream
 ```bash
+cat > /tmp/nats-bench.conf <<'EOF'
+listen: 127.0.0.1:4222
+jetstream {
+  store_dir: /tmp/nats-bench-data
+  max_mem: 1G
+  max_file: 10G
+}
+EOF
+
 rm -rf /tmp/nats-bench-data
 ./nats-server -c /tmp/nats-bench.conf &
 sleep 2
@@ -71,3 +82,11 @@ The filtered consumer should be >20% slower than the no-filter consumer, even th
 
 ## Expected result (bug present)
 The consumer with `FilterSubjects` matching all subjects delivers messages at least 20% slower than the consumer with no filter configured.
+
+## Oracle verdict
+
+`./bench.sh reproduce nats-7852-filter-perf` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): on one stream, a consumer created with `FilterSubjects: ["foo"]` is set up differently from one created with `FilterSubject: "foo"` (one has an internal multi-filter set initialized and the other does not); the oracle compares this setup and does not measure throughput. A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): the `FilterSubjects: ["foo"]` consumer records exactly one filter subject and has the same filter setup as the `FilterSubject: "foo"` consumer.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh` or the `nats-server` binary is missing), or Go module downloads fail so the oracle test cannot run.

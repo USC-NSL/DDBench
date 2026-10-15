@@ -2,10 +2,18 @@ name: CASE_NAME
 project: PROJECT
 repo: https://github.com/ORG/REPO.git
 buggy_commit: "FIX_COMMIT_HASH~1"
+fix_commit: "FIX_COMMIT_HASH"
+# fix_commit_note: "..."   # only when fix_commit is a backport or null (no upstream fix commit)
+resolve_time:
+  date: "YYYY-MM-DD"
+  source: issue_close_date
+  reference: "https://github.com/ORG/REPO/issues/ISSUE"
 submodules: false
 build:
   command: "BUILD_COMMAND"
   binary: BINARY_PATH
 docker:
   caps: []
-  min_cpus: 1
+  num_cpus: 10
+  # seccomp_unconfined: true   # only if needed (e.g. io_uring)
+  # offline: false             # last resort: give scoring containers network

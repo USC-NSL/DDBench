@@ -1,8 +1,16 @@
 # Reproduce: hashicorp/raft #268
 
 ## Prerequisites
-- Go 1.21+ installed
-- hashicorp/raft checked out at the buggy version (see setup.md)
+- Run inside `./bench.sh shell raft-268-shutdown-deadlock`: hashicorp/raft at the buggy commit is at `/workspace/src`, and the Go toolchain is in the image.
+- Build the program in its own module that points at that source:
+  ```bash
+  mkdir -p /tmp/raft-deadlock-test && cd /tmp/raft-deadlock-test
+  go mod init raft-deadlock-test
+  go mod edit -replace github.com/hashicorp/raft=/workspace/src
+  # create main.go (below), then:
+  go mod tidy
+  ```
+- The automated oracle (`bash /bench/reproduce.sh`) builds its own harness, `/bench/test_main.go`, the same way.
 
 ## Step 1: Create a test program
 
@@ -123,3 +131,11 @@ Some runs will print "DEADLOCK: Shutdown() has been blocked for 30 seconds" and 
 ## Expected result (bug absent)
 
 All runs complete with "Shutdown completed successfully" within a few seconds.
+
+## Oracle verdict
+
+`./bench.sh reproduce raft-268-shutdown-deadlock` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): in any of 50 attempts, `Shutdown()` of a single-node cluster (snapshot threshold 1, 10 ms snapshot interval, FSM snapshots slowed to 200 ms, `GOMAXPROCS(1)`), called shortly after five `Apply()` calls while an FSM snapshot may be in flight, does not return within 10 s, or the harness as a whole runs longer than 900 s. A worktree that does not build, a harness (`test_main.go`) that cannot be resolved or compiled against the worktree's raft package, or a node that does not start or become leader within 5 s, is also FAIL.
+- **PASS** (exit 0): all 50 attempts shut down within 10 s and at least one FSM snapshot was taken.
+- **ERROR** (exit 2): `REBUILD.sh`, `raft.go` or `test_main.go` is missing, the harness's Go modules cannot be downloaded (network), the harness cannot create its TCP transport, no FSM snapshot was ever taken (trigger not exercised), or the harness exits with an unexpected code.

@@ -14,20 +14,20 @@ When replicating from a Dragonfly master that has tiered storage enabled, the re
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup dragonfly-6687-replica-rdb-encoding        # build image + case repository, warm caches
+./bench.sh reproduce dragonfly-6687-replica-rdb-encoding    # FAIL (exit 1) while the bug is present
+./bench.sh shell dragonfly-6687-replica-rdb-encoding        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git
-- C++ compiler (GCC 11+ or Clang 14+)
-- CMake 3.16+
-- Ninja build system
-- `redis-cli` (from redis-tools package)
+Docker (all toolchains are in the `bug-bench/dragonfly` image; see the top-level README).
+
+## Build Notes
+
+- Release build (`-DCMAKE_BUILD_TYPE=Release`); the binary is `build-opt/dragonfly`.
+- The case container runs with 2 CPUs and an unconfined seccomp profile (`docker:` in `case.yaml`): Dragonfly sizes its thread pool from the CPU quota, and with more threads it refuses the scenario's `--maxmemory=512mb`.
 
 ## What to Expect
 
@@ -40,6 +40,5 @@ The replica successfully syncs with the master and `INFO replication` reports `m
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) — Observable behavior and error messages
-- [`setup.md`](setup.md) — Detailed setup instructions
-- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure
-- [`verification.md`](verification.md) — Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) — The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

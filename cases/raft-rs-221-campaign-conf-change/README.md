@@ -2,13 +2,18 @@
 
 Bug case from [tikv/raft-rs#221](https://github.com/tikv/raft-rs/issues/221).
 
-## Quick start
+## Quick Start
 
 ```bash
-cd cases/raft-rs-221-campaign-conf-change/
-./setup.sh       # clone, checkout buggy commit, build test harness
-./reproduce.sh   # inject test, run → PASS/FAIL
+# from the repository root
+./bench.sh setup raft-rs-221-campaign-conf-change        # build image + case repository, warm caches
+./bench.sh reproduce raft-rs-221-campaign-conf-change    # FAIL (exit 1) while the bug is present
+./bench.sh shell raft-rs-221-campaign-conf-change        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
+
+## Prerequisites
+
+Docker (all toolchains are in the `bug-bench/raft-rs` image; see the top-level README).
 
 ## Bug summary
 

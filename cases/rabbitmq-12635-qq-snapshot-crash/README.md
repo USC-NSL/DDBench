@@ -16,18 +16,15 @@ The bug is triggered when a slow or stopped follower has consumers on its node. 
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy version, build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup rabbitmq-12635-qq-snapshot-crash        # build image + case repository, warm caches
+./bench.sh reproduce rabbitmq-12635-qq-snapshot-crash    # FAIL (exit 1) while the bug is present
+./bench.sh shell rabbitmq-12635-qq-snapshot-crash        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Erlang/OTP 26+
-- Elixir 1.17+
-- GNU Make, GCC
+Docker (all toolchains are in the `bug-bench/rabbitmq` image; see the top-level README).
 
 ## What to Expect
 
@@ -40,5 +37,5 @@ The CT test passes. The `delivery_effect/3` function gracefully handles the stal
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) -- Observable behavior and error messages
-- [`reproduce.md`](reproduce.md) -- Step-by-step reproduction procedure
-- [`verification.md`](verification.md) -- Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) -- Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) -- The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

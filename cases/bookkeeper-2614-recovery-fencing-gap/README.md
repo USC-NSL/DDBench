@@ -21,12 +21,15 @@ Discovered through TLA+ formal verification of the BookKeeper replication protoc
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, Maven build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup bookkeeper-2614-recovery-fencing-gap        # build image + case repository, warm caches
+./bench.sh reproduce bookkeeper-2614-recovery-fencing-gap    # FAIL (exit 1) while the bug is present
+./bench.sh shell bookkeeper-2614-recovery-fencing-gap        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
+
+## Prerequisites
+
+Docker (all toolchains are in the `bug-bench/bookkeeper` image; see the top-level README).
 
 ## What to Expect
 
@@ -39,5 +42,5 @@ Recovery reads fence the bookies they contact. w1's write to the already-read bo
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) — Observable data loss behavior
-- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure
-- [`verification.md`](verification.md) — Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) — The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

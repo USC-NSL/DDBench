@@ -1,7 +1,7 @@
 # Reproduce: Dragonfly #6687
 
 ## Prerequisites
-A Dragonfly master with tiered storage and a replica (see setup.md).
+Run inside `./bench.sh shell dragonfly-6687-replica-rdb-encoding`, from `/workspace/src` (the Release binary is `build-opt/dragonfly`). Steps 1 and 3 start the master with tiered storage and the replica.
 
 ## Step 1: Start master with tiered storage
 
@@ -56,3 +56,11 @@ The replica never completes sync and keeps retrying in a loop. `INFO replication
 redis-cli -p 6380 INFO replication | grep master_link_status
 # master_link_status:down
 ```
+
+## Oracle verdict
+
+`./bench.sh reproduce dragonfly-6687-replica-rdb-encoding` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): during the full sync of a fresh replica from the tiered-storage master (loaded with `DEBUG POPULATE` strings and hashes), the replica's log contains `Internal error when loading RDB` or `Unknown RDB string encoding`, or `INFO replication` on the replica does not report `master_link_status:up` within 45 s of `REPLICAOF`. A worktree that does not build, a master or replica that does not answer `PING` within 60 s of starting, a master that stops answering during the 15 s offload wait, or a `REPLICAOF` that is not accepted, is also FAIL.
+- **PASS** (exit 0): the replica reports `master_link_status:up` within 45 s and its log contains neither of those RDB load errors.
+- **ERROR** (exit 2): `REBUILD.sh` or the built `build-opt/dragonfly` binary is missing (the case is not set up), or the master holds fewer than 200200 keys after the data load (trigger not established).

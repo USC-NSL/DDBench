@@ -1,7 +1,12 @@
 # Reproduce: Kvrocks #3339
 
 ## Prerequisites
-A running Kvrocks instance (see setup.md).
+Run inside `./bench.sh shell kvrocks-3339-xreadgroup-double`, from `/workspace/src`, and start a Kvrocks instance:
+
+```bash
+mkdir -p /tmp/kvrocks-data
+./build/kvrocks --port 6666 --dir /tmp/kvrocks-data --log-dir /tmp/kvrocks-logs &
+```
 
 ## Step 1: Create stream and consumer group
 
@@ -35,6 +40,8 @@ done
 ```
 
 ## Step 4: Scripted reproduction
+
+This script needs the Python `redis` package, which is not preinstalled in the image.
 
 ```python
 import redis
@@ -87,3 +94,11 @@ else:
 
 ## Expected result (bug present)
 Some consumers receive protocol errors or unexpected responses due to the double response from XREADGROUP.
+
+## Oracle verdict
+
+`./bench.sh reproduce kvrocks-3339-xreadgroup-double` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): during an 8 s run in which 16 consumers repeatedly issue `XREADGROUP ... COUNT 1 BLOCK 500` on an initially empty stream while a producer runs `XADD` about 50 times per second, some `XREADGROUP` reply is followed by extra bytes (a second RESP frame) within 150 ms, or a reply is malformed or of an unexpected type, a connection breaks, or an `XADD` fails. A worktree that does not build, or Kvrocks that exits during startup or does not listen on its port within 15 s, is also FAIL.
+- **PASS** (exit 0): every `XREADGROUP` in the run produced exactly one RESP frame with no trailing bytes.
+- **ERROR** (exit 2): `REBUILD.sh` or the built `build/kvrocks` binary is missing, `XGROUP CREATE` fails, or the run completes fewer than 10 `XREADGROUP` replies or 5 `XADD`s (the code path was not exercised).

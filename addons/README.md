@@ -1,6 +1,6 @@
 # Addons
 
-Addons inject tools — AI coding agents, debuggers, profilers — into bug-bench containers at runtime, without modifying base Docker images.
+Addons inject tools — AI coding agents, debuggers, profilers — into bug-bench containers at runtime, without modifying base Docker images. They are used by `bench.sh shell` and `bench.sh agent` (never by `bench.sh reproduce`, whose scoring container is hermetic and offline).
 
 ## Quick Start
 
@@ -28,6 +28,27 @@ First run downloads and installs the tool (~1-3 min depending on addon). Subsequ
 | `custom-gdb-dashboard` | [GDB Dashboard](https://github.com/cyrus-and/gdb-dashboard) | Rich terminal UI for GDB |
 | `rr-debugger` | [rr](https://rr-project.org) | Record & replay debugger |
 
+### Pinned versions
+
+Tool versions are pinned for reproducible agent runs. The variables below
+override them inside the container; `bench.sh` does not forward them from the
+host, so set them in a custom wrapper, e.g. `addons/claude-code.sh` containing
+`CLAUDE_CODE_VERSION=2.2.0 exec bash /addons/examples/claude-code.sh`:
+
+| Addon / runtime | Default | Variable |
+|-----------------|---------|----------|
+| Node.js (`_runtime.sh`) | 22.12.0 | `NODE_VERSION` |
+| uv (`_runtime.sh`) | 0.11.3 (versioned installer) | `UV_VERSION` |
+| `claude-code` | 2.1.299 | `CLAUDE_CODE_VERSION` |
+| `codex` | 0.162.1 | `CODEX_VERSION` |
+| `aider` | 0.86.2 | `AIDER_VERSION` |
+| `mini-swe-agent` | 2.2.8 | `MSWEA_VERSION` |
+| `custom-gdb-dashboard` | commit `7b9b1260` | `GDB_DASHBOARD_REF` |
+| `rr-debugger` | the distribution package of the image | — |
+
+An installed tool whose version differs from the pin is reinstalled on the next
+container start.
+
 ## Runtime Caching Strategy
 
 Addons must install **everything** — including language runtimes — into the persistent volume at `/opt/tools/`. Using `apt-get` for runtimes (e.g., `apt-get install nodejs`) would put them in the ephemeral container filesystem, requiring reinstallation on every container start.
@@ -54,7 +75,8 @@ Every addon script must:
 3. **Print status** — `[addon:<name>] installing ...` / `[addon:<name>] already installed`
 4. **Install into `ADDON_TOOL_DIR`** — use `${ADDON_TOOL_DIR:-/opt/tools}` for persistent caching
 5. **Never use apt-get for runtimes** — use tarballs/managed installs into the persistent volume instead
-6. **Work on Ubuntu 24.04** — both base-cpp and base-go images use this base
+6. **Work on the project images** — most are Ubuntu 24.04; `bug-bench/ra` and `bug-bench/rabbitmq` are Debian-based (official Erlang/Elixir images)
+7. **Pin versions** — install a fixed version (overridable via an environment variable), never `latest`
 
 ### Template (Node.js tool)
 
@@ -144,7 +166,7 @@ With `bench.sh shell`, agent config directories (e.g., `~/.claude/`) are also mo
 
 ## Persistent Tool Cache
 
-Addon installations are cached in a Docker volume (`bug-bench-tools`) mounted at `/opt/tools`. This volume is shared across all 31 cases and all container types (C++, Go).
+Addon installations are cached in a Docker volume (`bug-bench-tools`) mounted at `/opt/tools`. This volume is shared across all cases and all project images. It only ever contains the tools themselves, never case data.
 
 **What's cached (install once, use everywhere):**
 - Language runtimes: Node.js binary, uv-managed Python
@@ -167,5 +189,8 @@ No. `reproduce` is a hermetic test — no extra tools. Use `shell` or `agent` in
 **Do addons modify the Docker image?**
 No. Addons install at container runtime. The base images remain tool-agnostic.
 
+**What does an agent container look like?**
+The worktree is at `/workspace/src` (with `SYMPTOM.md` and `REBUILD.sh`, plus a read-only `context/` with `--context`). Docker objects are named by an opaque hash, so nothing in the container reveals the case name. There is no `/bench` (oracle) and no host `~/.claude`. Package managers point at an empty, container-local `/deps` (the case's scoring dependency cache is never mounted), so the agent's first build downloads its dependencies over the network. The agent runs with the same CPU limit as scoring.
+
 **Can I use addons with VS Code devcontainers?**
-Not automatically (yet). For now, open a terminal inside the devcontainer and run the addon script manually: `bash /addons/examples/claude-code.sh`.
+Not automatically. The devcontainer does not mount `addons/`; copy an addon script into the container (or install the tool by hand) from a terminal inside it.

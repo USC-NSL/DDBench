@@ -74,7 +74,7 @@ For each case (or the specified case):
    - Variable, struct field, and constant names
    - File paths listed in "Fix locus" → "Files"
    - The component name from "Fix locus" → "Component"
-   - PR numbers and commit hashes from "Fix"
+   - Issue/PR numbers and commit hashes from the header lines (`- **Issue:**`, `- **Fix commit:**`) and any "Fix" section
    - Internal data structure names (e.g., `committedLog`, `pendingOffsets`, `HandleFactory`)
    - Prior issue/PR references mentioned as regression source (e.g., "ZOOKEEPER-4394")
 
@@ -190,25 +190,19 @@ Create separate markdown files by debug-context category. Only create files for 
 
 #### Debug-context file format
 
-Each debug-context file must have this structure:
+Use the `/debug-context` runtime format: a provenance line naming the command, then the raw output, nothing else. `context/` is observational, so there is no interpretation section.
 
 ```markdown
-# <Context Type>: <case-name>
+# <Context Type>
 
-## How this was obtained
+Obtained by running `<exact command>` against the buggy build.
 
-<Brief description of the tool/method used to capture this debug context.
-Must be a standard runtime tool — not source code reading.>
+## Output
 
-## Evidence
-
-<The actual content — log lines, stack traces, metrics, etc.>
-
-## What this tells a developer
-
-<1-2 sentences describing what direction this debug context suggests,
-WITHOUT naming the fix or the buggy code location.>
+<The actual content — log lines, stack traces, metrics, etc. — verbatim, trimmed only.>
 ```
+
+Do not put the case name in the title or anywhere else in the file: it carries the issue number and a diagnostic slug.
 
 #### Debug-context sanitization rules
 
@@ -223,9 +217,13 @@ Before writing any debug-context file, sanitize it:
 
 3. **Metrics**: Keep values and trends. Don't annotate which internal component is responsible for the anomaly unless that component name is user-facing.
 
+4. **Upstream references**: Remove links to and numbers of the upstream issue, PR or fix commit (URLs, `#<number>`, commit hashes, JIRA keys).
+
+5. **Oracle material**: Remove anything that came from the oracle: `reproduce.sh` output, PASS/FAIL verdicts, injected `DDBenchOracle*` tests and their output, oracle thresholds, windows or trigger parameters.
+
 ### Step 5b: Recommend missing debug context (for clean cases)
 
-If a case has zero violations but no `context/` directory, check whether natural Tier 2 debug context is missing based on the oracle type (from `case.yaml` or `verification.md`):
+If a case has zero violations but no `context/` directory, check whether natural Tier 2 debug context is missing based on the oracle type (`oracle_type` in `registry/case_registry.json`, or what `reproduce.sh` checks):
 
 | Oracle type | Expected Tier 2 debug context | Tool to obtain it |
 |---|---|---|
@@ -243,7 +241,7 @@ RECOMMEND: <case-name> — no context/ directory. Consider adding:
   - context/stack-trace.md (CRASH case — capture goroutine dump from stderr)
 ```
 
-This is advisory only — do not auto-create debug-context files from recommendation. The debug context must come from actually running the reproduction.
+This is advisory only — do not auto-create debug-context files from recommendation. The debug context must come from `/debug-context` (a developer investigating at the buggy commit inside `./bench.sh shell`), never from running `reproduce.sh`.
 
 ### Step 6: Rewrite symptom.md
 
@@ -251,12 +249,7 @@ After extracting Tier 2 content to context/ and redacting Tier 3 content:
 
 1. Rewrite `symptom.md` to contain ONLY Tier 1 information
 2. Apply the Fresh Developer Test to every sentence
-3. Add a brief pointer at the end of symptom.md if debug-context files were created:
-   ```markdown
-   ## Additional debug context
-   
-   Runtime diagnostic artifacts are available in the `context/` directory.
-   ```
+3. Do NOT add a pointer to `context/` in symptom.md: `SYMPTOM.md` is identical in both evaluation conditions, and only the context-augmented condition mounts `context/` (its prompt tells the agent about it)
 4. Show before/after diff
 5. Apply the edit
 
@@ -300,7 +293,8 @@ Re-run ALL scans (lexical + semantic) on:
 Verification checklist:
 - [ ] `symptom.md` passes the Fresh Developer Test (every sentence)
 - [ ] `symptom.md` passes all 5 litmus tests
-- [ ] Each debug-context file describes HOW it was obtained (runtime tool, not source reading)
+- [ ] Each runtime debug-context file names the command that produced it (runtime tool, not source reading)
+- [ ] No debug-context file links or cites the upstream issue, PR or fix commit, or contains oracle material
 - [ ] No debug-context file names the fix location or fix strategy
 - [ ] No debug-context file is diagnostic-equivalent to the solution
 - [ ] Stack traces are sanitized per the rules above

@@ -11,34 +11,33 @@
 
 ## Bug Summary
 
-When a follower replica appends messages received from the leader, the `DelayedFetchPurgatory` is never checked or completed. Consumers configured to fetch from follower replicas always wait the full `fetch.max.wait.ms` timeout before receiving data, even when new messages have already been replicated to the follower. The root cause is that `ReplicaFetcherThread.processPartitionData()` updates the follower's high watermark but never calls `replicaManager.completeDelayedFetchRequests()`, so any pending delayed fetch requests remain stuck in the purgatory until the timeout expires.
+When a follower replica appends messages received from the leader, the `DelayedFetchPurgatory` is never checked or completed. Consumers configured to fetch from follower replicas always wait the full `fetch.max.wait.ms` timeout before receiving data, even when new messages have already been replicated to the follower. The root cause is that `ReplicaFetcherThread.processPartitionData()` advances the follower's high watermark but nothing then checks the follower's delayed fetch purgatory, so pending consumer fetches stay there until they expire.
 
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup kafka-14334-delayed-fetch-purgatory        # build image + case repository, warm caches
+./bench.sh reproduce kafka-14334-delayed-fetch-purgatory    # FAIL (exit 1) while the bug is present
+./bench.sh shell kafka-14334-delayed-fetch-purgatory        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git
-- Java 17 (expected at `/usr/lib/jvm/java-17-openjdk-amd64`)
-- Docker (optional, recommended)
+Docker (all toolchains are in the `bug-bench/kafka` image; see the top-level README).
 
 ## What to Expect
 
+The oracle starts two brokers in-process (fetch from follower enabled, broker 0 leading and broker 1 following a replicated partition). It sends a consumer fetch (`minBytes=1`, `maxWait=30 s`) to the follower before producing, then produces one record to the leader with `acks=all`, in two rounds.
+
 **When the bug is present (FAIL):**
-The injected regression test fails because `ReplicaFetcherThread` does not override `doWork()` to call `completeDelayedFetchRequests()`, and the necessary API methods (`maybeUpdateHighWatermark`, `completeDelayedFetchRequests`, `partitionsWithNewHighWatermark`) are missing from the buggy code.
+The follower holds the fetch until its 30 s `maxWait` expires (about 28 s after the record was acknowledged), although the same fetch sent to the leader is answered at once and the record is already readable on the follower.
 
 **When the bug is fixed (PASS):**
-The test passes. `ReplicaFetcherThread.doWork()` now calls `completeDelayedFetchRequests()` after each fetch cycle, draining the buffer of partitions whose high watermark changed and completing any pending delayed fetch requests.
+The follower answers the waiting fetch with the record well within 10 s of the acknowledgement (about half a second with the upstream fix), in both rounds.
 
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) -- Observable behavior and error messages
-- [`reproduce.md`](reproduce.md) -- Step-by-step reproduction procedure
-- [`verification.md`](verification.md) -- Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) -- Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) -- The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

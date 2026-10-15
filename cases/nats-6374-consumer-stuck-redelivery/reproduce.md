@@ -23,7 +23,7 @@ Simulate a leader step-down race condition:
 ### Test command
 
 ```bash
-cd /path/to/nats-server
+cd /workspace/src
 go test -v -run TestJetStreamConsumerSwitchLeaderDuringInflightAck -count=1 -timeout 120s ./server/
 ```
 
@@ -47,6 +47,14 @@ Create a JetStream server, publish 3 messages, create a pull consumer, and fetch
 ### Test command
 
 ```bash
-cd /path/to/nats-server
+cd /workspace/src
 go test -v -run TestJetStreamConsumerMessageDeletedDuringRedelivery -count=1 -timeout 120s ./server/
 ```
+
+## Oracle verdict
+
+`./bench.sh reproduce nats-6374-consumer-stuck-redelivery` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): either injected test fails: after the consumer leader is switched off and on with an ack still in flight, fetching one of the 2,000 unacked messages returns nothing within 5 s; or, once a message queued for redelivery has been deleted from the stream (memory or file storage), reading the consumer's next message does not return `ErrStoreEOF` or leaves that sequence in the consumer's pending/redelivery state. A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): both tests pass: a message is redelivered within 5 s after the leader switch, and the deleted message yields `ErrStoreEOF` with empty pending and redelivery state.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh` or the `nats-server` binary is missing), or Go module downloads fail so the oracle tests cannot run.

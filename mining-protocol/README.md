@@ -1,36 +1,57 @@
 # Bug Case Mining Protocol
 
-This directory formalizes the end-to-end process for adding a new verified bug case to the benchmark suite. Every case must be **self-contained**: a fresh machine with Docker (or Ubuntu 24.04) should be able to clone this repo, run two scripts, and get a deterministic PASS/FAIL verdict with zero manual intervention.
+This directory formalizes the end-to-end process for adding a new verified bug case to DDBench. Every case must be **self-contained**: on any machine with Docker, a fresh clone of this repository must give a deterministic verdict from `./bench.sh setup <case>` followed by `./bench.sh reproduce <case>`, with zero manual intervention. Everything runs in Docker through `bench.sh`; there is no host mode.
 
 ## Protocol Documents
 
 | Document | Purpose |
 |----------|---------|
 | [selection-criteria.md](selection-criteria.md) | What makes a bug eligible for this benchmark |
-| [case-anatomy.md](case-anatomy.md) | Every file a case requires, with format specifications |
-| [docker-containment.md](docker-containment.md) | Why and how each case is Docker-self-contained |
-| [authoring-guide.md](authoring-guide.md) | Step-by-step walkthrough for adding a new case |
+| [case-anatomy.md](case-anatomy.md) | Every file a case requires, with format specifications and the reproduce.sh contract |
+| [docker-containment.md](docker-containment.md) | Images, volumes, containment, offline scoring, agent isolation |
+| [authoring-guide.md](authoring-guide.md) | Step-by-step walkthrough for adding a new case (including authoring `context/`) |
 | [checklist.md](checklist.md) | Pre-merge validation checklist |
-| [templates/](templates/) | Skeleton files to copy when starting a new case |
+| [templates/](templates/) | Skeleton files, each copied to its own destination |
 
 ## Quick Start
 
 ```bash
-# 1. Copy templates into a new case directory
-cp -r mining-protocol/templates/ cases/<project>-<issue#>-<slug>/
+CASE=<project>-<issue#>-<slug>        # e.g. raft-358-negative-log-range
+PROJECT=<project>                     # must match docker/<project>.Dockerfile
+VARIANT=reproduce-server-crash.sh     # the reproduce template that fits (templates/README.md)
+T=mining-protocol/templates
 
-# 2. Fill in every file following case-anatomy.md
-# 3. Create solution file
-mkdir -p cases-solution/<project>-<issue#>-<slug>/
-# Write solution.md (kept separate to avoid leaking answers)
+# 1. Case files: only these go into cases/<case>/
+mkdir -p "cases/$CASE"
+cp "$T/case.yaml" "$T/symptom.md" "$T/reproduce.md" "cases/$CASE/"
+cp "$T/case-README.md" "cases/$CASE/README.md"
+cp "$T/$VARIANT" "cases/$CASE/reproduce.sh"
+chmod +x "cases/$CASE/reproduce.sh"
 
-# 4. Add Docker support if this is a new project
-# See docker-containment.md for Dockerfile requirements
+# 2. Solution files, outside cases/ (never mounted into any container)
+mkdir -p "cases-solution/$CASE"
+cp "$T/solution.md" "cases-solution/$CASE/solution.md"
+#    ...and write cases-solution/$CASE/gold.patch (see case-anatomy.md §8)
 
-# 5. Validate
-# See checklist.md for the full pre-merge checklist
-./bench.sh setup <case-name> && ./bench.sh reproduce <case-name>
-# Expect: FAIL (bug is present on the buggy commit), with no trigger errors in the output
-# Then: /verify-oracle <case-name>. It checks that the FAIL has the right cause and that
-#       the hash-verified fix tree PASSes, over repeated runs. Exit codes: 0 PASS, 1 FAIL, 2 ERROR.
+# 3. Dev container config (after case.yaml is filled in; renders templates/devcontainer.json's
+#    layout for every case, adding the case's caps/seccomp and the project's VS Code extensions)
+python3 scripts/generate_devcontainers.py
+
+# 4. Case name and project. Not CASE_NAME in reproduce.sh: its prelude uses a shell
+#    variable of that name, so the reproduce templates write the case name as <case-name>.
+sed -i -e "s/CASE_NAME/$CASE/g" -e "s/PROJECT/$PROJECT/g" \
+    "cases/$CASE"/*.md "cases/$CASE/case.yaml" "cases-solution/$CASE/solution.md"
+sed -i "s/<case-name>/$CASE/g" "cases/$CASE/reproduce.sh"
+
+# 5. Fill in the remaining placeholders and TODOs (templates/README.md lists them), then
+#    add a Dockerfile if this is a new project (docker-containment.md).
+
+# 6. Validate (checklist.md has the full pre-merge list)
+./bench.sh setup "$CASE"                         # warm-up should report FAIL on the buggy code
+./bench.sh reproduce "$CASE"                     # expect exit 1 / "FAIL: ...", no trigger errors in the output
+./bench.sh validate-oracle "$CASE" --runs 3      # buggy FAILs and gold.patch PASSes every run -> SOUND
 ```
+
+Exit codes everywhere: 0 PASS, 1 FAIL, 2 ERROR. `/verify-oracle <case>` adds the semantic
+checks (the FAIL has the right cause, negative control for metric oracles, fix-specific
+anti-patterns); `/newcase` and `/mine` automate the scaffolding.

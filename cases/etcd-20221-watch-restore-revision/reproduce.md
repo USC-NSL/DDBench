@@ -5,7 +5,7 @@
 The bug is in the mvcc (multi-version concurrency control) layer. It can be reproduced with a unit test that exercises the watchable store directly, without needing a full etcd cluster.
 
 ```bash
-cd etcd
+cd /workspace/src
 go test -v -run "^TestWatchRestoreFutureRevisionBug$" -count=1 -timeout 60s ./server/storage/mvcc/
 ```
 
@@ -24,3 +24,11 @@ The test fails because the watcher receives events with revisions far below the 
 ```
 FAIL: watcher received event with revision 2, but requested start revision was 100 — watch contract violated after restore
 ```
+
+## Oracle verdict
+
+`./bench.sh reproduce etcd-20221-watch-restore-revision` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): a watcher on `foo` with start revision 4 receives any event within 2 s after the store (at revision 2) is restored from its backend and the key is then deleted at revision 3, i.e. an event below its start revision. A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): the watcher receives no events in the 2 s window.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh` or the etcd source is missing), or Go module downloads fail so the oracle test cannot run.

@@ -14,20 +14,15 @@ If a replica stops consuming the replication stream while its TCP connection sta
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup kvrocks-3356-replication-wal        # build image + case repository, warm caches
+./bench.sh reproduce kvrocks-3356-replication-wal    # FAIL (exit 1) while the bug is present
+./bench.sh shell kvrocks-3356-replication-wal        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git
-- C++ compiler (GCC 7+ or Clang)
-- CMake 3.16+
-- `redis-cli` (from redis-tools package)
-- `python3`
+Docker (all toolchains, plus `redis-cli` and `python3`, are in the `bug-bench/kvrocks` image; see the top-level README). The oracle needs no root, iptables, `tc` or extra Docker capabilities, and uses only the default server configuration.
 
 ## What to Expect
 
@@ -40,6 +35,5 @@ The master detaches the stalled replica within the window. After the replica res
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md): observable behavior and error messages
-- [`setup.md`](setup.md): detailed setup instructions
-- [`reproduce.md`](reproduce.md): step-by-step reproduction procedure
-- [`verification.md`](verification.md): pass/fail verification criteria
+- [`reproduce.md`](reproduce.md): step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh): the oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

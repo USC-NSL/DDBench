@@ -2,21 +2,22 @@
 
 ## Prerequisites
 
-- Git, Go 1.17+
-- The buggy commit checked out (done by `setup.sh`)
+- Docker. The Go toolchain is in the `bug-bench/consul` image.
 
 ## Step 1: Set up the codebase
 
 ```bash
-./setup.sh
+# from the repository root
+./bench.sh setup consul-12295-acl-replication-stall
 ```
 
-This clones `https://github.com/hashicorp/consul.git` and checks out the buggy commit (`24245edf~1`).
+This creates the case repository at the buggy commit (`/workspace/src` inside the container) and builds it.
 
 ## Step 2: Run the reproduction test
 
 ```bash
-./reproduce.sh
+./bench.sh reproduce consul-12295-acl-replication-stall   # from the repository root
+bash /bench/reproduce.sh                                  # or inside ./bench.sh shell consul-12295-acl-replication-stall
 ```
 
 The script injects a test into `lib/routine/` and runs:
@@ -42,8 +43,7 @@ The test simulates the race window between `revokeLeadership()` and `establishLe
     routine_test.go:NN: IsRunning returned true after parent context was cancelled
         while goroutine is still blocking on a long-running call. ...
 FAIL
-FAIL: Bug is present — IsRunning() returns true after parent context cancelled,
-      ACL replication will not restart after leadership re-election
+FAIL: Bug is present — IsRunning() still reports true after the parent context was cancelled
 ```
 
 ## Expected result (bug fixed)
@@ -51,5 +51,13 @@ FAIL: Bug is present — IsRunning() returns true after parent context cancelled
 ```
 --- PASS: TestManager_IsRunningAfterParentContextCancel (...)
 PASS
-PASS: Bug is fixed — IsRunning() correctly returns false after parent context cancelled
+PASS: Bug is fixed — IsRunning() returns false once the parent context is cancelled
 ```
+
+## Oracle verdict
+
+`./bench.sh reproduce consul-12295-acl-replication-stall` rebuilds the worktree and runs the oracle (`reproduce.sh`), which injects the test from `inject_test.go` into `lib/routine/` as `TestDDBenchOracleIsRunningAfterParentCancel`:
+
+- **FAIL** (exit 1): the test fails or times out (60 s): after a routine's parent context is cancelled while the routine is still blocked, `IsRunning()` still reports it as running, or a new routine under the same name then does not start. A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): `IsRunning()` reports `false` right after the parent context is cancelled, and a new routine under the same name starts and is reported as running.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh`, the `lib/routine` package or `inject_test.go` is missing), or Go module downloads fail so the oracle test cannot run.

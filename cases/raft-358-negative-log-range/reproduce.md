@@ -61,3 +61,11 @@ go test -v -run TestSnapshotNegativeRange ./... 2>&1 | grep "Compacting logs"
 
 ## Expected result (bug present)
 Log output shows "Compacting logs from X to Y" where X > Y (e.g., "from 26108 to 6079"), indicating an invalid negative range passed to `DeleteRange`.
+
+## Oracle verdict
+
+`./bench.sh reproduce raft-358-negative-log-range` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): the injected test `TestDDBenchOracleCompactLogsRange` fails: when `compactLogs(50)` runs on a log store holding entries 100–200 (`TrailingLogs = 0`), the log store's `DeleteRange` is called with `min > max`. A worktree that does not build, or a package or injected test that does not compile (or a skipped test), is also FAIL.
+- **PASS** (exit 0): the injected test passes within its 30 s timeout: `DeleteRange` is never called with `min > max`.
+- **ERROR** (exit 2): `REBUILD.sh` or `raft.go` is missing (the case is not set up), or the test did not run because a Go module download failed (network).

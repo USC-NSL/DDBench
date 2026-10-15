@@ -49,3 +49,11 @@ The consumer times out and does not deliver the message published to `events.spe
 
 ## Expected result (fixed)
 The message is delivered successfully.
+
+## Oracle verdict
+
+`./bench.sh reproduce nats-7726-mixed-filter` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): with file or memory storage, a pull consumer whose filter subjects mix two partial-wildcard patterns with the literal `events.main.datastore.result.created` does not deliver the message published to that literal subject (after 7 non-matching `events.main.datastore.*` messages) within a 3 s fetch, or delivers a different message. A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): for both storage types the fetch returns the message on `events.main.datastore.result.created` with its original payload.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh` or the `nats-server` binary is missing), or Go module downloads fail so the oracle test cannot run.

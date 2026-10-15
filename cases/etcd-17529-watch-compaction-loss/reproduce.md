@@ -5,7 +5,7 @@
 The bug is in the mvcc (multi-version concurrency control) watch synchronization layer. It can be reproduced with a unit test that exercises the watchable store directly, without needing a full etcd cluster.
 
 ```bash
-cd etcd
+cd /workspace/src
 go test -v -run "^TestWatchNoEventLossOnCompactBug$" -count=1 -timeout 120s ./server/storage/mvcc/
 ```
 
@@ -23,3 +23,11 @@ The test times out or fails because one of the two compacted watchers never rece
 ```
 FAIL: timed out waiting for all watchers to complete — watcher(s) stuck without compaction notification or events
 ```
+
+## Oracle verdict
+
+`./bench.sh reproduce etcd-17529-watch-compaction-loss` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): with a watch channel buffer of 1 and 8 watchers per sync, at least one of 4 watchers whose start revision (1) is below the compaction revision (5) never receives a compaction response over 30 sync rounds, with the channel drained after each round. A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): all 4 compacted watchers receive a response carrying a compaction revision within the 30 rounds.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh` or the etcd source is missing), or Go module downloads fail so the oracle test cannot run.

@@ -26,3 +26,11 @@ At least one iteration produces different `LedgerDescriptor` instances for the t
 ## Expected result (bug fixed)
 
 All iterations return the same `LedgerDescriptor` instance. The test reports PASS.
+
+## Oracle verdict
+
+`./bench.sh reproduce bookkeeper-4701-fencing-race` rebuilds the worktree and runs the oracle (`reproduce.sh`). It injects its own test, `DDBenchOracleHandleFactoryRaceTest#testConcurrentGetHandleReturnsSameInstance` (backed by `DbLedgerStorage`), which runs the 500 trials of Step 2.
+
+- **FAIL** (exit 1): in at least one trial the two threads calling `HandleFactoryImpl.getHandle()` for the same new ledger get different `LedgerDescriptor` instances, or a call throws or returns no handle within 5 s. A worktree that does not build, an oracle test that does not compile or is skipped, or a `HandleFactoryImpl` without the private `ledgers` map that the test clears by reflection between trials, is also FAIL.
+- **PASS** (exit 0): in all 500 trials both threads get the same `LedgerDescriptor` instance.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh` or `bookkeeper-server` is missing), or the test produced no JUnit report and no compilation error explains it.

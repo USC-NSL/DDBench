@@ -1,14 +1,14 @@
 # Reproduce: hashicorp/raft #460
 
 ## Prerequisites
-- Go 1.15+ installed
-- hashicorp/raft checked out at the buggy version (see setup.md)
+- Run inside `./bench.sh shell raft-460-logcache-store-order`, from `/workspace/src` (hashicorp/raft at the buggy commit; the Go toolchain is in the image).
+- The test file is the case's `inject_test.go`, mounted at `/bench/inject_test.go`.
 
 ## Step 1: Inject the test
 
 Copy the test file into the raft source tree:
 ```bash
-cp inject_test.go /path/to/raft/logcache_store_order_bug_test.go
+cp /bench/inject_test.go /workspace/src/logcache_store_order_bug_test.go
 ```
 
 The test (`TestLogCacheStaleDataOnStoreError`) does the following:
@@ -52,3 +52,11 @@ The test PASSes because:
     logcache_store_order_bug_test.go: CORRECT: GetLog(5) returned ErrLogNotFound -- cache was not polluted by failed store
 PASS
 ```
+
+## Oracle verdict
+
+`./bench.sh reproduce raft-460-logcache-store-order` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): the injected test `TestDDBenchOracleLogCacheStoreError` fails: after `StoreLog` of entry 5 through a `LogCache` whose backing store rejects the write with an injected error, `GetLog(5)` still returns the entry instead of `ErrLogNotFound` (the test also fails if the write error is not returned or entries 1–4 become unreadable). A worktree that does not build, or a package or injected test that does not compile (or a skipped test), is also FAIL.
+- **PASS** (exit 0): the injected test passes within its 60 s timeout: the failed write is reported, entries 1–4 are readable, and `GetLog(5)` returns `ErrLogNotFound`.
+- **ERROR** (exit 2): `REBUILD.sh`, `raft.go` or `inject_test.go` is missing, or the test did not run because a Go module download failed (network).

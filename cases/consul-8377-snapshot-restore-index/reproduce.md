@@ -1,8 +1,8 @@
 # Reproduce: Consul #8377
 
 ## Prerequisites
-- Consul binary built from the buggy commit
-- `curl` and `jq` available
+- Run inside `./bench.sh shell consul-8377-snapshot-restore-index`, from `/workspace/src`. `./bench.sh setup` has built the Consul binary at `bin/consul`; put it on `PATH` with `export PATH=/workspace/src/bin:$PATH`.
+- `curl` and `jq` are available in the image.
 
 ## Step 1: Start a 3-node Consul server cluster
 ```bash
@@ -66,3 +66,11 @@ echo "Server1: $IDX1, Server2: $IDX2, Server3: $IDX3"
 
 ## Expected result (bug present)
 The three servers return different `CreateIndex` values for the same health check (e.g., `14`, `15`, `16`). Each server assigned its own snapshot restore index as the CreateIndex instead of preserving the original value.
+
+## Oracle verdict
+
+`./bench.sh reproduce consul-8377-snapshot-restore-index` rebuilds the worktree and runs the oracle (`reproduce.sh`). The oracle does not run the cluster procedure above: it injects a Go test into `agent/consul/state` that registers node `nodeA` at raft index 10, takes a state-store `Snapshot()`, and restores it into an empty store at raft index 100.
+
+- **FAIL** (exit 1): the restored node's `CreateIndex` is not the original 10 (e.g. it equals the restore index 100), or the test fails earlier or times out (120 s). A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): the restored node keeps `CreateIndex` 10.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh` or the `agent/consul/state` package is missing), or Go module downloads fail so the oracle test cannot run.

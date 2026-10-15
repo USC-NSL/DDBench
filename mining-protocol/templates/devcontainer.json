@@ -1,20 +1,29 @@
 {
-  "name": "Bug Bench - CASE_NAME",
-  "build": {
-    "dockerfile": "../../docker/PROJECT.Dockerfile"
-  },
+  "name": "DDBench - CASE_NAME",
+  "image": "bug-bench/PROJECT",
   "runArgs": [
     "--cap-add=SYS_PTRACE"
   ],
   "mounts": [
-    "source=bug-bench-PROJECT-src,target=/workspace,type=volume",
+    "source=bug-bench-ws-CASE_UID,target=/workspace,type=volume",
+    "source=bug-bench-deps-CASE_UID,target=/deps,type=volume",
     "source=${localWorkspaceFolder}/cases/CASE_NAME,target=/bench,type=bind,readonly"
   ],
-  "workspaceFolder": "/workspace/worktrees/CASE_NAME",
-  "postCreateCommand": "mkdir -p ~/bug-bench && ln -sfn /workspace/worktrees/CASE_NAME ~/bug-bench/CASE_NAME",
+  "workspaceFolder": "/workspace/src",
+  "containerEnv": {
+    "BENCH_WORKDIR": "/workspace/src",
+    "GOMODCACHE": "/deps/go/mod",
+    "GOCACHE": "/deps/go/build",
+    "CARGO_HOME": "/deps/cargo",
+    "GRADLE_USER_HOME": "/deps/gradle",
+    "MAVEN_OPTS": "-Dmaven.repo.local=/deps/m2"
+  },
+  "postCreateCommand": "git config --global --add safe.directory '*'",
   "customizations": {
     "vscode": {
-      "extensions": ["TODO_EXTENSIONS"]
+      "extensions": [
+        "TODO_EXTENSIONS"
+      ]
     }
   }
 }

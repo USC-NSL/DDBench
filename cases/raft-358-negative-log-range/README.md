@@ -14,17 +14,19 @@ After a snapshot is taken, the log compaction step computes a range for `DeleteR
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup raft-358-negative-log-range        # build image + case repository, warm caches
+./bench.sh reproduce raft-358-negative-log-range    # FAIL (exit 1) while the bug is present
+./bench.sh shell raft-358-negative-log-range        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git
-- Go 1.21+
+Docker (all toolchains are in the `bug-bench/raft` image; see the top-level README).
+
+## Build Notes
+
+- hashicorp/raft is a library, so there is no binary to build; the oracle runs an injected Go test.
 
 ## What to Expect
 
@@ -37,6 +39,5 @@ A bounds check prevents `DeleteRange` from being called with `maxLog < minLog`.
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) — Observable behavior and error messages
-- [`setup.md`](setup.md) — Detailed setup instructions
-- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure
-- [`verification.md`](verification.md) — Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) — The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

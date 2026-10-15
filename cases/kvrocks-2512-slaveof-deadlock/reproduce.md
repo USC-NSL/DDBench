@@ -1,8 +1,8 @@
 # Reproduce: Kvrocks #2512
 
 ## Prerequisites
-- Kvrocks built from the buggy commit
-- `redis-cli` available (for interacting with Kvrocks)
+- Run inside `./bench.sh shell kvrocks-2512-slaveof-deadlock`, from `/workspace/src`; `./bench.sh setup` has built Kvrocks at `build/kvrocks`.
+- `redis-cli` is available in the image.
 
 ## Reproduction Strategy
 The deadlock race window is extremely narrow (microseconds) and requires the
@@ -58,3 +58,11 @@ The second `SLAVEOF` command hangs indefinitely. The slave becomes completely
 unresponsive. The worker thread holding `WorkExclusivityGuard` is blocked on
 `thread.join()` waiting for the replication thread, which is blocked waiting
 for the same exclusive lock.
+
+## Oracle verdict
+
+`./bench.sh reproduce kvrocks-2512-slaveof-deadlock` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): with the oracle's temporary 2 s race-widening sleep compiled in (see Reproduction Strategy), a second `SLAVEOF` sent 0.5 s after a `SLAVEOF` that forces a full sync does not return within 10 s, or the replica then answers `PING` with neither `PONG` nor `LOADING` within 5 s (up to 3 attempts), or it never answers `PONG` in the final check (15 tries, `LOADING` replies tolerated). A worktree that does not build with the instrumentation applied, or a master or replica that does not answer `PING` within 30 s of starting, is also FAIL.
+- **PASS** (exit 0): no attempt hangs and the replica answers `PING` with `PONG` in the final check.
+- **ERROR** (exit 2): `REBUILD.sh` or the built `build/kvrocks` binary is missing, or the oracle cannot instrument `src/server/server.cc` because its anchor log line is not found.

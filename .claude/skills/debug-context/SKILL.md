@@ -45,10 +45,11 @@ grep output showing a suspicious gap     Reconstructed timeline with full analys
 
 ## CRITICAL: Agent-Accessible Debug Context Only
 
-The agent works **inside a Docker container** at `/workspace/worktrees/<case>/` with only the built source code at the buggy commit. It has:
-- The full project source and built binaries at the buggy commit
+The agent works **inside a Docker container** at `/workspace/src` with only the built source code at the buggy commit (the repository is truncated to the buggy commit's ancestry, so no later history exists). It has:
+- The full project source and built binaries at the buggy commit, plus `SYMPTOM.md`
 - Standard development tools (GDB, Go toolchain, Maven, cargo, rebar3, etc.)
 - Network tools (redis-cli, etcdctl, nats CLI, curl, etc.)
+- In the context-augmented condition only: your `context/` files, mounted read-only at `/workspace/src/context`
 
 Debug context must NOT depend on:
 - `reproduce.sh`, `bench.sh`, or any case scripts (`bench.sh agent` never mounts the case dir, so these files are invisible to agents)
@@ -65,7 +66,7 @@ Debug context must NOT depend on:
 
 ### How to verify: the container test
 
-Before writing any debug-context file, ask: "Could an agent inside the container at `/workspace/worktrees/<case>/` — with only the buggy commit source, no case scripts, no injected files — actually run this command and get this output?"
+Before writing any debug-context file, ask: "Could an agent inside the container at `/workspace/src` — with only the buggy commit source, no case scripts, no injected files — actually run this command and get this output?"
 
 If the answer is no, the debug context is invalid.
 
@@ -181,7 +182,6 @@ For the target case, read these files in parallel:
 ```
 cases/<case-name>/symptom.md
 cases/<case-name>/reproduce.md
-cases/<case-name>/verification.md
 cases/<case-name>/case.yaml
 ```
 
@@ -221,7 +221,7 @@ Then plan your debugging approach based on the bug category:
 ./bench.sh shell <case-name>
 ```
 
-`bench.sh shell` drops you into the container at `/workspace/worktrees/<case>/` with the source at the buggy commit. No files have been injected. This is exactly what the agent sees.
+`bench.sh shell` drops you into the container at `/workspace/src` with the source at the buggy commit. No files have been injected. This is what the agent sees, with two differences you must ignore: the shell also mounts the case directory at `/bench` and the case's dependency cache at `/deps` (agent containers get neither). Never read `/bench` while investigating.
 
 If the workspace has been modified by a previous `reproduce.sh` run, reset first:
 
@@ -241,7 +241,7 @@ Now you are inside the container. Act as a developer investigating the symptom.
 
 **Example investigation strategies by project type:**
 
-**C++ server (Dragonfly, Kvrocks, ClickHouse, RocksDB):**
+**C++ server (Dragonfly, Kvrocks, RocksDB):**
 ```bash
 # Start the server
 ./build-dbg/dragonfly --port 6379 --logtostderr &
@@ -351,11 +351,13 @@ NOT:
 
 Before finalizing, verify debug context does not leak the fix:
 
-1. **Agent-reproducibility check**: Could an agent inside the container at `/workspace/worktrees/<case>/` (with only the buggy commit source, no injected files) actually run this exact command and get this output? If no, DELETE the debug-context file.
+1. **Agent-reproducibility check**: Could an agent inside the container at `/workspace/src` (with only the buggy commit source, no injected files) actually run this exact command and get this output? If no, DELETE the debug-context file.
 
 2. **Injected-test check**: Is this output from a test/file that was injected by reproduce.sh? If yes, DELETE the debug-context file.
 
-2b. **Oracle-leak check**: Compare against `reproduce.sh` and `verification.md`. Does the file contain a verdict line, the oracle's messages, its thresholds, windows, or data sizes, or its exact trigger recipe? If yes, DELETE it and re-capture with your own scenario.
+2b. **Oracle-leak check**: Compare against `reproduce.sh` and the "Oracle verdict" section of `reproduce.md`. Does the file contain a verdict line, the oracle's messages, its thresholds, windows, or data sizes, its exact trigger recipe, or anything named `DDBenchOracle*` / `zz_ddbench_oracle_*`? If yes, DELETE it and re-capture with your own scenario.
+
+2c. **Identity check**: Does the file link or cite the upstream issue, PR, or fix commit (URLs, `#<number>`, commit hashes, JIRA keys), or contain the case name (it carries the issue number and a diagnostic slug; paths in captured output must be `/workspace/src/...`)? If yes, remove them or re-capture.
 
 3. **Native output test**: Every line under `## Output` must be something the tool actually produced. No annotations, no decoded constants, no source-derived commentary.
 
@@ -416,7 +418,7 @@ Use placeholders only when genuine investigation inside the container produced n
 
 ```
 === Batch Debug-Context Report ===
-Total: 62 | Already had debug context: N | Generated: M | Placeholders: P | Errors: K
+Total: 60 | Already had debug context: N | Generated: M | Placeholders: P | Errors: K
 ```
 
 ---
@@ -461,7 +463,7 @@ Total: 62 | Already had debug context: N | Generated: M | Placeholders: P | Erro
 
 6. **Hand-written code snippets in code investigation**: The "What was found" section must contain actual command output (`grep -n`, `sed -n`, `cat -n`) run inside the container, not hand-copied or paraphrased code. This ensures the debug context is reproducible by the agent.
 
-7. **Modifying symptom.md**: Never touch symptom.md. Debug context and symptoms are completely separate artifacts. Debug context is injected as system prompt at benchmark time — it is never referenced from symptom files.
+7. **Modifying symptom.md**: Never touch symptom.md. Debug context and symptoms are completely separate artifacts. In the context-augmented condition (`bench.sh agent --context`, `harness/run_agent.sh --context`) the `context/` folder is mounted read-only at `/workspace/src/context` and the agent's prompt points to it; symptom files never reference it, because `SYMPTOM.md` is identical in both conditions.
 
 8. **Skipping investigation for placeholders**: Placeholders are a last resort after genuine debugging inside the container. Don't skip investigation because it seems hard — a developer would try things. Even partial clues (a related test that's flaky under `-race`, suspicious log output during the scenario) are valuable.
 

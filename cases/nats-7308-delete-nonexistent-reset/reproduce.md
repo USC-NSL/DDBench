@@ -76,3 +76,11 @@ The `nats stream rmm` command hangs for several seconds, then reports a timeout.
 ## Expected result (bug fixed)
 
 The `nats stream rmm` command immediately returns an error message (e.g., "message delete failed") without disrupting the cluster or triggering a leader election.
+
+## Oracle verdict
+
+`./bench.sh reproduce nats-7308-delete-nonexistent-reset` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): for an R1 or an R3 stream holding one message in a 3-node cluster, a message-delete request does not get the expected reply, e.g. deleting sequence 2 (past the end of the stream) times out instead of returning a "message delete failed" (`ErrStoreEOF`) error. A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): for both R1 and R3, deleting sequence 0 or an already-deleted sequence returns "no message found", deleting sequence 1 succeeds, and deleting sequence 2 returns "message delete failed" (`ErrStoreEOF`).
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh` or the `nats-server` binary is missing), or Go module downloads fail so the oracle test cannot run.

@@ -1,8 +1,8 @@
 # Reproduce: hashicorp/raft PR#581
 
 ## Prerequisites
-- Go 1.21+ installed
-- hashicorp/raft checked out at the buggy version (see setup.md)
+- Run inside `./bench.sh shell raft-581-transfer-write-race`: hashicorp/raft at the buggy commit is at `/workspace/src`, and the Go toolchain is in the image.
+- The automated oracle (`bash /bench/reproduce.sh`) instead injects `/bench/inject_test.go` into package `raft` and runs it.
 
 ## Step 1: Create a test program
 
@@ -43,7 +43,7 @@ func (m *MockSnapshot) Release() {}
 func main() {
     // Create 7-node cluster, start concurrent writes, transfer leadership,
     // check if target became leader.
-    // See setup.sh for the full program.
+    // (sketch only; the full program is not shipped with the case)
 }
 ```
 
@@ -52,7 +52,7 @@ func main() {
 ```bash
 cd test/
 go mod init raft-transfer-test
-go mod edit -replace github.com/hashicorp/raft=/path/to/raft
+go mod edit -replace github.com/hashicorp/raft=/workspace/src
 go mod tidy
 go build -o raft-transfer-test .
 ```
@@ -90,3 +90,11 @@ All or nearly all transfers succeed, with the designated target becoming the new
 Transferring leadership to node3...
 TRANSFER_OK: Leadership transferred to node3 (writes: 38)
 ```
+
+## Oracle verdict
+
+`./bench.sh reproduce raft-581-transfer-write-race` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): at least one of 10 runs of the injected test `TestDDBenchOracleWritesDuringTransfer` fails: in a 7-node in-memory cluster, more than 1 of 50 targeted leadership transfers (each started while 16 goroutines keep calling `Apply()` on the leader) returns an error or leaves a node other than the target as leader 300 ms later; a run that otherwise fails or exceeds its 120 s timeout also counts. A worktree that does not build, or a package or injected test that does not compile (or a skipped test), is also FAIL.
+- **PASS** (exit 0): all 10 runs pass, i.e. in every run at most 1 of the 50 transfers misses its target.
+- **ERROR** (exit 2): `REBUILD.sh`, `raft.go` or `inject_test.go` is missing, or the test did not run because a Go module download failed (network).

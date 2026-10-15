@@ -62,3 +62,11 @@ mem, store, err = sl.JetStreamReservedResources()
 ## Root cause
 
 In `server/stream.go`, the stream creation function `addStreamWithAssignment()` unconditionally calls `mset.js.reserveStreamResources(&mset.cfg)`. When `resetClusteredState()` stops a stream (without releasing resources for non-delete resets) and then calls `processClusterCreateStream()` to recreate it, the resources get reserved a second time.
+
+## Oracle verdict
+
+`./bench.sh reproduce nats-6455-reserved-resource-leak` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): in a 3-node cluster with an R3 stream limited to `MaxBytes` = 1 GiB, after the stream's clustered state is reset (once for a last-sequence and once for a first-sequence mismatch), the stream leader reports reserved storage other than 1 GiB (e.g. 2 GiB) or non-zero reserved memory, or the reset does not complete within 5 s. A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): in both subtests the reset completes and the leader's reserved storage stays exactly 1 GiB with zero reserved memory.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh`, the `nats-server` binary or the case's `inject_test.go` is missing), or Go module downloads fail so the oracle test cannot run.

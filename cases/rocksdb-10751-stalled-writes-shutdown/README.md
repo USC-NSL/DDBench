@@ -14,19 +14,19 @@ When `DB::Close()` is called while write operations are stalled (blocked by the 
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, build, compile test)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup rocksdb-10751-stalled-writes-shutdown        # build image + case repository, warm caches
+./bench.sh reproduce rocksdb-10751-stalled-writes-shutdown    # FAIL (exit 1) while the bug is present
+./bench.sh shell rocksdb-10751-stalled-writes-shutdown        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git
-- CMake 3.16+
-- C++ compiler (GCC 11+)
-- Build dependencies: libgflags-dev, libsnappy-dev, zlib1g-dev, libbz2-dev, liblz4-dev, libzstd-dev, liburing-dev
+Docker (all toolchains are in the `bug-bench/rocksdb` image; see the top-level README).
+
+## Build Notes
+
+- Release build of the static library only (`build/librocksdb.a`, tests disabled); the oracle compiles `test_stall_shutdown.cc` from the case directory against it.
 
 ## What to Expect
 
@@ -39,6 +39,5 @@ When `DB::Close()` is called while write operations are stalled (blocked by the 
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) — Observable behavior and error messages
-- [`setup.md`](setup.md) — Detailed setup instructions
-- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure
-- [`verification.md`](verification.md) — Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) — The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

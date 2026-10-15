@@ -1,228 +1,418 @@
-# Distributed Systems Bug Benchmark Suite
+# DDBench: debugging real distributed-systems bugs
 
-A benchmark suite of real-world bugs from open-source distributed systems, each with automated scripts to reproduce the bug from source. Designed for evaluating debugging tools, program analysis techniques, and automated repair systems.
+DDBench is a benchmark of **60 real bugs** taken from **13 open-source
+distributed systems**, written in Go, C++, Java/Scala, Rust and Erlang. Each
+case pins the upstream repository at the commit before the fix. It describes
+the observable symptom and comes with an automated oracle that tells whether
+the bug is still present.
 
-## Quick Start (Docker, recommended)
+The benchmark is designed for evaluating AI coding agents, program-analysis
+tools and automated repair:
 
-Requires Docker. Each case runs in an isolated container — no host pollution.
+- **What the agent gets.** The agent works in a Docker container. It gets the
+  buggy repository (with history truncated at the buggy commit) and
+  `SYMPTOM.md`. In the context-augmented condition it also gets a short
+  `context/` folder of debug observations (logs, test output, traces). It may
+  build, run and edit anything in the worktree.
+- **How it is scored.** `bench.sh` scores the edited worktree in a separate,
+  offline container that runs the case's oracle. The result is
+  **PASS** (fixed), **FAIL** (still buggy, or does not build) or
+  **ERROR** (no verdict).
+- **What the agent never sees.** The agent never sees the oracle
+  (`cases/<case>/`), the solution (`cases-solution/<case>/`), or any upstream
+  commit after the bug.
 
-```bash
-# 1. Set up a case (builds Docker image, clones repo, compiles)
-./bench.sh setup dragonfly-6856-flushslots-oob    # ~5 min
+| Project | Language | Cases | Bug types |
+|---------|----------|------:|-----------|
+| [Dragonfly](https://github.com/dragonflydb/dragonfly) | C++ | 14 | crashes (SIGABRT/SIGFPE/OOB), replication encoding, protocol replies, search |
+| [NATS Server](https://github.com/nats-io/nats-server) | Go | 9 | JetStream consumer/stream state, message loss, leaks, performance |
+| [Kvrocks](https://github.com/apache/kvrocks) | C++ | 8 | replication gaps/stalls, deadlock, namespaces, protocol violations |
+| [etcd](https://github.com/etcd-io/etcd) | Go | 7 | watch/compaction event loss, linearizability, data race, membership |
+| [hashicorp/raft](https://github.com/hashicorp/raft) | Go | 6 | shutdown deadlock, log compaction, races, liveness |
+| [Consul](https://github.com/hashicorp/consul) | Go | 3 | ACL replication stall, snapshot restore, streaming cache |
+| [ZooKeeper](https://github.com/apache/zookeeper) | Java | 3 | ZAB sync ordering, snapshot/ACL race, committed-log hole |
+| [Kafka](https://github.com/apache/kafka) | Java/Scala | 3 | rebalance loop, delayed fetch, transactional offsets |
+| [BookKeeper](https://github.com/apache/bookkeeper) | Java | 2 | fencing races during recovery |
+| [raft-rs](https://github.com/tikv/raft-rs) | Rust | 2 | conf-change during campaign, ReadIndex stall |
+| [RocksDB](https://github.com/facebook/rocksdb) | C++ | 1 | shutdown hang with stalled writes |
+| [RabbitMQ](https://github.com/rabbitmq/rabbitmq-server) | Erlang | 1 | quorum-queue crash after snapshot install |
+| [Ra](https://github.com/rabbitmq/ra) | Erlang | 1 | election livelock |
 
-# 2. Reproduce the bug
-./bench.sh reproduce dragonfly-6856-flushslots-oob
-# Output: FAIL: Bug is present — process crashed (exit code 134, SIGABRT)
+[`index.md`](index.md) lists every case with its upstream issue. Cases are
+grouped into three tiers (31 / 15 / 14), described in
+[`registry/tier_definitions.md`](registry/tier_definitions.md).
+[`docs/oracle-validation.md`](docs/oracle-validation.md) records the soundness
+check of every oracle: the buggy commit must FAIL and the gold patch must PASS,
+repeatedly.
 
-# 3. Interactive debug shell (gdb, source code, everything inside container)
-./bench.sh shell dragonfly-6856-flushslots-oob
-
-# 4. Reset source to original buggy state after experimenting
-./bench.sh reset dragonfly-6856-flushslots-oob
-
-# 5. Clean up
-./bench.sh clean dragonfly-6856-flushslots-oob    # remove this case
-./bench.sh clean-all                                # remove everything
-```
-
-### VS Code Workflow
-
-For a full IDE experience with editor, IntelliSense, and graphical debugger:
-
-```bash
-# 1. Run setup from host terminal first
-./bench.sh setup dragonfly-6856-flushslots-oob
-
-# 2. Open VS Code → Ctrl+Shift+P → "Dev Containers: Reopen in Container"
-#    Pick "Bug Bench - dragonfly-6856-flushslots-oob" from the list
-
-# 3. In VS Code's integrated terminal, reproduce the bug:
-bash /bench/reproduce.sh
-```
-
-Each of the 31 verified cases has its own devcontainer config. VS Code opens directly into the case's source tree with C++ or Go extensions pre-installed.
-
-> **Remote-SSH users**: If VS Code fails to download its server binary (503 error), add `"remote.SSH.localServerDownload": "off"` to your VS Code settings.
-
-### Inside the Container
-
-The container has two mount points:
-
-| Path | Contents | Writable? |
-|------|----------|-----------|
-| `/workspace/worktrees/<case>/` | **Project source code** — the actual repo (e.g., Dragonfly) checked out at the buggy commit, with built binaries. This is where you edit, build, and debug. | Yes |
-| `/bench/` | **Case scripts** — reproduce.sh, case.yaml, documentation for this specific case. Human sessions only (VS Code, `bench.sh shell`). | No (read-only) |
-
-**`bench.sh agent` containers get neither `/bench` nor the host `~/.claude`.** Agents being benchmarked must never see the oracle. They get `SYMPTOM.md` in the worktree, and `context/` only with `--context`. Scoring (`bench.sh reproduce`) runs the oracle in its own container. The `claude-code` addon receives only `~/.claude/.credentials.json` and `settings.json`.
-
-In a human session (VS Code or `bench.sh shell`), the commands are the same:
+## Quick start
 
 ```bash
-bash /bench/reproduce.sh                            # reproduce the bug
-cd build-dbg && ninja dragonfly                     # rebuild after editing (Dragonfly example)
+./bench.sh setup raft-358-negative-log-range       # image, case repository, build, cache warm-up
+./bench.sh reproduce raft-358-negative-log-range   # → "FAIL: Bug is present ..." (exit 1)
+
+./bench.sh shell raft-358-negative-log-range       # look around: source in /workspace/src
+./bench.sh eval raft-358-negative-log-range --patch my-fix.diff --json result.json
+./bench.sh reset raft-358-negative-log-range       # back to the pristine buggy state
 ```
 
-### Agent Workflow
-
-Run AI coding agents (Claude Code, Aider, Codex, etc.) inside containers to diagnose and fix bugs. Agents are injected at runtime via **addons** — no Docker image changes needed.
-
-```bash
-# 1. Set up the case first (as usual)
-./bench.sh setup dragonfly-6856-flushslots-oob
-
-# 2a. Launch Claude Code inside the container
-./bench.sh agent dragonfly-6856-flushslots-oob --addon claude-code
-
-# 2b. Or launch Aider with a prompt
-./bench.sh agent dragonfly-6856-flushslots-oob --addon aider \
-    --prompt "Read SYMPTOM.md. Diagnose and fix."
-
-# 2c. Or just get a shell with tools pre-installed
-./bench.sh shell dragonfly-6856-flushslots-oob --addon claude-code --addon custom-gdb-dashboard
-```
-
-API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) are forwarded from your host environment. `bench.sh shell` mounts agent configs (`~/.claude/`) read-only. `bench.sh agent` does not, except the `claude-code` addon's `.credentials.json` and `settings.json`.
-
-First run installs the tool (~1-3 min). Subsequent runs are instant (cached in a persistent Docker volume). See [`addons/README.md`](addons/README.md) for writing custom addons.
-
-### Host-Only Workflow (no Docker)
-
-If Docker is not available, the scripts fall back to building directly on the host:
-
-```bash
-cd cases/dragonfly-6856-flushslots-oob/
-./setup.sh       # installs deps via apt-get, clones, builds on host
-./reproduce.sh   # triggers the bug
-```
-
-The workspace defaults to `$HOME/bug-bench/<case-name>/`. Override with `BENCH_WORKSPACE=/your/path`.
-
-## What's in a Case
-
-Each case folder contains:
-
-```
-cases/<project>-<issue#>-<slug>/
-├── case.yaml        # Metadata (project, buggy commit, resolve time, build, Docker caps)
-├── setup.sh         # Automated: clone, checkout buggy commit, install deps, build
-├── reproduce.sh     # Automated: start system, trigger bug, report PASS/FAIL
-├── README.md        # Quick start, prerequisites, what to expect
-├── symptom.md       # Observable behavior and error messages
-├── setup.md         # Detailed setup documentation
-├── reproduce.md     # Step-by-step reproduction procedure
-└── verification.md  # Pass/fail verification criteria
-```
-
-- `setup.sh` and `reproduce.sh` are the executable entry points — everything else is documentation.
-- `reproduce.sh` exits with code 1 and prints `FAIL` when the bug is present, code 0 and `PASS` when the bug is fixed.
-- Solutions are in `cases-solution/<case-name>/solution.md` — consult only after attempting diagnosis.
-- `case.yaml` records the estimated `resolve_time` and whether its date comes
-  from a confirmed fix commit or the corresponding issue's later close date.
-  Detailed upstream evidence for all cases is in
-  [`registry/resolve_times.json`](registry/resolve_times.json).
-
-## bench.sh Commands
-
-| Command | Description |
-|---------|-------------|
-| `bench.sh setup <case>` | Build Docker image, clone repo, checkout buggy commit, compile |
-| `bench.sh reproduce <case>` | Run reproduce.sh inside container, prints PASS/FAIL |
-| `bench.sh shell <case> [--addon <name>]` | Interactive shell, optionally with tool addons |
-| `bench.sh agent <case> --addon <name>` | Launch an AI agent inside the container |
-| `bench.sh reset <case>` | Revert all source changes to original buggy commit |
-| `bench.sh clean <case>` | Remove worktree for a case |
-| `bench.sh clean-all` | Remove all Docker volumes, images, and artifacts |
-
-Same-project cases share a single git clone via Docker volumes (e.g., 14 Dragonfly cases share one ~2GB volume instead of ~28GB of separate clones).
-
-## Verified Cases (31)
-
-All cases build from source on Ubuntu 24.04 and reliably reproduce the described bug.
-
-| Project | Language | Cases | Bug Types |
-|---------|----------|-------|-----------|
-| Dragonfly | C++ | 14 | Crashes (SIGABRT, SIGFPE), replication failure, pipeline stall |
-| NATS Server | Go | 5 | Subscription leak, message loss, filter bugs, perf regression |
-| Kvrocks | C++ | 4 | Crash, data loss, protocol violation, unbounded WAL growth |
-| etcd | Go | 3 | Data race, linearizability violation, stale cluster state |
-| Raft (hashicorp) | Go | 2 | Shutdown deadlock, invalid log compaction range |
-| ClickHouse | C++ | 1 | Keeper disconnects client on addWatch |
-| RocksDB | C++ | 1 | DB::Close() hangs with stalled writes |
-
-See [`index.md`](index.md) for the full list with links and descriptions.
-
-## Repository Structure
-
-```
-.
-├── README.md                          # This file
-├── bench.sh                           # Central orchestrator for Docker-based isolation
-├── docker/                            # Dockerfiles (layered: base → project)
-│   ├── base-cpp.Dockerfile            # Ubuntu 24.04 + cmake + ninja + gdb + lldb
-│   ├── base-go.Dockerfile             # Ubuntu 24.04 + Go + dlv debugger
-│   ├── dragonfly.Dockerfile           # base-cpp + Dragonfly build deps
-│   ├── kvrocks.Dockerfile             # base-cpp + iptables
-│   ├── clickhouse.Dockerfile          # base-cpp + clang-23 + rust + JRE
-│   ├── rocksdb.Dockerfile             # base-cpp + compression libs
-│   ├── seastar.Dockerfile             # base-cpp + Seastar deps
-│   ├── etcd.Dockerfile                # base-go
-│   ├── nats.Dockerfile                # base-go
-│   └── raft.Dockerfile                # base-go
-├── addons/                            # Runtime tool injection (agents, debuggers)
-│   ├── README.md                      # Addon authoring guide
-│   └── examples/                      # Shipped addon scripts
-│       ├── claude-code.sh             # Claude Code CLI
-│       ├── aider.sh                   # Aider AI assistant
-│       ├── codex.sh                   # OpenAI Codex CLI
-│       ├── custom-gdb-dashboard.sh    # GDB Dashboard UI
-│       └── rr-debugger.sh            # Mozilla rr (record & replay)
-├── .devcontainer/                     # VS Code devcontainer configs (one per case)
-│   ├── dragonfly-6856-flushslots-oob/
-│   │   └── devcontainer.json
-│   └── ...                            # 31 configs total
-├── index.md                           # Master index of all 31 verified cases
-├── cases/                             # Bug cases (problem only, no solution)
-│   ├── dragonfly-6856-flushslots-oob/
-│   │   ├── case.yaml                  # Declarative case metadata
-│   │   ├── setup.sh                   # Docker wrapper + host fallback
-│   │   ├── reproduce.sh               # Docker wrapper + host fallback
-│   │   └── ...
-│   └── ...                            # 31 verified cases
-├── cases-solution/                    # Solutions (root cause + fix)
-│   └── ...
-└── CLAUDE.md                          # AI assistant instructions
-```
+`./bench.sh help` lists every command and option. `./bench.sh list` shows which
+cases are set up.
 
 ## Prerequisites
 
-### Docker workflow (recommended)
-- **Docker** 19.03+
-- No sudo, no apt-get, no host pollution
+- Linux or macOS with **Docker** 23+ (BuildKit). The daemon must be able to
+  pull from Docker Hub, GitHub and the language package registries during
+  `setup`.
+- **bash** 4.4+ and GNU coreutils (`timeout`, `sha256sum` or `shasum`). `git`
+  is not needed on the host. **Python** 3.8+ (standard library only) is needed
+  for `eval-all`, the `harness/` scripts and `scripts/`.
+- Images are built for x86_64. Other architectures may work but are untested.
 
-### Host-only workflow (fallback)
-- **Ubuntu 24.04** (tested) or compatible Linux
-- **Git** 2.40+
-- **Build tools**: `build-essential`, `cmake`, `ninja-build` (installed automatically by `setup.sh`)
-- **Go 1.22+** for Go-based cases (etcd, NATS, Raft)
-- **Clang 23** for ClickHouse (installed automatically by `setup.sh` from LLVM nightly)
-- **sudo access** for `apt-get install` (dependency installation)
+No toolchains, `sudo` or host packages are needed: every compiler, runtime and
+tool lives in the per-project images (`docker/<project>.Dockerfile`).
 
-## Bug Categories
+### Resources
 
-The cases cover these distributed systems failure modes:
+Each case container is limited to `min(num_cpus, Docker CPUs)` CPUs. This is
+10 for all cases except one, and can be capped further with `BENCH_CPUS=N`.
+`nproc` inside the container reports the same number. The figures below were
+measured on a 64-core x86_64 machine with 10 CPUs per case. "Setup" is a first
+`bench.sh setup` of one case: the project clone and image are shared by the
+project's cases, so later cases of the same project are faster. "Oracle run"
+is one `bench.sh reproduce` (incremental rebuild + oracle) on a set-up case.
 
-- **Crashes**: SIGABRT, SIGFPE, SIGSEGV from assertion failures, division by zero, out-of-bounds access
-- **Deadlocks**: Shutdown/snapshot race conditions
-- **Data loss**: Silent deletion, message loss, stale cache
-- **Protocol violations**: Double responses, incompatible API behavior
-- **Performance regressions**: Pipeline stalls, unbounded resource growth
-- **Linearizability violations**: Cache returning stale data
+| Project (cases) | Image | Disk per case: worktree + dependency cache | First build | Oracle run: median (max) |
+|-----------------|------:|-------------------------------------------:|------------:|-------------------------:|
+| Dragonfly (14) | 1.0 GB | 2.3 GB + — | ~8 min | 8 s (2 min) |
+| Kvrocks (8) | 1.0 GB | 4.3 GB + — | ~8 min | 2.5 min (5 min) |
+| RocksDB (1) | 0.8 GB | 0.25 GB + — | ~1.5 min | 40 s |
+| NATS (9) | 0.65 GB | 0.1 GB + 0.85 GB | ~35 s | 12 s (2 min) |
+| etcd (7) | 0.6 GB | 0.2 GB + 1.1 GB | ~45 s | 17 s (10 min) |
+| Consul (3) | 0.6 GB | 0.4 GB + 1.3 GB | ~3 min | 4 s (20 s) |
+| hashicorp/raft (6) | 0.6 GB | <0.01 GB + 0.15 GB | ~15 s | 10 s (7 min) |
+| Kafka (3) | 0.75 GB | 0.75 GB + 0.85 GB | ~1.5 min | 2.3 min (4 min) |
+| ZooKeeper (3) | 0.95 GB | 0.25 GB + 0.15 GB | ~1.2 min | 55 s |
+| BookKeeper (2) | 0.95 GB | 0.2 GB + 0.2 GB | ~1.6 min | 1.8 min |
+| raft-rs (2) | 1.9 GB | 0.65 GB + 0.1 GB | ~20 s | 6 s (15 s) |
+| RabbitMQ (1) | 1.7 GB | 0.35 GB + — | ~5 min | 45 s |
+| Ra (1) | 0.6 GB | 0.05 GB + — | ~15 s | 35 s |
 
-## Intended Use
+- **First build.** This column times the `build.command` alone, from a clean
+  checkout with an empty dependency cache. Building the image (once per
+  project, 1–5 min) and cloning the project (once per project) come on top. So
+  does the warm-up oracle run that setup ends with.
+- **Long oracle runs.** The longest runs are race and stall oracles that
+  repeat a scenario many times, for example raft-581 and etcd-19172.
+- **All cases.** All 60 cases need roughly 100 GB of volumes plus about 12 GB of
+  images and caches. A full `validate-oracle --runs 3` of 57 cases took about
+  1.6 h of wall-clock time with 6–9 cases in parallel (about 6 h if run
+  serially).
 
-1. **Debugger evaluation**: Can your tool diagnose the root cause from the symptom?
-2. **Automated repair**: Can your system generate a correct fix?
-3. **Program analysis**: Can your tool detect the bug pattern statically?
-4. **Education**: Real-world examples of distributed systems failure modes.
+## Commands
 
-The `cases/` directory contains the problem only. The `cases-solution/` directory contains the answer. Use them separately to avoid leaking solutions during evaluation.
+| Command | What it does |
+|---------|--------------|
+| `setup <case> [--no-warm]` | Builds the project image if it is missing or its Dockerfile changed. Clones the project once into a cache volume, creates the case repository (only the buggy commit's ancestry), runs the build, and installs `SYMPTOM.md`/`REBUILD.sh` in the worktree. It then runs the oracle once online to fill the case's dependency cache (expected: FAIL). |
+| `reproduce <case>` | Runs the oracle on the current worktree. Exit 0 = PASS, 1 = FAIL, 2 = ERROR. |
+| `eval <case> --patch FILE` | Resets, applies the patch (`git apply`), runs the oracle `--runs N` times, resets again. With `--json OUT`, writes the result as JSON. |
+| `validate-oracle <case>` | Checks the oracle itself: buggy must FAIL `--runs N` times, `gold.patch` must PASS N times. |
+| `eval-all --predictions F --out D` | Runs `eval` for a JSONL file of patches, in parallel (`--jobs`), then aggregates. |
+| `shell <case> [--addon X]` | Interactive human shell. Mounts the oracle at `/bench`, so `bash /bench/reproduce.sh` works. |
+| `agent <case> --addon X [...]` | Runs an AI agent in an isolated container (see below). |
+| `reset <case>` | Restores the pristine buggy worktree (removes edits, commits and oracle leftovers) and rebuilds it. |
+| `rebuild <case>` | Runs the worktree's `REBUILD.sh` under scoring conditions (offline). |
+| `info <case> [field]` | Prints the case's opaque Docker names, image, CPUs and resolved buggy SHA. |
+| `list`, `build-images`, `stop`, `clean`, `clean-all`, `legacy-volumes` | Housekeeping. `legacy-volumes` lists volumes left by older layouts. `--remove` deletes them. |
+
+### Exit-code contract
+
+Every oracle (`cases/<case>/reproduce.sh`) and `bench.sh reproduce` use the same
+exit codes:
+
+| Exit | Verdict | Meaning |
+|-----:|---------|---------|
+| 0 | PASS | the bug is fixed |
+| 1 | FAIL | the bug is present, or the worktree does not build / the code under test does not start |
+| 2 | ERROR | the oracle or the infrastructure could not decide (not set up, Docker error, inconclusive run) |
+
+`eval` uses the same codes for its aggregate verdict.
+
+## Evaluating patches
+
+A patch is a unified diff relative to the repository root (`git diff`
+format, `a/`/`b/` prefixes). It is applied with `git apply` to the
+pristine buggy commit. `harness/extract_patch.sh` produces such a diff from a
+worktree an agent edited.
+
+```bash
+./bench.sh eval etcd-17529-watch-compaction-loss --patch fix.diff --runs 3 --json out.json
+```
+
+- **Aggregating runs.** If any run is FAIL, the verdict is **FAIL**: one
+  definite failure is conclusive. Otherwise, if any run is ERROR, the verdict
+  is **ERROR**: inconclusive, so re-run it. Only all-PASS gives **PASS**.
+- **Patch that does not apply.** The verdict is FAIL with
+  `"patch_applied": false`, and `apply_output` holds the `git apply` message.
+- **Timeout.** A run that exceeds `--timeout` (default 3600 s, including the
+  rebuild) is killed and counts as FAIL (`"timed_out": true`).
+- **Offline scoring.** Scoring is offline, so a patch that adds a new
+  third-party dependency cannot build and therefore FAILs.
+
+`eval --json` writes (schema `ddbench.eval/v1`):
+
+```json
+{
+  "schema": "ddbench.eval/v1",
+  "case": "etcd-17529-watch-compaction-loss",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "exit_codes": [0, 0, 0],
+  "n_runs": 3,
+  "runs": [{"run": 1, "verdict": "PASS", "exit_code": 0, "timed_out": false,
+            "duration_s": 74, "summary": "PASS: ...", "log": "/path/eval-run1.log"}],
+  "patch_applied": true,
+  "patch_file": "fix.diff",
+  "patch_sha256": "…",
+  "apply_output": "",
+  "error": null,
+  "reset_after": true,
+  "timeout_s": 3600,
+  "log_dir": "…/.bench/logs/eval-…",
+  "duration_s": 251,
+  "started_at": "2026-10-14T12:00:00Z",
+  "timestamp": "2026-10-14T12:04:11Z"
+}
+```
+
+`validate-oracle --json` writes (schema `ddbench.validate-oracle/v1`):
+
+```json
+{
+  "schema": "ddbench.validate-oracle/v1",
+  "case": "raft-358-negative-log-range",
+  "status": "SOUND",
+  "runs_per_side": 3,
+  "buggy": {"expected": "FAIL", "matched": 3, "errors": 0, "exit_codes": [1, 1, 1], "runs": [...]},
+  "gold":  {"expected": "PASS", "patch": "cases-solution/raft-358-negative-log-range/gold.patch",
+            "patch_applied": true, "matched": 3, "errors": 0, "exit_codes": [0, 0, 0], "runs": [...]},
+  "detail": "buggy FAIL 3/3, gold PASS 3/3",
+  "timeout_s": 3600, "log_dir": "…", "duration_s": 61,
+  "started_at": "…", "timestamp": "…"
+}
+```
+
+The statuses are:
+
+| Status | Exit | Meaning |
+|--------|-----:|---------|
+| SOUND | 0 | buggy FAILs every run and gold PASSes every run |
+| UNSOUND | 1 | buggy never FAILs, or gold never PASSes |
+| FLAKY | 1 | anything in between |
+| ERROR | 2 | the case is not set up, a reset failed, a run returned ERROR, or `gold.patch` does not apply |
+| NO-GOLD | 3 | the case has no `gold.patch`; the buggy runs are still reported |
+
+### Batch evaluation
+
+```bash
+./bench.sh eval-all --predictions preds.jsonl --out results/my-model --jobs 4 [--runs 1] [--setup]
+```
+
+Each line of `preds.jsonl` is one of these:
+
+- `{"case": "<case>", "patch": "<diff text>"}`
+- `{"case": "<case>", "patch_file": "<path>"}`
+
+The SWE-bench-style keys `instance_id` and `model_patch` are accepted, and an
+optional `model_name_or_path` is recorded.
+
+The command writes `<out>/<case>/{patch.diff,result.json,eval.log,logs/}` plus
+`summary.json` and `summary.md`. The summaries report PASS, FAIL and ERROR
+separately. ERROR is not counted as a failure: pass rate = PASS / (PASS + FAIL).
+Cases run in parallel safely, because every case has its own volumes and
+container. Use `--setup` to set up missing cases first. The exit status is 2 if
+any case ended in ERROR.
+
+## Running agents
+
+Agents are installed at runtime by addons (`addons/examples/`, pinned
+versions): `claude-code`, `codex`, `aider`, `mini-swe-agent`, plus the
+`custom-gdb-dashboard` and `rr-debugger` debugging aids. See
+[`addons/README.md`](addons/README.md).
+
+```bash
+./bench.sh agent <case> --addon claude-code                          # interactive
+./bench.sh agent <case> --addon mini-swe-agent --prompt "Fix the bug in SYMPTOM.md" \
+    --config harness/configs/ddbench_prompt.yaml --output-dir out/    # non-interactive
+./bench.sh agent <case> --addon mini-swe-agent --context ...          # context-augmented
+```
+
+`harness/run_agent.sh` runs mini-swe-agent over a case or a whole tier. For each
+case it runs setup, reset, the agent (with a timeout), scoring and a final
+reset, and writes per-case `result.json`, `patch.diff`, the trajectory and a
+summary:
+
+```bash
+MSWEA_MODEL_NAME=anthropic/claude-sonnet-4-20250514 harness/run_agent.sh --surface tier1
+harness/run_agent.sh --surface tier1 --model openai/gpt-4o --context
+harness/run_agent.sh --surface all --dry-run
+```
+
+Results go to `results/` (gitignored) unless `--results-dir` or
+`DDBENCH_RESULTS_DIR` says otherwise. Configs and prompts are documented in
+[`harness/configs/README.md`](harness/configs/README.md). The scripts and the
+result format are described in [`harness/README.md`](harness/README.md).
+
+## How cases are isolated
+
+Inside every container the source tree is at **`/workspace/src`**:
+
+| Path | Contents | setup / reproduce | shell / devcontainer | agent |
+|------|----------|:-----------------:|:--------------------:|:-----:|
+| `/workspace/src` | The case repository at the buggy commit, built, plus `SYMPTOM.md` and `REBUILD.sh` | rw | rw | rw |
+| `/workspace/src/context` | `cases/<case>/context/` (read-only copy) | — | with `--context` | with `--context` |
+| `/bench` | `cases/<case>/` (oracle, harness files, docs) | ro (reproduce) | ro | **never** |
+| `/deps` | The case's dependency cache volume | rw | rw | empty, container-local |
+
+The design has five parts:
+
+- **History containment.** Each case repository is created by fetching only
+  the ancestry of the buggy commit from a per-project bare clone. It then
+  drops all refs and remotes and prunes unreachable objects. Setup aborts
+  unless the repository holds exactly the buggy commit's ancestry. The full
+  clone (`bug-bench-<project>-cache`) is mounted only during setup, and
+  read-only by reset to resolve the commit.
+- **Opaque identity.** Case names carry the issue number, so nothing an agent
+  can observe contains them: the path, environment, hostname, volume names
+  (`bug-bench-ws-<uid>`, `bug-bench-ctx-<uid>`, `bug-bench-deps-<uid>`) and
+  container name (`bug-bench-<uid>`) do not. Here `<uid>` is the first 12 hex
+  characters of sha256(case name). `./bench.sh info <case>` maps a case to its
+  objects, and the Docker label `ddbench.case` lets you find them.
+- **Agent isolation.** Agent containers get neither `/bench` nor the host
+  `~/.claude`. The `claude-code` addon receives only `.credentials.json` and
+  `settings.json`. Agent containers have network access, so they can read
+  documentation. The agent prompt forbids searching for the upstream issue or
+  fix.
+- **Offline scoring with per-case dependency caches.** Go modules, toolchains
+  and build cache, Cargo, Gradle and Maven all use `/deps`, a per-case volume.
+  Setup fills it: it builds online, then runs the oracle once online so that
+  test-only dependencies are fetched too. `reproduce`, `rebuild`, `eval` and
+  the rebuild in `reset` then run with `--network none`, and Go, Cargo, Gradle
+  and Maven are switched to offline mode. Scoring is therefore hermetic and
+  does not re-download anything. A case can opt out with
+  `docker.offline: false`; none does. `BENCH_OFFLINE=0` gives scoring network
+  access for debugging.
+- **Threat model for the caches.** The dependency cache is written by scoring
+  runs, so it can contain artifacts compiled from oracle tests and from gold
+  or candidate patches (Go build cache, Gradle caches, Maven-installed project
+  jars). For that reason it is never mounted into agent containers. It is also
+  per case: a shared cache once let an agent read a sibling case's later
+  upstream version that contained the fix. The third-party content in it is
+  pinned by the buggy commit's lock files. Agents use the same
+  package-manager paths (`/deps/...`), but backed by an empty directory, and
+  download what they need themselves.
+
+Images are pinned for reproducibility:
+
+- Base images are pinned by digest (`ubuntu:24.04`, `golang:1.23.6-bookworm`,
+  `elixir:1.17-otp-26`, `erlang:26-slim`).
+- Rust is pinned to 1.99.0, installed by a checksum-verified rustup-init 1.29.1.
+- Delve is pinned to 1.27.2 and natscli to 0.3.0, both built with go1.26.9.
+- Go toolchains newer than the image's are fetched by `GOTOOLCHAIN` according
+  to each case's `go.mod`, then cached per case.
+- Images carry a fingerprint of their Dockerfiles and are rebuilt
+  automatically when those change.
+- Distribution packages (`apt-get`) are not version-pinned.
+
+## Anatomy of a case
+
+```
+cases/<project>-<issue#>-<slug>/
+├── case.yaml         # spec: project, repo, buggy_commit, fix_commit, resolve_time, build, docker
+├── reproduce.sh      # oracle; runs only inside the bench.sh scoring container
+├── symptom.md        # observable failure; becomes SYMPTOM.md in the worktree
+├── context/          # optional debug observations (--context condition)
+├── README.md, reproduce.md   # human documentation; reproduce.md ends with what PASS/FAIL mean
+└── (oracle harness files, e.g. inject_test.go, test_main.go)
+cases-solution/<case>/
+├── solution.md       # root cause and fix (header: Issue / Fix commit / Gold patch)
+└── gold.patch        # source-only fix; validate-oracle requires it to PASS
+```
+
+`case.yaml` (2-space indentation; parsed by bash):
+
+```yaml
+name: raft-358-negative-log-range
+project: raft                      # selects docker/raft.Dockerfile
+repo: https://github.com/hashicorp/raft.git
+buggy_commit: "7b09f38f739f486a692096c35236c7eef094e933~1"
+fix_commit: "7b09f38f739f486a692096c35236c7eef094e933"
+resolve_time:                      # later of fix-commit date and issue close date
+  date: "2019-10-01"
+  source: issue_close_date
+  reference: "https://github.com/hashicorp/raft/issues/358"
+submodules: false
+build:
+  command: ""                      # run in /workspace/src; becomes REBUILD.sh
+  binary: ""
+docker:
+  caps: []
+  num_cpus: 10
+```
+
+The oracles follow common rules:
+
+- An oracle rebuilds through the worktree's `REBUILD.sh`.
+- Oracle tests are injected fresh under `DDBenchOracle*` names and removed
+  afterwards.
+- Verdicts are read from structured test output (`go test -json`,
+  JUnit/surefire XML, Erlang CT logs, cargo test results), never from free
+  text.
+- Run on the host, a `reproduce.sh` delegates to `./bench.sh reproduce`.
+
+[`mining-protocol/`](mining-protocol/README.md) explains how to author new
+cases.
+
+## Repository structure
+
+```
+.
+├── README.md, CLAUDE.md, index.md
+├── bench.sh                     # orchestrator (./bench.sh help)
+├── harness/                     # agent runner, scoring, patch extraction, eval-all backend
+│   └── configs/                 # mini-swe-agent configs (repo-only / context, tool-call / text-based)
+├── docker/                      # base-cpp, base-go and per-project Dockerfiles (digest-pinned)
+├── addons/                      # runtime tool injection for shell/agent
+│   └── examples/                # claude-code, codex, aider, mini-swe-agent, gdb-dashboard, rr
+├── cases/                       # 60 cases (problem side; never visible to agents)
+├── cases-solution/              # solution.md + gold.patch per case
+├── .devcontainer/               # one VS Code devcontainer per case (generated)
+├── registry/                    # case_registry.json, tiers, resolve_times.json, oracle_validation.json
+├── docs/
+│   ├── oracle-validation.md     # oracle soundness table
+│   └── mining/                  # historical candidate-mining notes
+├── analysis/                    # debug-context size statistics
+├── scripts/                     # registry/devcontainer generators, statistics
+├── mining-protocol/             # case authoring guide, checklist, templates
+└── .claude/skills/              # Claude Code skills for mining and verifying cases
+```
+
+## VS Code
+
+Run `./bench.sh setup <case>` first. Then use "Dev Containers: Reopen in
+Container" and pick "DDBench - <case>". The devcontainer uses the same image,
+volumes, mounts and environment as `bench.sh shell`, so
+`bash /bench/reproduce.sh` works in its terminal. Regenerate the configs with
+`python3 scripts/generate_devcontainers.py`.
+
+## Maintenance
+
+- `python3 scripts/generate_registry.py [--resolve]` regenerates
+  `registry/case_registry.json` from the `case.yaml` files.
+- `python3 scripts/benchmark_stats.py` and
+  `python3 scripts/context_bundle_stats.py` refresh the statistics.
+- Run `./bench.sh validate-oracle <case> --runs 3` after changing an oracle,
+  a Dockerfile or a build command.
+- Volumes from older layouts (`bug-bench-case-<case>-src`,
+  `bug-bench-<project>-src`) are no longer used. `./bench.sh legacy-volumes`
+  lists them, and `--remove` deletes them.

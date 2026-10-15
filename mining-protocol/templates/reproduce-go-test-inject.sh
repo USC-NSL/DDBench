@@ -1,96 +1,98 @@
 #!/usr/bin/env bash
-# Reproduction and verification script for CASE_NAME
-# Injects a Go test from inject_test.go and runs it with a loop.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Reproduction and verification script for <case-name>
+# Injects the Go regression test from the case's inject_test.go into GO_PACKAGE_DIR
+# and runs it TEST_ITERATIONS times; any failing run means the bug is present.
+# TODO: one line on what the test checks, in observable terms.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/CASE_NAME"
-TEST_FILE="$WORK_DIR/GO_PACKAGE_PATH/TEST_FILE_NAME_test.go"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
 
-export PATH="$PATH:/usr/local/go/bin"
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
 
-# ── Rebuild if source changed ──
-if [ -f "$WORK_DIR/REBUILD.sh" ] && ! bash "$WORK_DIR/REBUILD.sh"; then
-    echo "FAIL: Bug is present — code under test does not build"; exit 1
-fi
-
-# Verify setup
-if [ ! -d "$WORK_DIR" ]; then
-    echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."
-    exit 2
-fi
-
-echo "=== Reproducing CASE_NAME ==="
-
-cleanup() {
-    rm -f "$TEST_FILE"
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
 }
-trap cleanup EXIT
 
-# Check if the test already exists in the codebase (fix commit may add it).
-# Only inject if it doesn't exist — avoids redeclaration errors.
-EXISTING_TEST="$WORK_DIR/GO_PACKAGE_PATH/EXISTING_TEST_FILE.go"
-if grep -q "TEST_FUNC_NAME" "$EXISTING_TEST" 2>/dev/null; then
-    echo "Test already exists in codebase (fix commit), skipping injection."
-else
-    cp /bench/inject_test.go "$TEST_FILE" 2>/dev/null || cp "$CASE_DIR/inject_test.go" "$TEST_FILE"
-    echo "Injected regression test: $TEST_FILE"
-fi
-
-
-# Build check before judging. ERROR (exit 2) only when the oracle's own probe
-# is broken: the injected test doesn't compile, or -run matches nothing. If the
-# code under test doesn't build, that is FAIL (exit 1), e.g. a patch that breaks
-# compilation. Never give the code under test the benefit of the doubt.
-go_build_guard() {  # go_build_guard <go test output>; exits on a build problem
-    local out="$1" inj errs
-    inj="$(basename "$TEST_FILE")"
-    if grep -qE '\[(build|setup) failed\]|^# |cannot find package|undefined:' <<<"$out"; then
-        errs=$(grep -E '\.go:[0-9]+(:[0-9]+)?: ' <<<"$out")
-        if [ -n "$errs" ] && ! grep -qv "$inj" <<<"$errs"; then
-            echo "ERROR: injected oracle test does not compile against this code:"; head -10 <<<"$errs"; exit 2
-        fi
-        echo "FAIL: Bug is present — code under test does not compile:"; head -10 <<<"${errs:-$out}"; exit 1
+# ── Go test verdicts ──
+# Decided from `go test -json` events for the exact oracle test, never from free
+# text (code under test can print anything). A test that did not run is no pass.
+go_test_result() {  # <json-log> <TestName> -> pass | fail | skip | norun
+    local pre='^\{("Time":"[^"]*",)?"Action":"' post="\",\"Package\":\"[^\"]*\",\"Test\":\"$2\"[,}]"
+    if   grep -qE "${pre}fail${post}" "$1"; then echo fail
+    elif grep -qE "${pre}pass${post}" "$1"; then echo pass
+    elif grep -qE "${pre}skip${post}" "$1"; then echo skip
+    else echo norun; fi
+}
+go_test_transcript() {  # human-readable form of a -json log
+    sed -n -e '/^{/!p' -e 's/^{.*"Action":"output".*"Output":"\(.*\)"}$/\1/p' "$1" \
+        | sed -e 's/\\n$//' -e 's/\\t/	/g' -e 's/\\"/"/g' -e 's/\\u003c/</g' \
+              -e 's/\\u003e/>/g' -e 's/\\u0026/\&/g' -e 's/\\\\/\\/g'
+}
+# go_oracle <TestName> <package> [go test flags...]: run exactly one test from
+# the current directory. Sets GO_RESULT (pass|fail|skip|norun) and GO_LOG.
+go_oracle() {
+    local name="$1" pkg="$2"; shift 2
+    GO_LOG="$RUN_DIR/go-test-$name-$RANDOM.json"
+    go test -json -count=1 -run "^${name}\$" "$@" "$pkg" > "$GO_LOG" 2>&1
+    go_test_transcript "$GO_LOG" | tail -n 40
+    GO_RESULT=$(go_test_result "$GO_LOG" "$name")
+}
+# Verdict when the oracle test produced no result.
+go_norun_verdict() {  # <json-log>
+    if grep -qE 'dial tcp|i/o timeout|TLS handshake timeout|no such host|connection reset by peer' "$1" \
+       && ! grep -qE '\.go:[0-9]+:[0-9]+: ' "$1"; then
+        error "the oracle test did not run: Go module download failed (network)"
     fi
-    grep -q 'no tests to run' <<<"$out" && { echo "ERROR: -run pattern matched no tests"; exit 2; }
-    return 0
+    fail "the oracle test did not run (the package or the injected oracle test does not compile)"
 }
 
-cd "$WORK_DIR/GO_MODULE_ROOT"
-
-FAILURES=0
+MODULE_DIR="$WORK_DIR/GO_MODULE_ROOT"        # directory that holds go.mod ("." for the worktree root)
+PKG="./GO_PACKAGE_DIR"                       # package under test, relative to MODULE_DIR
+ORACLE=ORACLE_TEST_NAME                      # the test in inject_test.go; must start with TestDDBenchOracle
+ORACLE_FILE="$MODULE_DIR/GO_PACKAGE_DIR/zz_ddbench_oracle_test.go"
 TOTAL=TEST_ITERATIONS
 
-for i in $(seq 1 $TOTAL); do
+cleanup() { rm -f "$ORACLE_FILE"; rm -rf "$RUN_DIR"; }
+trap cleanup EXIT
+
+rebuild_worktree
+[ -d "$MODULE_DIR/GO_PACKAGE_DIR" ] || error "package GO_PACKAGE_DIR not found in $MODULE_DIR (run setup first)"
+cd "$MODULE_DIR" || error "module directory $MODULE_DIR not found (run setup first)"
+
+echo "=== Reproducing <case-name> ==="
+
+# The oracle test is always injected fresh, under a ddbench-only name and file.
+# It is read from the case directory (/bench) at run time; builds never copy it
+# into the worktree.
+[ -f "$CASE_DIR/inject_test.go" ] || error "oracle test $CASE_DIR/inject_test.go missing"
+cp "$CASE_DIR/inject_test.go" "$ORACLE_FILE" || error "could not inject the oracle test"
+
+for i in $(seq 1 "$TOTAL"); do
     echo "=== Run $i/$TOTAL ==="
-    OUTPUT=$(timeout 120 go test -v -run "^TEST_FUNC_NAME$" -count=1 -timeout 90s ./GO_PACKAGE_PATH/ 2>&1)
-    EXIT_CODE=$?
-    go_build_guard "$OUTPUT"
-
-    echo "$OUTPUT" | grep -E "PASS|FAIL|Bug present" | head -5
-
-    if [ $EXIT_CODE -ne 0 ]; then
-        FAILURES=$((FAILURES + 1))
-        echo "  -> FAILED"
-    else
-        echo "  -> OK"
-    fi
+    go_oracle "$ORACLE" "$PKG" -timeout 90s
+    case "$GO_RESULT" in
+        pass) echo "Run $i: passed" ;;
+        fail) fail "Bug is present — FAIL_DESCRIPTION (run $i/$TOTAL)" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)    go_norun_verdict "$GO_LOG" ;;
+    esac
 done
-
-rm -f "$TEST_FILE"
-
-echo ""
-if [ $FAILURES -gt 0 ]; then
-    echo "FAIL: Bug is present — $FAILURES/$TOTAL runs detected the bug"
-    exit 1
-else
-    echo "PASS: Bug is fixed — all $TOTAL runs passed"
-    exit 0
-fi
+pass "Bug is fixed — PASS_DESCRIPTION (all $TOTAL runs passed)"

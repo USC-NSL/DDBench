@@ -1,8 +1,16 @@
 # Reproduce: hashicorp/raft #517
 
 ## Prerequisites
-- Go 1.21+ installed
-- hashicorp/raft checked out at the buggy version (see setup.md)
+- Run inside `./bench.sh shell raft-517-candidate-appendentries-race`: hashicorp/raft at the buggy commit is at `/workspace/src`, and the Go toolchain is in the image.
+- Build the program in its own module that points at that source:
+  ```bash
+  mkdir -p /tmp/raft-race-test && cd /tmp/raft-race-test
+  go mod init raft-race-test
+  go mod edit -replace github.com/hashicorp/raft=/workspace/src
+  # create main.go (below), then:
+  go mod tidy
+  ```
+- The automated oracle (`bash /bench/reproduce.sh`) instead injects `/bench/inject_test.go` into package `raft` and runs it under the race detector.
 
 ## Step 1: Create a test program
 
@@ -42,7 +50,7 @@ func (m *MockSnapshot) Release() {}
 
 func main() {
     // Create 3-node cluster, trigger leadership transfers, detect races
-    // See setup.sh for the full program
+    // (sketch only; the full program is not shipped with the case)
 }
 ```
 
@@ -85,3 +93,11 @@ The race is between a write in `runCandidate()` and a read in `appendEntries()`.
 ## Expected result (bug absent)
 
 All runs complete without any `WARNING: DATA RACE` output from the Go race detector.
+
+## Oracle verdict
+
+`./bench.sh reproduce raft-517-candidate-appendentries-race` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): in any of 5 runs of the injected test `TestDDBenchOracleCandidateAppendEntriesRace` under the Go race detector (five 3-node TCP-transport clusters, 200 leadership transfers each under continuous writes), the race detector reports a data race, or the test fails or exceeds its 120 s timeout. A worktree that does not build, or a package or injected test that does not compile (or a skipped test), is also FAIL.
+- **PASS** (exit 0): the test runs and passes in all 5 runs with no data race reported.
+- **ERROR** (exit 2): `REBUILD.sh`, `raft.go` or `inject_test.go` is missing, or the test did not run because a Go module download failed (network).

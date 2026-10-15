@@ -14,16 +14,19 @@ When a streaming subscriber resumes with a stale index (`Index > 0`) and the top
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup consul-9772-streaming-snapshot-cache        # build image + case repository, warm caches
+./bench.sh reproduce consul-9772-streaming-snapshot-cache    # FAIL (exit 1) while the bug is present
+./bench.sh shell consul-9772-streaming-snapshot-cache        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git, Go (1.13+)
+Docker (all toolchains are in the `bug-bench/consul` image; see the top-level README).
+
+## Build Notes
+
+- A full `consul` binary is not required (its build is best-effort); the bug is reproduced by a Go unit test in `agent/consul/stream/`.
 
 ## What to Expect
 
@@ -36,6 +39,5 @@ The cached snapshot contains only data events, and the `newSnapshotToFollow` fra
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) -- Observable behavior and error messages
-- [`setup.md`](setup.md) -- Detailed setup instructions
-- [`reproduce.md`](reproduce.md) -- Step-by-step reproduction procedure
-- [`verification.md`](verification.md) -- Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) -- Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) -- The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

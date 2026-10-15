@@ -93,3 +93,11 @@ nats stream info WORK --json | python3 -c "import json,sys; d=json.load(sys.stdi
 
 ## Expected result (bug present)
 The stream shows significantly fewer than 20 messages remaining (e.g., 9 or fewer). Messages that reached max-deliver were incorrectly removed.
+
+## Oracle verdict
+
+`./bench.sh reproduce nats-7817-workqueue-message-loss` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): in a 3-node cluster with an R3 work-queue stream, 3 messages are each delivered twice (the consumer's `MaxDeliver`) without an ack and a 4th message is then fetched and acked; FAIL if message 1 is no longer in the stream afterwards, or the deliveries, the consumer's pending/ack state or the replicas' stream state differ from what the test expects. A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): the messages that reached `MaxDeliver` stay in the stream after the later ack (message 1 can still be loaded), the consumer state matches the expected values, and all replicas agree.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh` or the `nats-server` binary is missing), or Go module downloads fail so the oracle test cannot run.

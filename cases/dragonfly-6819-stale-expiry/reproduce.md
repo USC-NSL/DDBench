@@ -31,3 +31,11 @@ sleep 2
 redis-cli -p 6379 PING
 ```
 If the process has crashed, PING will fail with a connection error.
+
+## Oracle verdict
+
+`./bench.sh reproduce dragonfly-6819-stale-expiry` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): after `LPUSH mylist 3 2 1`, `PEXPIRE mylist 500` and `SORT mylist STORE mylist`, followed by about 3 s of waiting past the original expiry, the Dragonfly process has exited (crashed) or no longer answers `PING`. A worktree that does not build, a Dragonfly server that does not answer `PING` within 60 s of starting, or an `LPUSH`/`PEXPIRE` that does not return `3`/`1`, is also FAIL.
+- **PASS** (exit 0): Dragonfly is still running and answers `PING` with `PONG` after the trigger (the contents and TTL of `mylist` are not checked).
+- **ERROR** (exit 2): `REBUILD.sh` or the built `build-dbg/dragonfly` binary is missing (the case is not set up).

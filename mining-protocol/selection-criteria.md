@@ -19,7 +19,7 @@ A bug must satisfy **all** of the following to qualify for the benchmark.
 The bug must come from a public GitHub issue or PR in an actively maintained open-source distributed system. No synthetic or contrived bugs.
 
 ### 2. Pinned buggy/fixed commit pair
-A merged fix must exist. The fix commit is used to derive the buggy commit (`fix_commit~1`) and, for Go projects, to extract regression tests. The two commits define an unambiguous ground truth: buggy behavior on one side, correct behavior on the other.
+A merged fix must exist. The fix commit (`fix_commit` in case.yaml) is used to derive the buggy commit (`fix_commit~1`), the gold patch (the source-only part of the fix, `cases-solution/<case>/gold.patch`), and often the oracle's regression test, which is adapted into an injected `DDBenchOracle*` test. Together they define an unambiguous ground truth: buggy behavior on one side, correct behavior on the other.
 
 ### 3. Deterministic reproduction
 The bug must be reproducible with >90% reliability in an automated script. Per-iteration flakiness (e.g., a race that fires 40% of the time) is acceptable only if the script aggregates enough iterations to produce a reliable aggregate verdict (e.g., 20-50 loop iterations with a per-run timeout). A case that sometimes *passes for wrong reasons* (e.g., timing-dependent false PASS) is not acceptable.
@@ -28,19 +28,21 @@ The bug must be reproducible with >90% reliability in an automated script. Per-i
 The reproduce script must embody a **correctness oracle** — a ground-truth definition of expected behavior that mechanically distinguishes correct from incorrect. This is stronger than "check if it crashed":
 
 - The oracle must be **sound**: no false positives (buggy code passing) and no false negatives (fixed code failing).
-- The oracle reports via exit code: `exit 1` = FAIL (bug present), `exit 0` = PASS (bug fixed), `exit 2` = ERROR. A broken trigger must never reach the PASS/FAIL verdict. ERROR is only for failures of the oracle's own machinery, independent of the code under test (missing tool, trigger not established, injected oracle test doesn't compile, `-run` matches nothing). Anything the code under test does wrong (doesn't build, doesn't start, never reaches the baseline state, crashes) is FAIL. Scoring counts every non-zero exit as FAIL; ERROR is a diagnostic for case authors, never an exemption.
+- The oracle reports via exit code: `exit 0` = PASS (bug fixed), `exit 1` = FAIL (bug present, or the worktree does not build / the code under test does not start), `exit 2` = ERROR (oracle or infrastructure problem; inconclusive). A broken trigger must never reach the PASS/FAIL verdict. ERROR is only for failures of the oracle's own machinery, independent of the code under test (missing tool or harness file, trigger not established, the oracle test produced no result and no compile error explains it). Anything the code under test does wrong (doesn't build, doesn't start, never reaches the baseline state, crashes, hangs) is FAIL. Scoring records ERROR separately from FAIL, as an infrastructure problem, so an oracle that exits 2 because of the code under test would excuse a broken patch.
 - The oracle must observe the behavior the **fix changes**, not a side quantity the workload produces anyway. (Counter-example: kvrocks-3356 originally thresholded data-dir size after a write benchmark. That size exceeded the threshold even with no replica attached, so the oracle FAILed regardless of the bug.)
-- The oracle must be validated in both directions, repeatedly: confirmed FAIL on the buggy commit (for the right reason: no trigger errors, plus a negative control for metric oracles), and confirmed PASS on the exact fix tree (hash-verified, clean build). See `/verify-oracle`.
+- The oracle must be validated in both directions, repeatedly: `./bench.sh validate-oracle <case> --runs 3` (or more) must report SOUND, i.e. FAIL on the buggy worktree and PASS with `gold.patch` applied in every run. The FAIL must also have the right cause: no trigger errors, plus a negative control for metric oracles. See `/verify-oracle`.
 
 Examples of oracles: process survival check after a crash-triggering input, assertion on query results after a data-loss trigger, race detector output after N iterations, subscription count comparison after a workload.
 
 ### 5. Self-contained reproduction
 The reproduction must require **only**:
 - The project's own source code at the buggy commit
-- Standard build tools available in the project's base Docker image
-- Lightweight client tools (redis-cli, curl, netcat, python3) already in base images
+- Standard build tools available in the project's Docker image
+- Lightweight client tools (redis-cli, curl, netcat, python3) already in the images
+- Third-party dependencies that can be fetched once during `bench.sh setup` and then used offline (scoring runs with `--network none`)
 
 It must **not** require:
+- Network access while the oracle runs
 - External services (cloud APIs, remote databases, third-party servers)
 - Proprietary tooling or licenses
 - Hardware-specific features (GPU, FPGA, specific NIC)

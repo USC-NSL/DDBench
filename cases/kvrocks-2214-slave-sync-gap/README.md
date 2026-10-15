@@ -14,19 +14,15 @@ When `repl-namespace-enabled` is turned on, a slave that restarts fails to recei
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup kvrocks-2214-slave-sync-gap        # build image + case repository, warm caches
+./bench.sh reproduce kvrocks-2214-slave-sync-gap    # FAIL (exit 1) while the bug is present
+./bench.sh shell kvrocks-2214-slave-sync-gap        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git
-- C++ compiler (GCC 7+ or Clang)
-- CMake 3.16+
-- `redis-cli` (from redis-tools package)
+Docker (all toolchains are in the `bug-bench/kvrocks` image; see the top-level README).
 
 ## What to Expect
 
@@ -39,6 +35,5 @@ After the slave restarts and reconnects, all keys updated on the master during d
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) — Observable behavior and error messages
-- [`setup.md`](setup.md) — Detailed setup instructions
-- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure
-- [`verification.md`](verification.md) — Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) — The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

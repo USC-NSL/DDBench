@@ -5,7 +5,7 @@
 The bug is in the mvcc (multi-version concurrency control) layer's restore path. It can be reproduced with a unit test that exercises the KV store directly, without needing a full etcd cluster.
 
 ```bash
-cd etcd
+cd /workspace/src
 go test -v -run "^TestRestoreTombstoneAfterCompaction$" -count=1 -timeout 120s ./server/storage/mvcc/
 ```
 
@@ -26,3 +26,11 @@ Bug present — foo1 has NO key index entry after restore. The tombstone at rev 
 reconstructed during restoreIntoIndex. If compaction resumes after a crash, this tombstone
 will be permanently deleted from the database, causing the delete event to be lost on watches.
 ```
+
+## Oracle verdict
+
+`./bench.sh reproduce etcd-19179-watch-tombstone-compact` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): after `foo1`–`foo5` are put, `foo1` is deleted (revision 7), the store is compacted at revision 7, closed, and reopened from the same backend, the key index has no entry for `foo1`. A worktree that does not build, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): `foo1` still has a key-index entry after the store is reopened.
+- **ERROR** (exit 2): the case is not set up (`REBUILD.sh` or the etcd source is missing), or Go module downloads fail so the oracle test cannot run.

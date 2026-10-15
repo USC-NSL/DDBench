@@ -14,20 +14,15 @@ Using the `DUMP` command on a key that holds a CMS (Count-Min Sketch) data struc
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup dragonfly-6912-rdb-encoding        # build image + case repository, warm caches
+./bench.sh reproduce dragonfly-6912-rdb-encoding    # FAIL (exit 1) while the bug is present
+./bench.sh shell dragonfly-6912-rdb-encoding        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git
-- C++ compiler (GCC 11+ or Clang 14+)
-- CMake 3.16+
-- Ninja build system
-- `redis-cli` (from redis-tools package)
+Docker (all toolchains are in the `bug-bench/dragonfly` image; see the top-level README).
 
 ## What to Expect
 
@@ -40,6 +35,5 @@ The DUMP command returns the serialized data and the process remains alive.
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) — Observable behavior and error messages
-- [`setup.md`](setup.md) — Detailed setup instructions
-- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure
-- [`verification.md`](verification.md) — Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) — The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

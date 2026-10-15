@@ -1,12 +1,12 @@
 # Solution: PROJECT #ISSUE
 
-## Fix
-- **PR:** https://github.com/ORG/REPO/pull/PR_NUMBER
-- **Commit:** `FIX_COMMIT_HASH`
+- **Issue:** https://github.com/ORG/REPO/issues/ISSUE
+- **Fix commit:** `FIX_COMMIT_HASH` (PR: https://github.com/ORG/REPO/pull/PR_NUMBER)
+- **Gold patch:** [`gold.patch`](gold.patch): the source-only part of the fix, applied by `./bench.sh validate-oracle`
 
 ## Fix locus
 - **Component:** TODO: subsystem/module name (e.g., "transaction engine", "Raft snapshot", "subscription manager")
-- **Files:** TODO: list files changed in the fix
+- **Files:** TODO: list the files changed in gold.patch
 
 ## Root cause
 TODO: 2-3 sentences explaining WHY the bug happens at a code level.
@@ -20,11 +20,8 @@ TODO: How would a debugger arrive at the root cause? Document the reasoning path
 ## Fix description
 TODO: 1-2 paragraphs explaining WHAT the fix changes.
 
-## How to apply
-```bash
-git checkout FIX_COMMIT_HASH
-TODO_BUILD_COMMAND
-```
-
 ## How to verify
-Run `./reproduce.sh` after applying the fix — it should output `PASS`.
+```bash
+./bench.sh validate-oracle CASE_NAME --runs 3   # buggy worktree FAILs, gold.patch PASSes -> SOUND
+./bench.sh eval CASE_NAME --patch cases-solution/CASE_NAME/gold.patch   # score the gold patch alone
+```

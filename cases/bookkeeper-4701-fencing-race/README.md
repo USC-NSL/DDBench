@@ -14,18 +14,19 @@
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup bookkeeper-4701-fencing-race        # build image + case repository, warm caches
+./bench.sh reproduce bookkeeper-4701-fencing-race    # FAIL (exit 1) while the bug is present
+./bench.sh shell bookkeeper-4701-fencing-race        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git
-- Java 11+ (JDK)
-- Apache Maven 3.6+
+Docker (all toolchains are in the `bug-bench/bookkeeper` image; see the top-level README).
+
+## Build Notes
+
+- Maven builds only `bookkeeper-server` and its upstream modules, skipping tests and static checks; the first build takes roughly 5-10 minutes.
 
 ## What to Expect
 
@@ -38,6 +39,5 @@ Concurrent `getHandle()` calls always return the same `LedgerDescriptor` instanc
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) — Observable behavior and error messages
-- [`setup.md`](setup.md) — Detailed setup instructions
-- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure
-- [`verification.md`](verification.md) — Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) — Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) — The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

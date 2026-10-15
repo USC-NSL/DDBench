@@ -21,26 +21,36 @@ Validate:
 
 ### Step 2: Scaffold directories and files
 
+Ask the user which reproduce template fits the bug (see `mining-protocol/templates/README.md`; default: the generic `reproduce.sh`). Copy each template to its own destination, never the templates directory wholesale:
+
 ```bash
-CASE="<case-name>"
-cp -r mining-protocol/templates/ "cases/$CASE/"
-mkdir -p "cases-solution/$CASE/"
-cp mining-protocol/templates/solution.md "cases-solution/$CASE/solution.md"
-mkdir -p ".devcontainer/$CASE/"
-cp mining-protocol/templates/devcontainer.json ".devcontainer/$CASE/devcontainer.json"
-chmod +x "cases/$CASE/setup.sh" "cases/$CASE/reproduce.sh"
+CASE="<case-name>"; PROJECT="<project>"; VARIANT="<reproduce template>"
+T=mining-protocol/templates
+mkdir -p "cases/$CASE" "cases-solution/$CASE" ".devcontainer/$CASE"
+cp "$T/case.yaml" "$T/symptom.md" "$T/reproduce.md" "cases/$CASE/"
+cp "$T/case-README.md" "cases/$CASE/README.md"
+cp "$T/$VARIANT" "cases/$CASE/reproduce.sh"
+chmod +x "cases/$CASE/reproduce.sh"
+cp "$T/solution.md" "cases-solution/$CASE/solution.md"
+CASE_UID=$(printf %s "$CASE" | sha256sum | cut -c1-12)    # same as: ./bench.sh info "$CASE" uid
+sed -e "s/CASE_NAME/$CASE/g" -e "s/PROJECT/$PROJECT/g" -e "s/CASE_UID/$CASE_UID/g" \
+    "$T/devcontainer.json" > ".devcontainer/$CASE/devcontainer.json"
 ```
+
+There is no per-case setup script or setup document: `case.yaml` is the declarative spec and `./bench.sh setup <case>` is the only setup entry point. `gold.patch` has no template; the user writes it later (see the next steps in Step 6).
 
 ### Step 3: Replace placeholders
 
-In all scaffolded files, replace the following placeholders with actual values:
+In the scaffolded `case.yaml`, `*.md` and `solution.md` files, replace the following placeholders with actual values:
 - `CASE_NAME` → the full case name
 - `PROJECT` → the project name
 - `ISSUE` → the issue number
 - `ORG/REPO` → the GitHub org/repo (ask the user)
 - `LANGUAGE` → the language (ask the user)
 
-Do NOT replace `TODO_*` or `FIX_COMMIT*` placeholders — those require the user's input.
+In `reproduce.sh`, replace only `<case-name>`. Never substitute `CASE_NAME` there: the standard prelude uses a shell variable of that name.
+
+Do NOT replace `TODO_*`, `FIX_COMMIT*`, `ORACLE_TEST_NAME`, `GO_*` or `*_ITERATIONS` placeholders — those require the user's input.
 
 ### Step 4: Gatekeeping tests (interactive)
 
@@ -78,21 +88,23 @@ Print a summary of what was created and what the user needs to fill in:
 === Case scaffolded: <case-name> ===
 
 Created:
-  cases/<case-name>/          (8 files from template)
+  cases/<case-name>/          (case.yaml, reproduce.sh, symptom.md, README.md, reproduce.md)
   cases-solution/<case-name>/ (solution.md)
   .devcontainer/<case-name>/  (devcontainer.json)
 
 Next steps:
-  1. Fill in case.yaml with repo URL, fix commit, build command
+  1. Fill in case.yaml: repo URL, buggy_commit / fix_commit, resolve_time, build command, num_cpus
   2. Write symptom.md (observable behavior only — no leakage!)
-  3. Write reproduce.md with exact reproduction steps
-  4. Write verification.md with oracle logic
-  5. Implement setup.sh host fallback
-  6. Implement reproduce.sh host fallback
-  7. Write setup.md for human readers
-  8. Complete README.md
-  9. Write solution.md with fix locus and diagnosis chain
-  10. [If new project] Create docker/<project>.Dockerfile
+  3. Write reproduce.md with exact reproduction steps (run inside ./bench.sh shell)
+  4. Implement reproduce.sh after its prelude (exit 0 PASS / 1 FAIL / 2 ERROR; injected tests named DDBenchOracle*),
+     then fill in the "Oracle verdict" section of reproduce.md (what FAIL/PASS/ERROR mean)
+  5. Complete README.md
+  6. Write solution.md with fix locus and diagnosis chain, and gold.patch (source-only fix diff)
+  7. Fill in TODO_EXTENSIONS in .devcontainer/<case-name>/devcontainer.json
+  8. [If new project] Create docker/<project>.Dockerfile
+  9. ./bench.sh setup <case-name> && ./bench.sh reproduce <case-name>   (expect FAIL)
+  10. ./bench.sh validate-oracle <case-name> --runs 3                     (expect SOUND)
+  11. [Optional] /debug-context <case-name> to write context/
 
 Run /sanitize <case-name> before merging to check for leakage.
 Run /verify-oracle <case-name> after scripts are ready.

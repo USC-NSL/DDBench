@@ -94,3 +94,11 @@ cd /tmp && go run leasing_bug_test.go
 
 ## Expected result (bug present)
 The test detects a mismatch between the leasing cache state and the actual etcd state, showing that `Get` returns incorrect data after concurrent `Delete` + `Put` operations.
+
+## Oracle verdict
+
+`./bench.sh reproduce etcd-20704-leasing-linearizability` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): in one of 1000 iterations of a concurrent `Delete` and `Put` on one key through a leasing KV against a single-node etcd, a following `Get` through the leasing KV returns a different number of keys than a direct `Get`; a leasing KV operation that returns an error, or a client program that hangs for 300 s or crashes, is also FAIL. A worktree that does not build, an etcd that does not start serving, or a client program that does not compile against the worktree's `client/v3/leasing` is also FAIL.
+- **PASS** (exit 0): the leasing `Get` matches the direct `Get` in all 1000 iterations and the client program reports completion.
+- **ERROR** (exit 2): the client program cannot connect to etcd or exits 0 without completing, Go module downloads fail, or the case is not set up (`REBUILD.sh` or the etcd binary is missing).

@@ -1,95 +1,98 @@
 #!/usr/bin/env bash
-# Reproduction and verification script for CASE_NAME
-# Injects a Go test and runs it with -race detector in a loop.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Reproduction and verification script for <case-name>
+# Injects the Go test from the case's inject_test.go and runs it with the race
+# detector RACE_ITERATIONS times; a data race in any run means the bug is present.
+# TODO: one line on what the test exercises, in observable terms.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/CASE_NAME"
-TEST_FILE="$WORK_DIR/GO_PACKAGE_PATH/TEST_FILE_NAME_test.go"
-OUTPUT_FILE=$(mktemp)
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
 
-export PATH=$PATH:/usr/local/go/bin
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
 
-# ── Rebuild if source changed ──
-if [ -f "$WORK_DIR/REBUILD.sh" ] && ! bash "$WORK_DIR/REBUILD.sh"; then
-    echo "FAIL: Bug is present — code under test does not build"; exit 1
-fi
-
-# Verify setup
-if [ ! -d "$WORK_DIR" ]; then
-    echo "ERROR: Work directory not found at $WORK_DIR. Run ./setup.sh first."
-    exit 2
-fi
-
-cd "$WORK_DIR"
-
-echo "=== Reproducing CASE_NAME ==="
-
-cleanup() {
-    rm -f "$TEST_FILE" "$OUTPUT_FILE"
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
 }
-trap cleanup EXIT
 
-# Inject the test
-cp /bench/inject_test.go "$TEST_FILE" 2>/dev/null || cp "$CASE_DIR/inject_test.go" "$TEST_FILE"
-
-# Build check before judging. ERROR (exit 2) only when the oracle's own probe
-# is broken: the injected test doesn't compile, or -run matches nothing. If the
-# code under test doesn't build, that is FAIL (exit 1), e.g. a patch that breaks
-# compilation. Never give the code under test the benefit of the doubt.
-go_build_guard() {  # go_build_guard <go test output>; exits on a build problem
-    local out="$1" inj errs
-    inj="$(basename "$TEST_FILE")"
-    if grep -qE '\[(build|setup) failed\]|^# |cannot find package|undefined:' <<<"$out"; then
-        errs=$(grep -E '\.go:[0-9]+(:[0-9]+)?: ' <<<"$out")
-        if [ -n "$errs" ] && ! grep -qv "$inj" <<<"$errs"; then
-            echo "ERROR: injected oracle test does not compile against this code:"; head -10 <<<"$errs"; exit 2
-        fi
-        echo "FAIL: Bug is present — code under test does not compile:"; head -10 <<<"${errs:-$out}"; exit 1
+# ── Go test verdicts ──
+# Decided from `go test -json` events for the exact oracle test, never from free
+# text (code under test can print anything). A test that did not run is no pass.
+go_test_result() {  # <json-log> <TestName> -> pass | fail | skip | norun
+    local pre='^\{("Time":"[^"]*",)?"Action":"' post="\",\"Package\":\"[^\"]*\",\"Test\":\"$2\"[,}]"
+    if   grep -qE "${pre}fail${post}" "$1"; then echo fail
+    elif grep -qE "${pre}pass${post}" "$1"; then echo pass
+    elif grep -qE "${pre}skip${post}" "$1"; then echo skip
+    else echo norun; fi
+}
+go_test_transcript() {  # human-readable form of a -json log
+    sed -n -e '/^{/!p' -e 's/^{.*"Action":"output".*"Output":"\(.*\)"}$/\1/p' "$1" \
+        | sed -e 's/\\n$//' -e 's/\\t/	/g' -e 's/\\"/"/g' -e 's/\\u003c/</g' \
+              -e 's/\\u003e/>/g' -e 's/\\u0026/\&/g' -e 's/\\\\/\\/g'
+}
+# Verdict when the oracle test produced no result.
+go_norun_verdict() {  # <json-log>
+    if grep -qE 'dial tcp|i/o timeout|TLS handshake timeout|no such host|connection reset by peer' "$1" \
+       && ! grep -qE '\.go:[0-9]+:[0-9]+: ' "$1"; then
+        error "the oracle test did not run: Go module download failed (network)"
     fi
-    grep -q 'no tests to run' <<<"$out" && { echo "ERROR: -run pattern matched no tests"; exit 2; }
-    return 0
+    fail "the oracle test did not run (the package or the injected oracle test does not compile)"
 }
 
-echo "Running TEST_FUNC_NAME with -race detector (up to RACE_ITERATIONS iterations)..."
-
-DETECTED=0
+MODULE_DIR="$WORK_DIR/GO_MODULE_ROOT"        # directory that holds go.mod ("." for the worktree root)
+PKG="./GO_PACKAGE_DIR"                       # package under test, relative to MODULE_DIR
+ORACLE=ORACLE_TEST_NAME                      # the test in inject_test.go; must start with TestDDBenchOracle
+ORACLE_FILE="$MODULE_DIR/GO_PACKAGE_DIR/zz_ddbench_oracle_test.go"
 TOTAL=RACE_ITERATIONS
 
-for i in $(seq 1 $TOTAL); do
-    echo "=== Run $i/$TOTAL ==="
-    timeout 120 go test -race -run "^TEST_FUNC_NAME$" -count=1 -timeout 90s ./GO_PACKAGE_PATH/ > "$OUTPUT_FILE" 2>&1 || true
+cleanup() { rm -f "$ORACLE_FILE"; rm -rf "$RUN_DIR"; }
+trap cleanup EXIT
 
-    go_build_guard "$(cat "$OUTPUT_FILE")"
-    HAS_RACE=false
-    grep -q "DATA RACE" "$OUTPUT_FILE" && HAS_RACE=true
-    grep -q "concurrent map" "$OUTPUT_FILE" && HAS_RACE=true
-    grep -q "race detected" "$OUTPUT_FILE" && HAS_RACE=true
+rebuild_worktree
+[ -d "$MODULE_DIR/GO_PACKAGE_DIR" ] || error "package GO_PACKAGE_DIR not found in $MODULE_DIR (run setup first)"
+cd "$MODULE_DIR" || error "module directory $MODULE_DIR not found (run setup first)"
 
-    if $HAS_RACE; then
-        DETECTED=$((DETECTED + 1))
-        echo "  RACE DETECTED"
-        # Show relevant output
-        grep -A 10 "DATA RACE\|concurrent map" "$OUTPUT_FILE" | head -20
-    else
-        echo "  OK"
+echo "=== Reproducing <case-name> ==="
+
+# The oracle test is always injected fresh, under a ddbench-only name and file.
+[ -f "$CASE_DIR/inject_test.go" ] || error "oracle test $CASE_DIR/inject_test.go missing"
+cp "$CASE_DIR/inject_test.go" "$ORACLE_FILE" || error "could not inject the oracle test"
+
+echo "Running $ORACLE with the race detector ($TOTAL runs) ..."
+for i in $(seq 1 "$TOTAL"); do
+    echo "=== Run $i/$TOTAL (-race) ==="
+    GO_LOG="$RUN_DIR/race-$i.json"
+    rc=0
+    timeout 150 go test -json -race -count=1 -run "^${ORACLE}\$" -timeout 120s "$PKG" > "$GO_LOG" 2>&1 || rc=$?
+    # The race detector's report is the bug signal. Printing it can only turn a
+    # run into FAIL; a PASS still needs the oracle test's own "pass" event below.
+    if grep -qE 'WARNING: DATA RACE|race detected during execution of test' "$GO_LOG"; then
+        go_test_transcript "$GO_LOG" | grep -A 20 'DATA RACE' | head -30
+        fail "Bug is present — data race detected in run $i/$TOTAL"
     fi
+    [ "$rc" -eq 124 ] && fail "the oracle test did not finish within 150s in run $i/$TOTAL"
+    GO_RESULT=$(go_test_result "$GO_LOG" "$ORACLE")
+    case "$GO_RESULT" in
+        pass) echo "Run $i: test passed, no race detected" ;;
+        fail) go_test_transcript "$GO_LOG" | tail -30; fail "the oracle test failed in run $i/$TOTAL" ;;
+        skip) fail "the oracle test was skipped" ;;
+        *)    go_test_transcript "$GO_LOG" | tail -30; go_norun_verdict "$GO_LOG" ;;
+    esac
 done
-
-rm -f "$TEST_FILE"
-
-echo ""
-if [ $DETECTED -gt 0 ]; then
-    echo "FAIL: Bug is present — $DETECTED/$TOTAL runs triggered a data race"
-    exit 1
-else
-    echo "PASS: Bug is fixed — all $TOTAL runs completed without data race"
-    exit 0
-fi
+pass "Bug is fixed — all $TOTAL race-detector runs passed without a data race"

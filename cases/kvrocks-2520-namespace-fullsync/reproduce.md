@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-A Kvrocks build at the buggy commit with `redis-cli` available (from redis-tools package).
+Run inside `./bench.sh shell kvrocks-2520-namespace-fullsync`, from `/workspace/src`; `./bench.sh setup` has built Kvrocks at `build/kvrocks`, and `redis-cli` is available in the image.
 
 ## Step 1: Create config files
 
@@ -76,3 +76,11 @@ Only the default namespace is returned. `ns1` and `ns2` are missing from the out
 ## Expected result (fixed)
 
 All namespaces (`ns1`, `ns2`, and default) are returned immediately after full sync completes, without requiring a server restart.
+
+## Oracle verdict
+
+`./bench.sh reproduce kvrocks-2520-namespace-fullsync` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): the injected Go test `TestDDBenchOracleNamespaceFullSync` (in `tests/gocase/unit/namespace`) fails: after a master and a replica with `repl-namespace-enabled yes` complete a full sync of 1024 keys of 128 KiB plus a namespace `foo` (token `bar`) added on the master, `NAMESPACE GET foo` on the replica errors or does not return `bar`, or the replication offsets do not match within 60 s. A worktree that does not build, a Kvrocks server that does not start, or an oracle test that does not compile or is skipped, is also FAIL.
+- **PASS** (exit 0): the oracle test passes within its 120 s timeout: the replica returns `bar` for `NAMESPACE GET foo` after the full sync.
+- **ERROR** (exit 2): `REBUILD.sh`, the built `build/kvrocks` binary, `inject_test.go` or `tests/gocase` is missing, or the test did not run because a Go module download failed (network).

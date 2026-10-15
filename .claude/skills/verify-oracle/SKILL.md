@@ -1,6 +1,8 @@
 # /verify-oracle — Oracle Soundness Check
 
-Verify that a case's reproduce script is a sound correctness oracle: FAIL on the buggy commit AND PASS after applying the fix.
+Verify that a case's reproduce script is a sound correctness oracle: FAIL on the buggy commit AND PASS after applying the fix (`cases-solution/<case>/gold.patch`). The mechanical part is `./bench.sh validate-oracle`; this skill adds the checks a script cannot do (the FAIL has the right cause, the oracle is not fix-specific).
+
+Exit-code contract of every reproduce.sh: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does not build / the code under test does not start), 2 = ERROR (oracle or infrastructure problem; inconclusive).
 
 ## Usage
 
@@ -14,21 +16,22 @@ Verify that a case's reproduce script is a sound correctness oracle: FAIL on the
 ### Step 1: Read case metadata
 
 For each case, read `cases/<case-name>/case.yaml` and `cases-solution/<case-name>/solution.md` to extract:
-- `buggy_commit` (the `~1` value from case.yaml)
-- Fix commit hash (from solution.md → "Commit" field)
-- Build command (from case.yaml)
+- `buggy_commit` (by convention `"<fix>~1"`)
+- `fix_commit` (and `fix_commit_note`, if the gold patch is a backport or there is no upstream fix commit); `solution.md`'s `- **Fix commit:**` header line names the same commit
+- Build command and `docker.num_cpus`
+- Whether `cases-solution/<case-name>/gold.patch` exists
 
-If `solution.md` does not exist or doesn't contain a fix commit, error:
+If there is neither a fix commit nor a `gold.patch`, error:
 ```
-ERROR: No fix commit found for <case-name>. Cannot verify oracle in both directions.
+ERROR: No fix for <case-name> (no fix_commit, no gold.patch). Cannot verify oracle in both directions.
 ```
 
 ### Step 2: Direction 1 — FAIL on buggy commit
 
 ```bash
-# Ensure we're on the buggy commit (bench.sh setup does this)
-./bench.sh setup <case-name>
-./bench.sh reproduce <case-name>
+./bench.sh setup <case-name>        # its warm-up already runs the oracle once online and should report FAIL
+./bench.sh reset <case-name>        # pristine buggy worktree (if anything modified it)
+./bench.sh reproduce <case-name>    # offline, like all scoring
 ```
 
 **Expected**: exit code 1 with "FAIL:" in output.
@@ -56,6 +59,8 @@ Check for these anti-patterns:
 | **Trigger errors swallowed** | Fault-injection/trigger lines ending in `2>/dev/null`, `\|\| true`, or with no exit-status check | HIGH — a failed trigger falls through to the verdict, so FAIL/PASS no longer reflects the bug |
 | **Fix-only config / API** | Oracle sets or reads config options, commands, or log strings that only exist in the fix diff | HIGH — buggy build rejects them (false FAIL) and alternative fixes never produce them |
 | **Bare metric threshold** | PASS/FAIL decided by `du`, memory, latency, or counter vs. a constant | MEDIUM — must be backed by the negative control in Step 2.6 |
+| **Free-text verdict** | PASS decided by grepping output for `PASS`/`ok` instead of `go test -json` events, JUnit XML, Common Test `suite.log`, or libtest status lines for the exact `DDBenchOracle*` test | HIGH — code under test can print the success string |
+| **Network at reproduce time** | Downloads in reproduce.sh, hard-coded `-Dmaven.repo.local`/`GOMODCACHE`/`CARGO_HOME`, a PASS path that needs dependencies the FAIL path never fetched | HIGH — scoring runs with `--network none` against the cache warmed at setup |
 
 If any HIGH-severity anti-pattern is found, emit a warning:
 
@@ -82,67 +87,68 @@ A FAIL on the buggy commit is necessary but **not sufficient**. An oracle can FA
 2. **Semantic check against the fix diff.** Read the fix commit message and diff, and name the observable behavior the fix changes. Does the oracle's FAIL condition measure *that* behavior? If the fix doesn't touch the quantity the oracle measures (e.g. the fix adds a send timeout and the oracle measures disk usage), the oracle is UNSOUND, whatever Direction 1 says.
 3. **Negative control** (mandatory for METRIC/threshold oracles, recommended for all). Run the oracle's scenario on the buggy build with the bug trigger removed or neutralized, e.g. no fault injected or the bug-relevant component absent. The control must not FAIL. Also record the measured value against the threshold: if buggy-build values sit within ~2× of the threshold, the margin is too thin.
 4. **Trigger took effect.** The script must check that the fault actually happened (e.g. send queue non-empty, process actually stopped, partition actually dropping packets), not just that the command ran. Fault injection must hit the real traffic path. Example: replication connections are opened *by the replica to the master*, so an iptables rule on the replica's listening port never matches replication traffic.
-5. **Inconclusive ≠ FAIL, and code failures ≠ ERROR.** If the oracle's own machinery fails (trigger not established, injected test doesn't compile), the script must exit 2 with `ERROR:`. If the code under test fails to build or start, that is `FAIL:`. An `ERROR` on either the buggy or the fixed commit during validation means the oracle is broken.
+5. **Inconclusive ≠ FAIL, and code failures ≠ ERROR.** If the oracle's own machinery fails (trigger not established, harness file missing, the oracle test produced no result and no compile error explains it), the script must exit 2 with `ERROR:`. If the code under test fails to build or start, or the injected oracle test does not compile against it, that is `FAIL:`. An `ERROR` run on either side (`validate-oracle` status ERROR) means the oracle is broken.
 
-### Step 3: Direction 2 — PASS on fix commit
+### Step 3: Direction 2 — PASS with the gold patch
 
-**Goal: run the oracle on exactly the fix commit's code, and prove it.**
+**Goal: run the oracle on the buggy commit plus the fix, exactly as scoring would run an agent's patch.**
 
-**Where the fix comes from.** The fix commit hash is in `solution.md` (Step 1). The case volume doesn't contain it: containment cuts the case repo off at the buggy commit (`git cat-file -t <fix>` fails there), so `git checkout <fix>` in the case workspace can't work. The code comes from the per-project **cache volume** `bug-bench-<project>-cache`, a full-history clone of upstream at `/cache/repo.git`. If the cache predates the fix, fetch it from upstream into the cache. Apply the fix to a **scratch copy** of the case volume; never modify the case volume itself.
-
-**Why this is the real fix commit.** The case's buggy commit is `<fix>~1`. Applying the *full* `git diff <fix>~1 <fix>` to a clean checkout of `<fix>~1` reproduces `<fix>`'s tree exactly. Step 3c proves it: the scratch tree's `git write-tree` hash must equal `git rev-parse <fix>^{tree}`. Equal hashes mean byte-identical source for every tracked file.
+**3a. The gold patch.** `cases-solution/<case-name>/gold.patch` is the source-only part of the fix: a unified diff relative to the repository root, without tests, docs or changelogs, that applies with `git apply` at `buggy_commit`. If it is missing, derive it from `fix_commit`. The case volume does not contain the fix: containment truncates the case repository to the buggy commit's ancestry (`git cat-file -t <fix>` fails there), so `git checkout <fix>` in the worktree can't work. Take it from the per-project **cache volume** `bug-bench-<project>-cache`, a bare full-history clone at `/cache/repo.git`:
 
 ```bash
-CASE=<case-name>; PROJ=<project>; FIX=<fix-commit from solution.md>; SCR=<scratchpad-dir>
-IMG=bug-bench/${PROJ}; GITC='git config --global safe.directory "*";'
+CASE=<case-name>; PROJ=<project>; FIX=<fix_commit>; IMG=bug-bench/${PROJ}
+GITC='git config --global --add safe.directory "*";'
 
-# 3a. From the cache: make sure the fix exists (fetch from upstream if not), then export the
-#     expected start point, the expected tree hash, and the FULL diff (no path exclusions).
-docker run --rm -v bug-bench-${PROJ}-cache:/c -v $SCR:/out $IMG bash -c "$GITC cd /c/repo.git;
-  git cat-file -e ${FIX}^{commit} 2>/dev/null || git fetch -q origin ${FIX} || exit 1;
-  git rev-parse ${FIX}~1 > /out/parent; git rev-parse ${FIX}^{tree} > /out/tree;
-  git diff --binary ${FIX}~1 ${FIX} > /out/fix.patch"
+# Make sure the fix is in the cache (bench.sh never updates it after the first clone).
+docker run --rm -v bug-bench-${PROJ}-cache:/cache $IMG bash -c "$GITC
+  git --git-dir=/cache/repo.git cat-file -e ${FIX}^{commit} 2>/dev/null ||
+  git --git-dir=/cache/repo.git fetch -q origin '+refs/heads/*:refs/heads/*'"
 
-# 3b. Scratch copy of the case volume
-docker volume create ${CASE}-fixed-scratch
-docker run --rm -v bug-bench-case-${CASE}-src:/from:ro -v ${CASE}-fixed-scratch:/to alpine cp -a /from/. /to/
-
-# 3c. Check the start point, apply, and PROVE the tree equals the fix commit's tree
-docker run --rm -v ${CASE}-fixed-scratch:/workspace -v $SCR:/in:ro $IMG bash -c "$GITC cd /workspace/worktrees/${CASE};
-  [ \"\$(git rev-parse HEAD)\" = \"\$(cat /in/parent)\" ] || { echo 'START != <fix>~1'; exit 1; };
-  [ -z \"\$(git status --porcelain --untracked-files=no)\" ] || { echo 'DIRTY WORKTREE'; exit 1; };
-  git apply --index /in/fix.patch || exit 1;
-  [ \"\$(git write-tree)\" = \"\$(cat /in/tree)\" ] && echo TREE-IDENTICAL || { echo TREE-MISMATCH; exit 1; }"
-
-# 3d. Clean build with case.yaml's build command (fresh build dir, same as setup does)
-docker run --rm --cpus=<num_cpus> -v ${CASE}-fixed-scratch:/workspace $IMG bash -c "$GITC
-  cd /workspace/worktrees/${CASE} && rm -rf <build-dir> && <case.yaml build.command>"
-
-# 3e. Run the oracle against the scratch volume, mounted the way bench.sh does it, plus case.yaml caps
-docker run --rm <caps> -v ${CASE}-fixed-scratch:/workspace -v $PWD/cases/${CASE}:/bench:ro \
-  -w /workspace/worktrees/${CASE} -e BENCH_WORKSPACE=/workspace/worktrees $IMG bash /bench/reproduce.sh
+# The fix's file list, then the source-only diff (drop test/doc/changelog paths).
+docker run --rm --network none -v bug-bench-${PROJ}-cache:/cache:ro $IMG bash -c "$GITC
+  git --git-dir=/cache/repo.git diff --stat ${FIX}~1 ${FIX}"
+docker run --rm --network none -v bug-bench-${PROJ}-cache:/cache:ro $IMG bash -c "$GITC
+  git --git-dir=/cache/repo.git diff ${FIX}~1 ${FIX} -- <source paths>" > cases-solution/${CASE}/gold.patch
 ```
 
 Rules:
-- **TREE-MISMATCH, START mismatch, or a dirty worktree → stop.** Don't run the oracle on a hybrid tree. Run `./bench.sh reset <case>`, or fix `buggy_commit` in case.yaml (it must be `<fix>~1`).
-- **Submodules.** If the diff has `Subproject commit` lines, run `git submodule update --init --recursive` in the scratch copy after 3c. Then check each submodule's HEAD against `git ls-tree <fix> <path>` from the cache. If the new submodule commits can't be fetched, Direction 2 is unverified; say so.
-- **Multi-commit PRs.** If the fix spans several commits, set `FIX` to the last one. Its first parent must still be the case's buggy commit; otherwise use the PR's merge commit (`gh pr view --json mergeCommit,commits`).
-- **Incremental builds are fine while iterating** on the oracle. The verdict you record must come from 3d's clean build.
+- **The patch must apply to the case's buggy commit.** `buggy_commit` must be `<fix>~1` (or `fix_commit_note` must explain the backport). A patch that does not apply makes `validate-oracle` report ERROR.
+- **Submodules.** If the fix has `Subproject commit` lines, `git apply` cannot reproduce them; Direction 2 is unverified for that part. Say so.
+- **Multi-commit PRs.** If the fix spans several commits, diff from the case's buggy commit to the last one, or use the PR's merge commit (`gh pr view --json mergeCommit,commits`).
+- **No new third-party dependencies.** Scoring builds offline; a gold patch that needs a download cannot build.
 
-**Expected**: exit code 0 with "PASS:" in output.
+**3b. Run both directions.**
+
+```bash
+./bench.sh validate-oracle <case-name> --runs 3 --json <scratchpad>/<case-name>.validate.json
+```
+
+It resets the worktree, runs the oracle N times on the buggy code (each run must FAIL), resets again, applies `gold.patch` with `git apply`, runs the oracle N times (each must PASS), and finally resets and rebuilds the buggy source. All runs are offline, exactly like `bench.sh reproduce`. Status and exit code:
+
+| Status | Exit | Meaning |
+|---|---|---|
+| SOUND | 0 | buggy FAIL in every run and gold PASS in every run |
+| UNSOUND | 1 | buggy never FAILs, or gold never PASSes |
+| FLAKY | 1 | anything in between |
+| ERROR | 2 | an ERROR run, a failed reset, or gold.patch does not apply |
+| NO-GOLD | 3 | no gold.patch (buggy-side runs are still reported) |
+
+The JSON (`ddbench.validate-oracle/v1`) has per-run exit codes, durations, summaries and log paths (`--log-dir`, default `.bench/logs/`). Read the gold-side logs, not only the status.
+
+**Expected**: SOUND. To score any other candidate fix the same way: `./bench.sh eval <case-name> --patch <file.diff> --runs N --json <out.json>`.
 
 Record:
-- `fixed_exit`: exit code
-- `fixed_output`: last 10 lines of output
+- `fixed_exit`: per-run exit codes of the gold side
+- `fixed_output`: last 10 lines of a gold-side run log
 - `fixed_verdict`: PASS (correct) or FAIL (oracle unsound — false negative)
 
 ### Step 3.5: Repeatability
 
-Run each direction **at least 3 times** (≥5 for timing, metric, or race oracles). Independent containers can run in parallel, since each has its own network namespace. Record the per-run measured value (e.g. detection time, queue size, metric), not only the verdict. The oracle is SOUND only if every buggy run FAILs and every fixed run PASSes. Any flip makes it UNSOUND (timing-sensitive): fix the oracle, then re-run.
+Use `--runs 3` at least, and more (5) for timing, metric, or race oracles. Record the per-run measured value (e.g. detection time, queue size, metric), not only the verdict. The oracle is SOUND only if every buggy run FAILs and every gold run PASSes. Any flip (FLAKY) makes it unusable (timing-sensitive): fix the oracle, then re-run. Validate at the case's `docker.num_cpus`; `BENCH_CPUS` or a smaller Docker host lowers the CPU count and bench.sh warns about it.
 
 ### Step 4: Clean up
 
-The case volume was never modified, so no reset is needed. Delete the scratch volume (`docker volume rm ${CASE}-fixed-scratch`). Run `./bench.sh reset <case-name>` only if something did modify the case workspace.
+`validate-oracle` resets the worktree and rebuilds the buggy source when it finishes. Run `./bench.sh reset <case-name>` only if something else modified the worktree.
 
 ### Step 5: Report
 
@@ -160,11 +166,12 @@ Validity (Step 2.6):
   Negative control: PASS (<measured value> vs threshold <T>)  | n/a (non-metric)
   Trigger confirmed in-script: yes — <how>
 
-Direction 2 (fix commit → expect PASS):
-  Commit: <fix-commit> (scratch volume; tree hash verified = <fix>^{tree}; clean build)
+Direction 2 (gold patch → expect PASS):
+  Patch: cases-solution/<case-name>/gold.patch (source-only diff of <fix-commit>)
   Result: PASS (exit 0) x5/5     ← CORRECT
   Output: "PASS: Bug is fixed — process survived MONITOR inside MULTI/EXEC"
 
+validate-oracle: SOUND (--runs 5)
 Oracle verdict: SOUND
 ```
 
@@ -197,9 +204,10 @@ Issue: False positive — buggy code passes the oracle.
 
   — OR —
 
-Issue: False negative — fixed code fails the oracle.
+Issue: False negative — the gold patch fails the oracle.
   This means the reproduce script flags correct behavior as buggy.
-  Check: does the oracle test the right condition? Is the fix commit correct?
+  Check: does the oracle test the right condition? Is gold.patch the complete fix?
+  Does the PASS path need a dependency the warm-up never fetched (offline build)?
 ```
 
 ### Batch mode
@@ -207,7 +215,7 @@ Issue: False negative — fixed code fails the oracle.
 When multiple cases are specified, output a summary table after individual reports:
 
 ```
-| Case | Buggy → FAIL? | Fixed → PASS? | Quality | Oracle |
+| Case | Buggy → FAIL? | Gold → PASS? | Quality | Oracle |
 |------|---------------|---------------|---------|--------|
 | dragonfly-6614-monitor-multiexec | FAIL (correct) | PASS (correct) | clean | SOUND |
 | nats-7718-subscription-leak | FAIL (correct) | PASS (correct) | clean | SOUND |
@@ -221,5 +229,5 @@ When multiple cases are specified, output a summary table after individual repor
 - Oracle soundness is a mandatory selection criterion (see mining-protocol/selection-criteria.md #4).
 - Run both directions repeatedly (Step 3.5). A single run in each direction isn't a soundness result.
 - A case that has only ever been checked in Direction 1 is **unverified**, not SOUND. kvrocks-3356 was recorded as "bug confirmed" in tier-1 replay validation while its oracle could not tell buggy code from fixed code.
-- If Direction 2 fails because the fix commit doesn't build, the issue is likely the build command or missing submodule updates — not the oracle itself.
+- If Direction 2 fails because the patched worktree doesn't build, the issue is likely an incomplete gold.patch, a dependency the offline build cannot fetch, or the build command — not the oracle itself.
 - **SOUND vs SOUND-BUT-FRAGILE**: Both pass the two-direction check, but SOUND-BUT-FRAGILE oracles use fix-specific detection (FIX_COMMIT deps, reflection field checks, source grep). They work as regression tests but will reject valid alternative fixes. For benchmark evaluation of agents, only SOUND oracles are reliable. Remediate fragile oracles before using them for agent evaluation.

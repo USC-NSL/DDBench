@@ -14,17 +14,15 @@ etcd uses a buffered batch transaction layer on top of bbolt. Put operations are
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy commit, build)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup etcd-17158-delete-linearizability        # build image + case repository, warm caches
+./bench.sh reproduce etcd-17158-delete-linearizability    # FAIL (exit 1) while the bug is present
+./bench.sh shell etcd-17158-delete-linearizability        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git
-- Go 1.21+ (expected at /usr/local/go/bin/go)
+Docker (all toolchains are in the `bug-bench/etcd` image; see the top-level README).
 
 ## What to Expect
 
@@ -37,5 +35,5 @@ The test passes. After deleting a key, both BatchTx and ReadTx agree that the ke
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) -- Observable behavior and error messages
-- [`reproduce.md`](reproduce.md) -- Step-by-step reproduction procedure
-- [`verification.md`](verification.md) -- Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) -- Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) -- The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

@@ -1,108 +1,112 @@
 #!/usr/bin/env bash
-# Reproduction and verification script for CASE_NAME
-# Starts a server cluster, triggers the bug condition, and checks data correctness.
-# ── Docker mode (preferred) ──
-CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if command -v docker &>/dev/null && [ -f "$REPO_ROOT/bench.sh" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/case.yaml" ]; then
-    exec "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+# Reproduction and verification script for <case-name>
+# Starts a two-node setup, establishes the baseline (replication up, data in sync),
+# triggers the bug condition, and checks the data the nodes return.
+# TODO: one line on the scenario and what is checked, in observable terms.
+#
+# Exit codes: 0 = PASS (bug fixed), 1 = FAIL (bug present, or the worktree does
+# not build / the code under test does not start), 2 = ERROR (oracle or
+# infrastructure problem; the verdict is inconclusive).
+# ── Runs only inside the bench.sh reproduce container (BENCH_WORKDIR is set) ──
+if [ -z "${BENCH_WORKDIR:-}" ]; then
+    CASE_NAME="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    [ -f "$REPO_ROOT/bench.sh" ] && exec bash "$REPO_ROOT/bench.sh" reproduce "$CASE_NAME"
+    echo "ERROR: run this oracle with ./bench.sh reproduce $CASE_NAME" >&2
+    exit 2
 fi
-# ── Host fallback (no Docker) ──
 set -uo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${BENCH_WORKSPACE:-$HOME/bug-bench}/CASE_NAME"
+WORK_DIR="$BENCH_WORKDIR"
+RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ddbench.XXXXXX")"   # scratch space outside the worktree
+
+pass()  { echo ""; echo "PASS: $*"; exit 0; }
+fail()  { echo ""; echo "FAIL: $*"; exit 1; }
+error() { echo ""; echo "ERROR: $*"; exit 2; }
+
+# REBUILD.sh is the worktree's designated build entry point.
+rebuild_worktree() {
+    [ -f "$WORK_DIR/REBUILD.sh" ] || error "REBUILD.sh not found in $WORK_DIR (run setup first)"
+    bash "$WORK_DIR/REBUILD.sh" || fail "the worktree does not build (REBUILD.sh exited non-zero)"
+}
+
+# ── Helpers ──
+# TODO: adjust the readiness probe if the server does not speak RESP (curl, nc ...).
+wait_for_ping() {  # <port> <pid> [seconds]: succeed once the server answers PING
+    local i
+    for i in $(seq 1 $(( ${3:-30} * 4 ))); do
+        kill -0 "$2" 2>/dev/null || return 1
+        [ "$(timeout 2 redis-cli -p "$1" PING 2>/dev/null)" = "PONG" ] && return 0
+        sleep 0.25
+    done
+    return 1
+}
+# Poll a condition (a shell command) for up to <seconds>; succeed once it holds.
+wait_until() {  # <seconds> <command...>
+    local deadline=$(( $(date +%s) + $1 )); shift
+    until "$@"; do
+        [ "$(date +%s)" -ge "$deadline" ] && return 1
+        sleep 0.5
+    done
+}
+
 BINARY="$WORK_DIR/BINARY_PATH"
-PORT1=TODO_PORT1
+PORT1=TODO_PORT1                  # convention: 1<issue#> and 1<issue#>+1
 PORT2=TODO_PORT2
-DATA_DIR1="$WORK_DIR/CASE_NAME-node1"
-DATA_DIR2="$WORK_DIR/CASE_NAME-node2"
-
-# ── Rebuild if source changed ──
-if [ -f "$WORK_DIR/REBUILD.sh" ] && ! bash "$WORK_DIR/REBUILD.sh"; then
-    echo "FAIL: Bug is present — code under test does not build"; exit 1
-fi
-
-# Verify setup
-if [ ! -x "$BINARY" ]; then
-    echo "ERROR: Binary not found at $BINARY. Run ./setup.sh first."
-    exit 2
-fi
-
+NODE1_DIR="$RUN_DIR/node1"
+NODE2_DIR="$RUN_DIR/node2"
 NODE1_PID=""
 NODE2_PID=""
 
+stop_node() {  # <pid>
+    [ -n "$1" ] || return 0
+    kill "$1" 2>/dev/null
+    wait "$1" 2>/dev/null
+}
 cleanup() {
-    echo "Cleaning up..."
-    kill "$NODE1_PID" "$NODE2_PID" 2>/dev/null || true
-    wait "$NODE1_PID" "$NODE2_PID" 2>/dev/null || true
-    rm -rf "$DATA_DIR1" "$DATA_DIR2"
+    stop_node "$NODE1_PID"
+    stop_node "$NODE2_PID"
+    rm -rf "$RUN_DIR"
 }
 trap cleanup EXIT
 
-# Cleanup from previous runs
-pkill -f "BINARY_NAME.*$PORT1\|BINARY_NAME.*$PORT2" 2>/dev/null || true
-sleep 1
-rm -rf "$DATA_DIR1" "$DATA_DIR2"
-mkdir -p "$DATA_DIR1" "$DATA_DIR2"
+rebuild_worktree
+[ -x "$BINARY" ] || error "binary not found at $BINARY (run setup first)"
+mkdir -p "$NODE1_DIR" "$NODE2_DIR"
 
-echo "=== Reproducing CASE_NAME ==="
+echo "=== Reproducing <case-name> ==="
 
-# ── Helper: wait for server to accept connections ──
-wait_for_port() {
-    local port=$1 label=$2 timeout=30
-    echo "Waiting for $label on port $port..."
-    for i in $(seq 1 $timeout); do
-        # TODO: Adjust readiness check for your server (redis-cli PING, curl, nc)
-        if redis-cli -p "$port" PING 2>/dev/null | grep -qi pong; then
-            echo "$label is ready."
-            return 0
-        fi
-        sleep 1
-    done
-    echo "$label did not become ready within ${timeout}s."
-    return 1
-}
-
-# ── Step 1: Start node 1 ──
-echo "Step 1: Starting node 1..."
-# TODO: Start server with appropriate config
-"$BINARY" --port "$PORT1" --dir "$DATA_DIR1" &>/dev/null &
+# ── Step 1: start both nodes (logs in $RUN_DIR) ──
+# TODO: start the servers with the configuration the scenario needs.
+"$BINARY" --port "$PORT1" --dir "$NODE1_DIR" > "$RUN_DIR/node1.log" 2>&1 &
 NODE1_PID=$!
-if ! wait_for_port "$PORT1" "Node 1"; then echo "FAIL: Bug is present — node 1 failed to start"; exit 1; fi
-
-# ── Step 2: Start node 2 ──
-echo "Step 2: Starting node 2..."
-# TODO: Start second node, set up replication
-"$BINARY" --port "$PORT2" --dir "$DATA_DIR2" &>/dev/null &
+wait_for_ping "$PORT1" "$NODE1_PID" 60 || { tail -20 "$RUN_DIR/node1.log"; fail "node 1 did not start serving"; }
+"$BINARY" --port "$PORT2" --dir "$NODE2_DIR" > "$RUN_DIR/node2.log" 2>&1 &
 NODE2_PID=$!
-if ! wait_for_port "$PORT2" "Node 2"; then echo "FAIL: Bug is present — node 2 failed to start"; exit 1; fi
+wait_for_ping "$PORT2" "$NODE2_PID" 60 || { tail -20 "$RUN_DIR/node2.log"; fail "node 2 did not start serving"; }
 
-# ── Step 3: TODO: Set up cluster/replication topology ──
+# ── Step 2: establish the baseline ──
+# TODO: set up the cluster/replication topology, write initial data, and wait until
+# it is visible on both nodes (wait_until 60 <check>). If the code under test never
+# reaches the baseline state, that is FAIL:
+#   wait_until 60 replication_is_up || fail "replication link did not come up"
 
-# ── Step 4: TODO: Write initial data and verify replication ──
-
-# ── Step 5: TODO: Trigger the bug condition ──
-# TODO: Confirm the trigger actually took effect (fault injected, request delivered,
+# ── Step 3: trigger the bug condition ──
+# TODO: trigger it, then confirm the trigger actually took effect (fault injected,
 # node really down, connection really stalled). If not, the run is inconclusive:
-#   echo "ERROR: trigger not established (<what was observed>)"; exit 2
-# Never let a failed trigger fall through to the verdict, and don't hide trigger
-# errors with 2>/dev/null or || true. No sudo: bench.sh reproduce runs as root,
-# agents run as the non-root `bench` user. Prefer process-level faults (SIGSTOP,
-# kill, a pausable proxy) over iptables/tc.
+#   error "trigger not established (<what was observed>)"
+# Never hide trigger errors with 2>/dev/null or || true. No sudo; prefer
+# process-level faults (SIGSTOP/SIGCONT, kill, a pausable proxy) over iptables/tc.
 
-# ── Step 6: TODO: Check data correctness ──
+# ── Step 4: check data correctness ──
+# TODO: read back what a correct system must return, with a generous window so
+# alternative fixes pass, and compare against the expected values.
+EXPECTED="TODO_EXPECTED"
+ACTUAL="TODO_ACTUAL"
+echo "Read back: '$ACTUAL' (expected '$EXPECTED')"
 
-# ── Verdict ──
-BUGS_FOUND=0
-# TODO: Add correctness checks
-# if [ "$ACTUAL" != "$EXPECTED" ]; then BUGS_FOUND=1; fi
-
-echo ""
-if [ "$BUGS_FOUND" -eq 1 ]; then
-    echo "FAIL: Bug is present — FAIL_DESCRIPTION"
-    exit 1
-else
-    echo "PASS: Bug is fixed — PASS_DESCRIPTION"
-    exit 0
+if [ "$ACTUAL" = "$EXPECTED" ]; then
+    pass "Bug is fixed — PASS_DESCRIPTION"
 fi
+fail "Bug is present — FAIL_DESCRIPTION"

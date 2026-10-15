@@ -88,3 +88,11 @@ nats consumer next TEST myconsumer --timeout=5s
 
 ## Expected result (bug present)
 The `nats consumer next` command times out. No messages are delivered despite matching the filter subjects.
+
+## Oracle verdict
+
+`./bench.sh reproduce nats-7760-filter-stepdown` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): on a 5-node cluster with an interest-based R5 stream, after the pull consumer's filters are edited from `orders.new`, `orders.paid` to `orders.new`, `orders.shipped` and its leader is stepped down, a message published to `orders.new` is not returned by a 5 s `nats consumer next`; it is also FAIL if the consumer delivers nothing even before the edit or a publish fails. A worktree that does not build, or a server that does not become healthy within 30 s, is also FAIL.
+- **PASS** (exit 0): after the filter edit and the change of consumer leader, the consumer delivers the message published to `orders.new`.
+- **ERROR** (exit 2): the trigger cannot be established (the stream or consumer cannot be created, the filter edit or step-down fails, or the consumer leader does not change), or the case is not set up (`REBUILD.sh`, the `nats-server` binary or the `nats` CLI is missing).

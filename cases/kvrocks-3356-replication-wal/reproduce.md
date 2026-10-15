@@ -1,7 +1,7 @@
 # Reproduce: Kvrocks #3356
 
 ## Prerequisites
-A built `kvrocks` binary (see setup.md), `redis-cli`, and `python3`. No root, iptables, or `tc` is needed.
+Run inside `./bench.sh shell kvrocks-3356-replication-wal`, from `/workspace/src`; `./bench.sh setup` has built Kvrocks at `build/kvrocks` (Debug). `redis-cli` and `python3` are in the image. No root, iptables, or `tc` is needed.
 
 ## Step 1: Start master and replica
 
@@ -65,3 +65,11 @@ watch -n 5 'redis-cli -p 13356 INFO replication; grep ":342C " /proc/net/tcp'
 ```bash
 kill -CONT $REPLICA_PID; pkill -9 -f 'kvrocks -c /tmp/(master|replica).conf'
 ```
+
+## Oracle verdict
+
+`./bench.sh reproduce kvrocks-3356-replication-wal` rebuilds the worktree and runs the oracle (`reproduce.sh`). It follows the steps above: it waits until the replica is in sync, freezes it with `SIGSTOP`, writes 64 MB to the master, confirms that the master's send queue on the replication connection is non-empty, and then watches `INFO replication` for 90 s under a light write load.
+
+- **FAIL** (exit 1): the master still lists the stalled replica after 90 s, or the master dies during the stall, or it detaches the replica but replication does not recover within 90 s after `SIGCONT`. A worktree that does not build, a master that does not start, or a replica that never syncs before the stall is also FAIL.
+- **PASS** (exit 0): the master detaches the stalled replica within 90 s, and after `SIGCONT` the replica reconnects (`master_link_status:up`) and serves a key written after the stall.
+- **ERROR** (exit 2): the stall could not be established (no queued data on the replication connection and the replica still attached), or the case is not set up.

@@ -87,3 +87,11 @@ bin/etcdctl --endpoints=http://127.0.0.1:2379 member list -w table
 
 ## Expected result (bug present)
 The learner member still appears in the member list even though `--force-new-cluster` should have removed all non-self members.
+
+## Oracle verdict
+
+`./bench.sh reproduce etcd-20893-force-new-cluster-learner` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): after a learner is added to a 3-member cluster (`--snapshot-count=2`), 10 keys are written, all members are stopped and `m1` is restarted with `--force-new-cluster`, `member list` on `m1` shows more than one member (e.g. the learner) or does not show `m1`. A worktree that does not build, a cluster that does not become healthy within 60 s, a failed `put`, or a restarted `m1` that does not come up within 30 s or cannot answer `member list`, is also FAIL.
+- **PASS** (exit 0): `member list` on the restarted member lists exactly one member, `m1`.
+- **ERROR** (exit 2): the learner cannot be added or does not appear in the member list, or the case is not set up (`REBUILD.sh`, the `etcd` or the `etcdctl` binary is missing).

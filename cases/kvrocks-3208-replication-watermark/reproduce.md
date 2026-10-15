@@ -1,8 +1,8 @@
 # Reproduce: Kvrocks #3208
 
 ## Prerequisites
-- Kvrocks built from the buggy commit
-- `redis-cli` available (for interacting with Kvrocks)
+- Run inside `./bench.sh shell kvrocks-3208-replication-watermark`, from `/workspace/src`; `./bench.sh setup` has built Kvrocks at `build/kvrocks`.
+- `redis-cli` is available in the image.
 
 ## Step 1: Start master
 ```bash
@@ -46,3 +46,11 @@ redis-cli -p 13209 GET small_key
 
 ## Expected result (bug present)
 The small value does NOT appear on the replica within several seconds. The replica is stalled waiting for more data to arrive before processing the replication stream, despite the connection being healthy. The value will eventually appear only after enough PINGs or additional data accumulate to satisfy the stuck threshold.
+
+## Oracle verdict
+
+`./bench.sh reproduce kvrocks-3208-replication-watermark` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): after a 16 KB value is written on the master and replicated, a following `SET small_key small_value` on the master is not readable on the replica within 5 s (50 polls, 0.1 s apart). A worktree that does not build, a master that does not answer `PING`, a replica that does not report `master_link_status:up` within about 30 s, or a baseline key that never reaches the replica, is also FAIL.
+- **PASS** (exit 0): `GET small_key` on the replica returns `small_value` within 5 s.
+- **ERROR** (exit 2): `REBUILD.sh` or the built `build/kvrocks` binary is missing, or the master rejects the 16 KB `SET` (trigger not established).

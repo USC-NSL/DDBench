@@ -147,7 +147,7 @@ Present the plan:
 === Mining Campaign Plan ===
 Target: 10 cases across 5 repos
 
-Existing coverage: dragonfly(14), nats(6), kvrocks(6), etcd(4), raft(4)
+Existing coverage: dragonfly(14), nats(9), kvrocks(8), etcd(7), raft(6)
 Strategy: Prioritize etcd, raft, nats, kvrocks for depth; add consul for breadth
 
 | # | Repo | Issue | Title | Type | Locus | Score |
@@ -223,7 +223,7 @@ gh issue view <number> -R <org>/<repo> --json title,body
 
 Derive case metadata:
 - **project**, **case name** (`<project>-<issue#>-<slug>`), **repo URL**
-- **fix commit** (`mergeCommit.oid`), **buggy commit** (`<fix>~1`)
+- **fix commit** (`mergeCommit.oid`, `fix_commit` in case.yaml), **buggy commit** (`<fix>~1`), **resolve_time**
 - **language**, **submodules**, **build command**, **binary path**, **bug type**
 
 For build command: check existing `cases/<project>-*/case.yaml` first, then `Makefile` / `CMakeLists.txt` / `go.mod`.
@@ -265,22 +265,25 @@ Follow `mining-protocol/authoring-guide.md` Phase 2 to create all files. Key inp
 
 **Scaffold decisions:**
 1. Write `case.yaml` per `mining-protocol/case-anatomy.md` Section 1
-2. Select bug-type-specific reproduce template from `mining-protocol/templates/`:
+2. Scaffold per `mining-protocol/templates/README.md` "How to use": each template goes to its own destination (never copy the templates directory wholesale). Select the bug-type-specific reproduce template and install it as `reproduce.sh`:
    - `reproduce-go-test-inline.sh` — Go test embedded as heredoc
    - `reproduce-go-test-inject.sh` — Go test from external inject_test.go + loop
    - `reproduce-go-race-loop.sh` — Go `-race` detector with iteration loop
    - `reproduce-server-crash.sh` — start server → trigger → PID survival check
    - `reproduce-server-correctness.sh` — cluster setup → write/trigger/verify data
-3. If Go test injection: write `inject_test.go` using **only APIs at the buggy commit** — read relevant source first
-4. Write documentation files per `case-anatomy.md` Sections 2-5
-5. Write `solution.md` in `cases-solution/` with fix locus + diagnosis chain
-6. Write `devcontainer.json` per template
-7. `chmod +x` both scripts
-8. Do **not** put oracle output in `context/`. Debug context comes only from `/debug-context` (a developer investigating at the buggy commit) or from `/sanitize` Tier-2 extraction. It never comes from `reproduce.sh` output, verdicts, or oracle parameters.
+3. If Go test injection: write `inject_test.go` using **only APIs at the buggy commit** — read relevant source first. Name the test `TestDDBenchOracle...`; the script injects it as `zz_ddbench_oracle_test.go` and removes it on exit.
+4. Write documentation files per `case-anatomy.md` Sections 2, 4 and 5 (`symptom.md`; `reproduce.md`, ending with the "Oracle verdict" section that says what FAIL/PASS/ERROR mean; `README.md`)
+5. Write `solution.md` in `cases-solution/` (header: Issue / Fix commit / Gold patch) with fix locus + diagnosis chain, and `gold.patch`: the source-only part of the fix diff, taken from the project cache volume (`mining-protocol/authoring-guide.md` 2.7)
+6. Generate `.devcontainer/<case>/devcontainer.json` from the template (`CASE_NAME`, `PROJECT`, `CASE_UID`)
+7. `chmod +x reproduce.sh` (the only script; there is no per-case setup script, `./bench.sh setup` reads case.yaml)
+8. Do **not** put oracle output in `context/`. Debug context comes only from `/debug-context` (a developer investigating at the buggy commit) or from `/sanitize` Tier-2 extraction. It never comes from `reproduce.sh` output, verdicts, or oracle parameters, and never links the upstream issue, PR or fix.
 
 **Oracle design rules (reproduce.sh):**
 - **Observe the behavior the fix changes** (Phase 1), not a side quantity the workload produces anyway. Disk size, memory, and latency thresholds are a last resort and need a negative control (`/verify-oracle` Step 2.6).
-- **Three outcomes:** `FAIL:` (exit 1), `PASS:` (exit 0), `ERROR:` (exit 2). Never let a broken trigger reach the verdict. ERROR is only for failures of the oracle's own machinery, independent of the code under test (missing tool, trigger not established, injected oracle test doesn't compile, `-run` matches nothing). Anything the code under test does wrong (doesn't build, doesn't start, never reaches the baseline state, crashes) is FAIL. Scoring counts every non-zero exit as FAIL; ERROR is a diagnostic for case authors, never an exemption.
+- **Start from the template's prelude** (verbatim) and call `rebuild_worktree` first. The oracle runs only inside bench.sh containers, offline, with the case directory at `/bench`.
+- **Three outcomes:** `FAIL:` (exit 1), `PASS:` (exit 0), `ERROR:` (exit 2), via the prelude's `fail`/`pass`/`error`. Never let a broken trigger reach the verdict. ERROR is only for failures of the oracle's own machinery, independent of the code under test (missing tool or harness file, trigger not established, the oracle test produced no result and no compile error explains it). Anything the code under test does wrong (doesn't build, doesn't start, never reaches the baseline state, crashes, the injected oracle test no longer compiles against it) is FAIL. Scoring records ERROR separately from FAIL as an infrastructure problem, so an `exit 2` caused by the code under test would excuse a broken patch.
+- **Verdicts from structured output** for the exact `DDBenchOracle*` test (`go test -json`, JUnit XML, Common Test `suite.log`, libtest status lines), never from free text. Scratch files in `$RUN_DIR`; injected files removed in the `EXIT` trap.
+- **Nothing downloaded at reproduce time.** Scoring runs with `--network none` against the per-case dependency cache that setup fills (build + one online warm-up run of the oracle). Never hard-code cache paths such as `-Dmaven.repo.local`.
 - **Assert every trigger took effect,** not just that the command ran: process stopped, connection stalled, partition dropping, node down. Don't use `2>/dev/null` or `|| true` on trigger steps.
 - **No `sudo`.** The images ship none, and `bench.sh reproduce` already runs as root. Prefer process-level faults (`SIGSTOP`/`SIGCONT`, killing a node, a pausable TCP proxy) over `iptables`/`tc`: they need no extra capabilities and target exactly one peer. If you must filter packets, match the real connection: client-initiated connections (e.g. replica→master) use ephemeral ports.
 - **Accept alternative fixes:** no config options, commands, or log strings that exist only in the fix. Make detection windows generous (e.g. 90s when upstream uses a 30s timeout), so any reasonable fix passes.
@@ -298,7 +301,7 @@ for attempt in 1..3:
 
     ./bench.sh reproduce <case-name>
     if PASS on buggy → /diagnose-case --phase reproduce (Category C) → fix → continue
-    if error (no FAIL:) → /diagnose-case --phase reproduce (Category B) → fix → continue
+    if ERROR (exit 2) or no verdict → /diagnose-case --phase reproduce (Category B) → fix → continue
     if FAIL: present → read the full output (not just the verdict):
         any trigger-path error (command not found, permission denied, connection refused)
             → Category B → fix → continue
@@ -315,15 +318,16 @@ A FAIL here is necessary but not sufficient. It only shows the oracle *can* FAIL
 
 Run `/verify-oracle <case-name>` in full. In particular:
 - **Step 2.6 validity checks:** semantic check against the fix diff, negative control for metric oracles, trigger confirmed in-script.
-- **Step 3:** the fix commit (from the project cache volume, fetched from upstream if missing) is applied to a **scratch copy** of the case volume. The tree hash is proven equal to `<fix>^{tree}` and built clean. The fix commit is not in the case volume, so `git checkout <fix-commit>` there fails.
-- **Step 3.5:** repeated runs in both directions.
+- **Step 3:** `gold.patch` (the source-only fix diff, derived from the project cache volume; the fix commit is not in the case repository, so `git checkout <fix-commit>` there fails) is checked with `./bench.sh validate-oracle <case-name> --runs N`: the buggy worktree must FAIL and the gold-patched worktree must PASS in every run, offline.
+- **Step 3.5:** repeated runs in both directions (`--runs 3` at least; more for timing/race/metric oracles).
 
 ```
 for attempt in 1..3:
     /verify-oracle <case-name>
     if SOUND: → break
     if FAIL-for-wrong-reason / control FAILs → redesign oracle (Phase 3 rules) → re-run Phase 4 → continue
-    if fixed FAILs → /diagnose-case --phase oracle (Category D) → fix → re-verify Direction 1 → continue
+    if gold FAILs (UNSOUND/FLAKY) → /diagnose-case --phase oracle (Category D) → fix → re-verify Direction 1 → continue
+    if validate-oracle ERROR → /diagnose-case (Category B, or D9 if gold.patch does not apply) → fix → continue
 ```
 
 Abort after 3 failed attempts.
@@ -333,7 +337,7 @@ Abort after 3 failed attempts.
 ## Phase 6: Sanitize and integrate
 
 1. Run `/sanitize <case-name>` — check symptom.md for leakage against solution.md
-   - Agents don't get `/bench`, but as defense in depth apply the same leak check to `README.md`, `reproduce.md`, `verification.md`, comments in `reproduce.sh`, and the oracle's printed messages. They may describe the scenario and what is observed, but not the root-cause mechanism or the fix.
+   - Agents don't get `/bench`, but as defense in depth apply the same leak check to `README.md`, `reproduce.md`, comments in `reproduce.sh`, and the oracle's printed messages. They may describe the scenario and what is observed, but not the root-cause mechanism or the fix.
    - `context/` must contain no oracle information: no `reproduce.sh` output, no PASS/FAIL verdicts, and no oracle trigger parameters, thresholds, or windows.
 2. Follow `mining-protocol/authoring-guide.md` Phase 5: update `index.md`, update `CLAUDE.md` if new project
 3. Final report (single case) or progress update (campaign mode)
@@ -342,8 +346,9 @@ Abort after 3 failed attempts.
 
 ## Operational Notes
 
-- **SYMPTOM.md lives in the case volume too.** `bench.sh setup` copies `symptom.md` into the worktree as `SYMPTOM.md`, and `reset` preserves that copy. After editing `symptom.md` on an existing case, refresh the copy (re-run setup, or copy it into the volume).
-- **`bench.sh reproduce` rebuilds first** (its build step plus the worktree's `REBUILD.sh`; for CMake projects that's a reconfigure, which can take minutes). While iterating on reproduce.sh, run it in a plain `docker run` against the case volume, then do the final check through `bench.sh reproduce`.
+- **SYMPTOM.md lives in the case volume too.** `bench.sh setup` copies `symptom.md` into the worktree as `SYMPTOM.md`, and `reset` re-copies it from the case directory. After editing `symptom.md` on an existing case, run `./bench.sh reset <case-name>`.
+- **`bench.sh reproduce` rebuilds first** (its build step plus the worktree's `REBUILD.sh`; for CMake projects that's a reconfigure, which can take minutes). While iterating on reproduce.sh, use `./bench.sh shell <case-name>` and run `bash /bench/reproduce.sh` there (the case directory is bind-mounted live; the shell has network, scoring does not), then do the final check through `bench.sh reproduce`.
+- **Offline scoring.** If the oracle starts needing dependencies the setup warm-up never fetched, remove the case's dependency volume (`docker volume rm "$(./bench.sh info <case-name> deps_volume)"`, after `./bench.sh stop <case-name>`) and re-run setup to warm it again.
 - **inject_test.go compatibility trap** (most common oracle failure): The test must compile on BOTH buggy and fixed commits. Always read source at the buggy commit before writing.
 - **Multi-commit PRs**: Fix may not be the merge commit. Check `gh pr view --json commits`.
 - **Go projects without binaries** (e.g., hashicorp/raft): `build.command` and `build.binary` are empty strings.

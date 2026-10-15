@@ -14,17 +14,15 @@ Deleting a message with a non-existent sequence number (beyond the stream's last
 ## Quick Start
 
 ```bash
-# 1. Set up the codebase (clone, checkout buggy version)
-./setup.sh
-
-# 2. Reproduce the bug and verify
-./reproduce.sh
+# from the repository root
+./bench.sh setup nats-7308-delete-nonexistent-reset        # build image + case repository, warm caches
+./bench.sh reproduce nats-7308-delete-nonexistent-reset    # FAIL (exit 1) while the bug is present
+./bench.sh shell nats-7308-delete-nonexistent-reset        # explore: source at /workspace/src, oracle at /bench/reproduce.sh
 ```
 
 ## Prerequisites
 
-- Git
-- Go 1.22+ (expected at /usr/local/go/bin/go)
+Docker (all toolchains are in the `bug-bench/nats` image; see the top-level README).
 
 ## What to Expect
 
@@ -37,5 +35,5 @@ The test passes -- deleting a non-existent sequence returns an appropriate error
 ## Detailed Documentation
 
 - [`symptom.md`](symptom.md) -- Observable behavior and error messages
-- [`reproduce.md`](reproduce.md) -- Step-by-step reproduction procedure
-- [`verification.md`](verification.md) -- Pass/fail verification criteria
+- [`reproduce.md`](reproduce.md) -- Step-by-step reproduction procedure and what PASS/FAIL mean
+- [`reproduce.sh`](reproduce.sh) -- The oracle (exit 0 PASS, 1 FAIL, 2 ERROR)

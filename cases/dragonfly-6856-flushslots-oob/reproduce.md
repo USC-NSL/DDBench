@@ -37,3 +37,11 @@ python3 replay_crash.py crashes 000000
 - The crash is deterministic and triggers on every attempt.
 - Any slot ID >= 16384 will trigger the crash (e.g., 16384, 20000, 99999).
 - Slot IDs 0–16383 are valid and do not crash.
+
+## Oracle verdict
+
+`./bench.sh reproduce dragonfly-6856-flushslots-oob` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): after `DFLYCLUSTER FLUSHSLOTS 0 16384`, sent to a node started with `--cluster_mode=yes`, the Dragonfly process has exited (crashed) or no longer answers `PING`. A worktree that does not build, or a Dragonfly server that does not answer `PING` within 60 s of starting, is also FAIL.
+- **PASS** (exit 0): Dragonfly is still running and answers `PING` with `PONG` after the trigger (the reply to `FLUSHSLOTS` itself is not checked).
+- **ERROR** (exit 2): `REBUILD.sh` or the built `build-dbg/dragonfly` binary is missing (the case is not set up).

@@ -2,7 +2,7 @@
 
 ## Step 1: Build the test harness
 ```bash
-cd harness
+cd /workspace/src/harness
 cargo test --no-run
 ```
 
@@ -16,9 +16,17 @@ The `reproduce.sh` script appends a test function `test_read_when_quorum_becomes
 5. Asserts that `read_states` is non-empty (the read should complete with the leader's self-ack).
 
 ```bash
-cd harness
+cd /workspace/src/harness
 cargo test test_read_when_quorum_becomes_less_bug -- --nocapture
 ```
 
 ## Expected result (bug present)
 The assertion `!network.peers[&1].read_states.is_empty()` fails because pending reads are not re-evaluated when the quorum shrinks.
+
+## Oracle verdict
+
+`./bench.sh reproduce raft-rs-345-readindex-config-change` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): the test `test_ddbench_oracle_read_index_quorum_shrinks`, appended to `harness/tests/integration_cases/test_raft.rs`, fails: in a 2-node cluster, a ReadIndex request whose heartbeat acknowledgement from node 2 was dropped is still pending (the leader's `read_states` is empty) right after node 2 is removed and the quorum shrinks to the leader alone. A worktree that does not build, an oracle test that does not compile, or a test reported as ignored, is also FAIL.
+- **PASS** (exit 0): the appended test passes: the leader's `read_states` is non-empty right after node 2 is removed.
+- **ERROR** (exit 2): `REBUILD.sh` or `harness/tests/integration_cases/test_raft.rs` is missing (the case is not set up), or `cargo test` ends without running the oracle test and without a compile error.

@@ -47,3 +47,11 @@ redis-cli -p 6666 -a foobared NAMESPACE GET *
 
 ## Expected result (fixed)
 The `NAMESPACE SET ns1 token2` command should return an error indicating that `token2` is already in use by another namespace.
+
+## Oracle verdict
+
+`./bench.sh reproduce kvrocks-3148-namespace-delete` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): after `NAMESPACE ADD ns1 token1`, `NAMESPACE ADD ns2 token2` and `NAMESPACE SET ns1 token2`, `NAMESPACE GET *` no longer lists `ns2` (or the `NAMESPACE GET` call fails). A worktree that does not build, Kvrocks that does not answer `PING` within 30 s of starting, or a `NAMESPACE ADD` that does not return `OK`, is also FAIL.
+- **PASS** (exit 0): `NAMESPACE GET *` still lists `ns2` after the token change (whether `NAMESPACE SET` itself succeeds or is rejected is not checked).
+- **ERROR** (exit 2): `REBUILD.sh` or the built `build/kvrocks` binary is missing (the case is not set up).

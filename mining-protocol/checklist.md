@@ -6,56 +6,51 @@ Use this checklist to validate a new case before merging it into the benchmark.
 
 ## File Completeness
 
-- [ ] `cases/<case-name>/case.yaml` exists and parses correctly
-- [ ] `cases/<case-name>/symptom.md` exists
-- [ ] `cases/<case-name>/reproduce.md` exists
-- [ ] `cases/<case-name>/verification.md` exists
-- [ ] `cases/<case-name>/setup.md` exists
-- [ ] `cases/<case-name>/setup.sh` exists and is executable (`chmod +x`)
+- [ ] `cases/<case-name>/case.yaml` exists and parses (`./bench.sh info <case-name>` prints its settings)
 - [ ] `cases/<case-name>/reproduce.sh` exists and is executable (`chmod +x`)
+- [ ] `cases/<case-name>/symptom.md` exists
 - [ ] `cases/<case-name>/README.md` exists
+- [ ] `cases/<case-name>/reproduce.md` exists
+- [ ] Oracle harness files the oracle reads (`inject_test.go`, `inject_test/`, ...) are in the case directory
+- [ ] No per-case setup script or setup document (`case.yaml` + `./bench.sh setup` replace them), and no stray template files (`solution.md`, `devcontainer.json`, other reproduce variants) in `cases/<case-name>/`
 - [ ] `cases-solution/<case-name>/solution.md` exists
-- [ ] `.devcontainer/<case-name>/devcontainer.json` exists
+- [ ] `cases-solution/<case-name>/gold.patch` exists
+- [ ] `.devcontainer/<case-name>/devcontainer.json` exists (placeholders and `CASE_UID` substituted)
 - [ ] `docker/<project>.Dockerfile` exists (or already existed for this project)
+- [ ] Optional `cases/<case-name>/context/` follows the rules in "No Answer Leakage" below
 
 ## case.yaml Correctness
 
 - [ ] `name` matches the case directory name exactly
 - [ ] `project` is lowercase and matches the Dockerfile name
 - [ ] `repo` is a valid `https://` git URL ending in `.git`
-- [ ] `buggy_commit` is quoted and uses the `~1` suffix
-- [ ] `buggy_commit` resolves to a valid commit (`git rev-parse <commit>`)
+- [ ] `buggy_commit` is quoted and resolves in the full clone (convention: `"<fix-sha>~1"`)
+- [ ] `fix_commit` is the quoted 40-char upstream fix SHA, or `null` / a backport with `fix_commit_note` explaining
+- [ ] `resolve_time` has `date`, `source` (`confirmed_fix_commit_date` or `issue_close_date`) and `reference`
 - [ ] `submodules` is `true` or `false` (not quoted)
-- [ ] `build.command` builds the project from a clean worktree
-- [ ] `build.binary` points to the correct output path (relative to worktree root)
+- [ ] `build.command` builds the project from a clean worktree, and offline once the dependency cache is warm
+- [ ] `build.binary` points to the correct output path (relative to worktree root), or `""`
 - [ ] `docker.caps` is a YAML inline list (use `[]` if empty)
-- [ ] `docker.min_cpus` is set (default: 1)
+- [ ] `docker.num_cpus` is set to what the build and oracle need
+- [ ] `docker.seccomp_unconfined` only if required; `docker.offline: false` only as a justified last resort
+- [ ] Exactly 2-space indentation, inline lists, no trailing comments after nested values
 
-## Script Correctness
+## reproduce.sh Correctness
 
-### setup.sh
-- [ ] Docker preamble is present and identical to the standard template
-- [ ] Host fallback installs dependencies via `apt-get`
-- [ ] Host fallback clones with correct flags (`--recurse-submodules` if needed)
-- [ ] Host fallback checks out `buggy_commit` (not fix commit)
-- [ ] Script is idempotent (re-running skips completed steps)
-- [ ] Build produces the binary at the path declared in case.yaml
-- [ ] All required tools explicitly installed (no assumption about base image contents beyond what's in the Dockerfile)
-- [ ] No `set -e` conflicts with conditional checks (e.g., `git checkout ... || git checkout ...`)
-- [ ] Submodule update runs after checkout if `submodules: true`
-
-### reproduce.sh
-- [ ] Docker preamble is present and identical to the standard template
-- [ ] Checks for binary existence and errors clearly if missing
-- [ ] Cleans up from previous runs before starting (kills leftover processes)
-- [ ] Defines `cleanup` function with `trap cleanup EXIT` (defined BEFORE starting processes)
-- [ ] Uses `set -uo pipefail` (NOT `set -e`) to allow controlled failure detection
-- [ ] Final output is exactly `PASS: Bug is fixed — <description>` or `FAIL: Bug is present — <description>`
-- [ ] Exits with code 0 (PASS) or 1 (FAIL)
-- [ ] Uses unique port number (convention: `1<issue#>`)
-- [ ] Handles `REBUILD.sh` if present (`[ -f "$WORK_DIR/REBUILD.sh" ] && bash "$WORK_DIR/REBUILD.sh"`)
-- [ ] Server readiness uses active polling, not blind `sleep`
-- [ ] Temp directories cleaned up in both cleanup function and success path
+- [ ] Header comment ends with the exit-code summary, followed by the standard prelude, verbatim (see case-anatomy.md §3)
+- [ ] Registers `cleanup` with `trap cleanup EXIT`, then calls `rebuild_worktree` before running anything else
+- [ ] Exit contract: `pass` (0) only when the bug is fixed; `fail` (1) when the bug is present or the code under test does not build, start, or reach the baseline state; `error` (2) only for failures of the oracle's own machinery
+- [ ] Output ends with exactly one `PASS: ...`, `FAIL: ...` or `ERROR: ...` line
+- [ ] Injected oracle tests are written fresh each run under `DDBenchOracle*` names (`zz_ddbench_oracle_*` files) and removed, with their build outputs and reports, in an `EXIT` trap
+- [ ] Verdict comes from structured output for the exact oracle test (`go test -json`, JUnit XML, Common Test `suite.log`, libtest status lines) or from process state / protocol replies, never from free text
+- [ ] Scratch files in `$RUN_DIR`; nothing written into the worktree outside injected files that the trap removes
+- [ ] Harness files read from `$CASE_DIR`
+- [ ] Downloads nothing at reproduce time; no hard-coded cache paths (`-Dmaven.repo.local`, `GOMODCACHE`, `CARGO_HOME`, ...)
+- [ ] `cleanup` + `trap cleanup EXIT` defined BEFORE starting processes; kills leftovers from previous runs
+- [ ] Server readiness uses active polling with bounded client calls, not blind `sleep`
+- [ ] Uses unique port numbers (convention: `1<issue#>`)
+- [ ] No `set -e`, no `sudo`
+- [ ] `bash -n cases/<case-name>/reproduce.sh` passes
 
 ## Documentation Quality
 
@@ -64,6 +59,7 @@ Use this checklist to validate a new case before merging it into the benchmark.
 - [ ] Includes specific error signals (SIGABRT, "DATA RACE", etc.)
 - [ ] Describes the runtime/cluster context that triggers the bug
 - [ ] Would not help an agent locate the buggy code directly
+- [ ] Does not mention `context/` or link the upstream issue/PR
 - [ ] Cross-referenced against `solution.md` — none of the following appear:
   - [ ] Function, method, or variable names from the fix diff
   - [ ] Struct field names or internal constants from the buggy code path
@@ -73,35 +69,32 @@ Use this checklist to validate a new case before merging it into the benchmark.
   - [ ] PR numbers or commit hashes of the fix
 
 ### reproduce.md
-- [ ] Steps are numbered and complete
+- [ ] Steps are numbered, complete, and run inside `./bench.sh shell <case-name>`
 - [ ] Commands include all flags and ports
 - [ ] "Expected result (bug present)" section is present
-
-### verification.md
-- [ ] Contains executable bash snippet
-- [ ] PASS/FAIL criteria are clearly stated
-- [ ] References specific signals or exit codes
+- [ ] "Oracle verdict" section states briefly what FAIL, PASS and ERROR mean for this oracle (matching `reproduce.sh`), with specific signals or exit codes where they apply
 
 ### README.md
 - [ ] Metadata table is complete (Project, Issue, Language, Category)
-- [ ] Quick Start section includes `./setup.sh` and `./reproduce.sh`
-- [ ] Links to all 4 documentation files
+- [ ] Quick Start uses `./bench.sh setup` / `reproduce` / `shell`
+- [ ] Links to symptom.md, reproduce.md and reproduce.sh
 
-### solution.md
-- [ ] Links to fix PR and commit
+### solution.md and gold.patch
+- [ ] solution.md starts with `# Solution: <Project> #<issue>` and the `- **Issue:**`, `- **Fix commit:**`, `- **Gold patch:**` header lines
 - [ ] Root cause is explained at code level
 - [ ] Fix description explains what changed
-- [ ] "How to apply" section has correct checkout + build commands
+- [ ] gold.patch is a source-only unified diff relative to the repository root (no tests, docs, changelogs) that applies with `git apply` at `buggy_commit`
+- [ ] gold.patch adds no third-party dependencies (scoring builds offline)
 
 ## Docker Validation
 
-- [ ] `./bench.sh setup <case-name>` completes successfully
-- [ ] `./bench.sh reproduce <case-name>` outputs `FAIL: ...` (bug present on buggy commit)
-- [ ] `./bench.sh shell <case-name>` starts an interactive shell
+- [ ] `./bench.sh setup <case-name>` completes; the warm-up reports FAIL on the buggy code
+- [ ] `./bench.sh reproduce <case-name>` exits 1 with `FAIL: ...` (bug present on the buggy commit)
 - [ ] `reproduce` output shows no trigger-path errors (`command not found`, `Permission denied`, …) before the verdict
-- [ ] `/verify-oracle` Direction 2 gives `PASS`: fix from the cache volume, applied to a scratch copy, `git write-tree` == `<fix>^{tree}`, clean build
+- [ ] `./bench.sh validate-oracle <case-name>` reports `SOUND` (`--runs 3` or more for timing- or race-based oracles); keep the `--json` result
+- [ ] `./bench.sh shell <case-name>` starts, and `bash /bench/reproduce.sh` gives the same verdict inside it
 - [ ] `./bench.sh clean <case-name>` followed by `setup` + `reproduce` still works (clean slate)
-- [ ] Second `setup` run is fast (idempotent — skips clone and build)
+- [ ] Second `setup` run is fast (repository exists, cache already warm)
 
 ## Selection Criteria Compliance
 
@@ -115,12 +108,11 @@ Use this checklist to validate a new case before merging it into the benchmark.
 - [ ] The fix is localized (clear component, preferably 1-3 files)
 
 ### Oracle soundness
-- [ ] `reproduce.sh` produces FAIL on the buggy commit (confirmed, ≥3 runs; ≥5 for timing/metric/race)
-- [ ] `reproduce.sh` produces PASS on the hash-verified fix tree (confirmed, same run counts)
+- [ ] Buggy worktree FAILs and gold.patch PASSes in every run (`validate-oracle` SOUND)
 - [ ] The FAIL condition measures the behavior the fix diff changes
 - [ ] Metric/threshold oracles: a negative control (bug trigger removed) does not FAIL, with a clear margin
 - [ ] Trigger is confirmed in-script; inconclusive runs exit 2 with `ERROR:`
-- [ ] No `sudo`, no fix-only config/APIs, generous detection windows
+- [ ] No fix-only config/APIs, generous detection windows (alternative fixes pass)
 - [ ] No false positives (buggy code cannot accidentally pass)
 - [ ] No false negatives (fixed code does not spuriously fail)
 
@@ -131,15 +123,15 @@ Use this checklist to validate a new case before merging it into the benchmark.
 ## No Answer Leakage
 
 - [ ] `symptom.md` does not mention function names, variable names, or code paths from the fix
-- [ ] `reproduce.md` does not reference the fix PR or commit
-- [ ] `verification.md` does not hint at the root cause
-- [ ] `setup.sh` and `reproduce.sh` do not contain comments or printed messages revealing the fix or root-cause mechanism (defense in depth; agents never see `/bench`)
-- [ ] `context/` contains only debug context an agent could gather at the buggy commit: no `reproduce.sh` output, PASS/FAIL verdicts, or oracle thresholds, windows, or trigger parameters
-- [ ] `solution.md` is in `cases-solution/`, NOT in `cases/`
+- [ ] `README.md` and `reproduce.md` do not reference the fix PR or commit or hint at the root cause
+- [ ] `reproduce.sh` comments and printed messages do not reveal the fix or root-cause mechanism (defense in depth; agents never see `/bench`)
+- [ ] `context/` is observational only (see authoring-guide.md "Authoring context/"): debug context a developer could gather at the buggy commit before knowing the fix; no diagnosis, root cause or fix direction; no links to the upstream issue, PR or fix; no `reproduce.sh` output, PASS/FAIL verdicts, injected oracle tests, or oracle thresholds, windows, or trigger parameters. `/sanitize <case-name>` passes.
+- [ ] `solution.md` and `gold.patch` are in `cases-solution/`, NOT in `cases/`
 - [ ] The GitHub issue text does not trivially reveal the fix (if it does, the case is excluded — see selection criteria)
 
 ## Index and Metadata
 
 - [ ] Row added to `index.md` with correct rank, project, URL, description, and folder name
-- [ ] If new project: `CLAUDE.md` "Covered projects" table updated
-- [ ] Total case count in `index.md` header updated
+- [ ] If new project: "Covered projects" tables (`CLAUDE.md`, repository `README.md`) updated
+- [ ] Total case counts updated wherever they are stated
+- [ ] `validate-oracle` result recorded with the release results (`docs/oracle-validation.md`, `registry/oracle_validation.json`)

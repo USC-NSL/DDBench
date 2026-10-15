@@ -25,3 +25,11 @@ echo -e "mg bigkey v\r\nquit\r\n" | nc 127.0.0.1 11211
 
 ## Expected result (bug present)
 The Dragonfly process crashes with a buffer overflow assertion.
+
+## Oracle verdict
+
+`./bench.sh reproduce dragonfly-6654-mc-reply-large` rebuilds the worktree and runs the oracle (`reproduce.sh`):
+
+- **FAIL** (exit 1): after a 16000-byte value stored with `SET bigkey` on the Redis port is read back with the memcached meta get `mg bigkey v`, the Dragonfly process has exited (crashed) or no longer answers `PING`. A worktree that does not build, a Dragonfly server that does not answer `PING` within 60 s of starting, or a `SET` of the value that does not return `OK`, is also FAIL.
+- **PASS** (exit 0): Dragonfly is still running and answers `PING` with `PONG` after the trigger (the content of the meta get reply is not checked).
+- **ERROR** (exit 2): `REBUILD.sh` or the built `build-dbg/dragonfly` binary is missing (the case is not set up).

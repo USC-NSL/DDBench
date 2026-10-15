@@ -34,6 +34,9 @@ Before running any cases, scan each `reproduce.sh` for anti-patterns that make t
 | `sed -i` on production code | `sed -i.*src/main` | Injects accessors into production code to expose internal state |
 | `sudo` in reproduce.sh | `sudo ` | The images ship no `sudo` (and `bench.sh reproduce` already runs as root). The step silently fails and the trigger never happens |
 | Swallowed trigger errors | trigger lines with `2>/dev/null` / `\|\| true` and no effect check | A failed trigger still reaches a PASS/FAIL verdict |
+| Missing standard prelude | first lines after the header comment differ from `mining-protocol/case-anatomy.md` §3 (no `BENCH_WORKDIR` guard, no `rebuild_worktree`) | Not the current oracle contract (exit codes, worktree path, REBUILD.sh) |
+| Free-text verdict | PASS decided by `grep` for `PASS`/`ok` rather than `go test -json`, JUnit XML, Common Test `suite.log` or libtest lines for the `DDBenchOracle*` test | Code under test can print the success string |
+| Network at reproduce time | downloads, hard-coded `-Dmaven.repo.local` / `GOMODCACHE` / `CARGO_HOME` | Scoring runs with `--network none` against the cache warmed at setup |
 
 Output a pre-flight warning table before the main verification:
 
@@ -52,20 +55,23 @@ Cases with anti-patterns may still VERIFY correctly (FAIL on buggy commit) but a
 For each case, run the following and capture output + exit code:
 
 ```bash
-# Setup phase
+# Setup phase (builds online, then runs the oracle once online to warm the dependency cache;
+# the warm-up must report FAIL on the buggy code, and an ERROR there fails setup)
 ./bench.sh setup <case-name> 2>&1
 SETUP_EXIT=$?
 
-# Reproduce phase (only if setup succeeded)
+# Reproduce phase (only if setup succeeded; offline, exactly like scoring)
 if [ $SETUP_EXIT -eq 0 ]; then
     ./bench.sh reproduce <case-name> 2>&1
-    REPRO_EXIT=$?
+    REPRO_EXIT=$?     # 0 = PASS, 1 = FAIL, 2 = ERROR
 fi
 ```
 
+`./bench.sh list` shows which cases are already set up.
+
 **Important resource management rules:**
 - Run cases sequentially (NOT in parallel) to avoid Docker resource contention
-- Set a timeout of 30 minutes for setup (builds can be slow) and 5 minutes for reproduce
+- Set a timeout of 30 minutes for setup (builds can be slow, and setup includes one oracle run) and 5 minutes for reproduce (more for cases whose oracle loops)
 - If setup fails, mark case as SETUP_FAIL and move to the next case
 - Capture the last 20 lines of output for the report
 
@@ -78,8 +84,8 @@ For each case, determine the status:
 | VERIFIED | Setup OK + reproduce exits 1 with "FAIL:" in output, and no trigger-path errors (`command not found`, `Permission denied`, `Connection refused`) earlier in the output |
 | SUSPECT | Exits 1 with "FAIL:", but trigger-path errors appear before the verdict. The FAIL may not be caused by the bug; run `/verify-oracle` |
 | FIXED | Setup OK + reproduce exits 0 with "PASS:" in output (bug already fixed — wrong commit?) |
-| SETUP_FAIL | Setup exited non-zero |
-| REPRO_ERROR | Reproduce exited non-zero but without "FAIL:" in output (script error, not bug detection) |
+| SETUP_FAIL | Setup exited non-zero (if it failed in the warm-up because the oracle exited 2, classify as REPRO_ERROR) |
+| REPRO_ERROR | Reproduce exited 2 with "ERROR:" (or without any verdict): oracle or infrastructure problem, not bug detection |
 | TIMEOUT | Setup or reproduce exceeded timeout |
 
 ### Step 4: Generate report
@@ -114,7 +120,7 @@ For each non-VERIFIED case, output:
 
 ### Notes
 
-- A VERIFIED result means the oracle fires correctly on the buggy commit. It does NOT confirm oracle soundness in the other direction (PASS on fix). Use `/verify-oracle` for that.
+- A VERIFIED result means the oracle fires correctly on the buggy commit. It does NOT confirm oracle soundness in the other direction (PASS with the fix). Use `./bench.sh validate-oracle <case> --runs 3` (and `/verify-oracle` for the semantic checks) for that.
 - If many cases from the same project fail setup, the project Dockerfile likely needs updating.
 - Resource contention (parallel Docker builds sharing CPU/memory) was a major friction source in past sessions — always run sequentially.
 - **Fragile oracles**: A case can be VERIFIED yet still fragile. FIX_COMMIT dependencies, reflection field checks, and source-grep branching all produce oracles that reject valid alternative fixes. The pre-flight scan (Step 1.5) catches these. Remediation patterns: inline tests as heredocs (NATS pattern), use Mockito behavioral verify (Kafka pattern), ship test files as inject_test/ assets (BookKeeper pattern).
