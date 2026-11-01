@@ -1,0 +1,21 @@
+DDBench
+Copyright 2026 The DDBench Authors
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/):
+
+Apache BookKeeper
+Copyright 2011-2025 The Apache Software Foundation
+
+Apache Kafka
+Copyright 2022-2024 The Apache Software Foundation
+
+Apache Kvrocks
+Copyright 2022-2025 The Apache Software Foundation
+
+Apache ZooKeeper
+Copyright 2009-2024 The Apache Software Foundation
+
+This product includes material from projects under other licenses, including
+Dragonfly, which is under the Business Source License 1.1. See the
+"THIRD-PARTY COMPONENTS" section of LICENSE and the licenses/ directory.
