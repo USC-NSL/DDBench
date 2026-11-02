@@ -1,10 +1,15 @@
-# DDBench: debugging real distributed-systems bugs
+# DDBench
 
-DDBench is a benchmark of **60 real bugs** taken from **13 open-source
-distributed systems**, written in Go, C++, Java/Scala, Rust and Erlang. Each
-case pins the upstream repository at the commit before the fix. It describes
-the observable symptom and comes with an automated oracle that tells whether
-the bug is still present.
+## For Humans
+
+DDBench is a benchmark for debugging real distributed-systems bugs. It brings together 60 reproducible bugs from 13 widely used open-source systems, spanning Go, C++, Java/Scala, Rust, and Erlang.
+
+The project exists to make automated debugging and repair measurable in realistic settings. Each case captures a genuine historical failure, preserves the buggy state, and provides a reproducible way to determine whether a proposed fix works.
+
+The repository contains the benchmark cases, containerized environments, scoring oracles, and tooling for running human- or agent-driven debugging experiments. Its goal is to support fair, repeatable evaluation while keeping the information available to an agent separate from the hidden evidence used for scoring.
+
+<details>
+<summary>For Agents</summary>
 
 The benchmark is designed for evaluating AI coding agents, program-analysis
 tools and automated repair:
@@ -416,3 +421,5 @@ volumes, mounts and environment as `bench.sh shell`, so
 - Volumes from older layouts (`bug-bench-case-<case>-src`,
   `bug-bench-<project>-src`) are no longer used. `./bench.sh legacy-volumes`
   lists them, and `--remove` deletes them.
+
+</details>
