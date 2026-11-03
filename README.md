@@ -41,7 +41,7 @@ If you find our work helpful, please use the following citations.
   author    = {Yan, Yibo and Wang, Huijuan and He, Junzhou and
                Liang, Yizhuo and Wang, Shaoyu and Sun, Huanchen and
                Park, Seo Jin},
-  booktitle = {The Fortieth Annual Conference on Neural Information Processing Systems},
+  booktitle = {The Fortieth Annual Conference on Neural Information Processing Systems. Evaluations and Datasets Track},
   year      = {2026},
   url       = {https://openreview.net/forum?id=xeI7yaisrf}
 }
