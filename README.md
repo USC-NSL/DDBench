@@ -1,12 +1,51 @@
-# DDBench
+<p align="center">
+  <a href="https://nsl.usc.edu/ddbench-site/">
+    <img src="https://raw.githubusercontent.com/USC-NSL/ddbench-site/refs/heads/main/assets/logo/ddbench-logo-text.svg" alt="DDBench Logo" />
+  </a>
 
-## For Humans
+  <h3 align="center">
+    Evaluating Agentic Debugging Capabilities on Distributed Systems
+  </h3>
+
+  <p align="center"><strong>[&nbsp;<a href="https://nsl.usc.edu/ddbench-site/">Website for Leaderboard</a>&nbsp;]</strong></p>
+
+
+  
+  <p align="center">
+    <a href="https://github.com/USC-NSL/DDBench/blob/main/LICENSE">
+      <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"
+           alt="License: Apache 2.0" />
+    </a>
+  </p>
+</p>
+
+
+---
+
+## 👋 Overview
 
 DDBench is a benchmark for debugging real distributed-systems bugs. It brings together 60 reproducible bugs from 13 widely used open-source systems, spanning Go, C++, Java/Scala, Rust, and Erlang.
 
 The project exists to make automated debugging and repair measurable in realistic settings. Each case captures a genuine historical failure, preserves the buggy state, and provides a reproducible way to determine whether a proposed fix works.
 
 The repository contains the benchmark cases, containerized environments, scoring oracles, and tooling for running human- or agent-driven debugging experiments. Its goal is to support fair, repeatable evaluation while keeping the information available to an agent separate from the hidden evidence used for scoring.
+
+## ✍️ Citation & license
+Apache 2.0. Check [LICENSE.md](LICENSE).
+
+If you find our work helpful, please use the following citations.
+
+```bibtex
+@inproceedings{yan2026ddbench,
+  title     = {DDBench: A Benchmark for Agentic Debugging on Distributed Systems},
+  author    = {Yan, Yibo and Wang, Huijuan and He, Junzhou and
+               Liang, Yizhuo and Wang, Shaoyu and Sun, Huanchen and
+               Park, Seo Jin},
+  booktitle = {The Fortieth Annual Conference on Neural Information Processing Systems},
+  year      = {2026},
+  url       = {https://openreview.net/forum?id=xeI7yaisrf}
+}
+```
 
 <details>
 <summary>For Agents</summary>
