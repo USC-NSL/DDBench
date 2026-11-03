@@ -24,31 +24,18 @@
 
 ## 👋 Overview
 
-DDBench is a benchmark for debugging real distributed-systems bugs. It brings together 60 reproducible bugs from 13 widely used open-source systems, spanning Go, C++, Java/Scala, Rust, and Erlang.
+DDBench is a benchmark for evaluating agentic debugging for real bugs in distributed systems. It brings together 60 reproducible bugs from more than 10 widely used open-source systems, spanning Go, C++, Java/Scala, Rust, and Erlang.
 
-The project exists to make automated debugging and repair measurable in realistic settings. Each case captures a genuine historical failure, preserves the buggy state, and provides a reproducible way to determine whether a proposed fix works.
+The project aims making agentic debugging capability measurable in realistic settings. The project provides a complete evaluation suite, including benchmark cases, containerized environments, scoring oracles, and most importantly, scripts for reproducing the bugs and checking correctness!
 
-The repository contains the benchmark cases, containerized environments, scoring oracles, and tooling for running human- or agent-driven debugging experiments. Its goal is to support fair, repeatable evaluation while keeping the information available to an agent separate from the hidden evidence used for scoring.
+## Existing Results
+We evaluated **10 different models** against DDBench, here's the [results](https://nsl.usc.edu/ddbench-site/).
 
-## ✍️ Citation & license
-Apache 2.0. Check [LICENSE.md](LICENSE).
-
-If you find our work helpful, please use the following citations.
-
-```bibtex
-@inproceedings{yan2026ddbench,
-  title     = {DDBench: A Benchmark for Agentic Debugging on Distributed Systems},
-  author    = {Yan, Yibo and Wang, Huijuan and He, Junzhou and
-               Liang, Yizhuo and Wang, Shaoyu and Sun, Huanchen and
-               Park, Seo Jin},
-  booktitle = {The Fortieth Annual Conference on Neural Information Processing Systems. Evaluations and Datasets Track},
-  year      = {2026},
-  url       = {https://openreview.net/forum?id=xeI7yaisrf}
-}
-```
+## To deploy DDBench
+Give your agent this README, and the toggle section below contains all usage details for your agents to **reproduce**, **add your own models**, or **add your own cases**!
 
 <details>
-<summary>For Agents</summary>
+<summary>Usage Details: For Agents!</summary>
 
 The benchmark is designed for evaluating AI coding agents, program-analysis
 tools and automated repair:
@@ -462,3 +449,20 @@ volumes, mounts and environment as `bench.sh shell`, so
   lists them, and `--remove` deletes them.
 
 </details>
+
+## ✍️ Citation & license
+Apache 2.0. Check [LICENSE.md](LICENSE).
+
+If you find our work helpful, please use the following citations.
+
+```bibtex
+@inproceedings{yan2026ddbench,
+  title     = {DDBench: A Benchmark for Agentic Debugging on Distributed Systems},
+  author    = {Yan, Yibo and Wang, Huijuan and He, Junzhou and
+               Liang, Yizhuo and Wang, Shaoyu and Sun, Huanchen and
+               Park, Seo Jin},
+  booktitle = {The Fortieth Annual Conference on Neural Information Processing Systems. Evaluations and Datasets Track},
+  year      = {2026},
+  url       = {https://openreview.net/forum?id=xeI7yaisrf}
+}
+```
