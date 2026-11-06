@@ -27,7 +27,7 @@ DDBench is a benchmark for evaluating agentic debugging for real bugs in distrib
 The project aims making agentic debugging capability measurable in realistic settings. The project provides a complete evaluation suite, including benchmark cases, containerized environments, scoring oracles, and most importantly, scripts for reproducing the bugs and checking correctness. **Our paper is going to appear at NeurIPS '27 ED Track**, and you can check out our [preprint](https://arxiv.org/abs/2608.14863) for more insights and findings!
 
 <p align="center">
-  <img src="docs/pics/cases-overview.png" width="90%" />
+  <img src="docs/pics/cases_overview.png" width="90%" />
 </p>
 
 ## Existing Results
