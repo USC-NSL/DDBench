@@ -33,8 +33,9 @@ The project aims making agentic debugging capability measurable in realistic set
 ## Existing Results
 We evaluated **10 different models** against DDBench, here's the [results](https://nsl.usc.edu/ddbench-site/).
 
-- On the 31 hardest cases, six models span **42 percentage points** in pass rate, versus **7 on SWE-bench Verified**.
-- Debugging context raises average pass rate **31% → 50%** and cuts Opus 4.6's token use by **61%**.
+At a glance, we found that
+- On the hardest tier, six models span **42 percentage points** in pass rate, versus the 7% separation on SWE-bench Verified.
+- Debugging context raises average pass rate **from 31% to 50%** and cuts Opus 4.6's token use by **61%**.
 
 <p align="center">
   <img src="docs/pics/model-separation.png" alt="Pass rates across six models" width="50%" />
