@@ -29,6 +29,11 @@ The project aims making agentic debugging capability measurable in realistic set
 ## Existing Results
 We evaluated **10 different models** against DDBench, here's the [results](https://nsl.usc.edu/ddbench-site/).
 
+- On the 31 hardest cases, six models span **42 percentage points** in pass rate, versus **7 on SWE-bench Verified**.
+- Debugging context raises average pass rate **31% → 50%** and cuts Opus 4.6's token use by **61%**.
+
+<img src="docs/pics/model-separation.png" alt="Pass rates across six models" width="520" />
+
 ## To deploy DDBench
 Give your agent this README, and the toggle section below contains all usage details for your agents to **reproduce**, **add your own models**, or **add your own cases**!
 
