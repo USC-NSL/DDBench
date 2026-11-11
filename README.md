@@ -12,6 +12,10 @@
 
   
   <p align="center">
+    <a href="https://huggingface.co/datasets/DDBench/DDBench">
+      <img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-yellow.svg"
+           alt="Hugging Face Dataset" />
+    </a>
     <a href="https://github.com/USC-NSL/DDBench/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"
            alt="License: Apache 2.0" />
